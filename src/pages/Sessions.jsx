@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { addSession, getSessions, getUsers } from '../firebase/firestore';
+import { addSession, getSessions, getUsers, updateSessionStatus, updateSession } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
 
 const VIEWS = [
@@ -12,7 +12,6 @@ const EMPTY_FORM = {
   spoc: '',
   numberOfPlayers: '',
   sessionDate: '',
-  signalPaid: false,
   additionalComments: '',
   monitors: [],
 };
@@ -53,7 +52,39 @@ const groupSessions = (sessions, view) => {
   return groups;
 };
 
-const SessionCard = ({ session, users }) => {
+const getStatusLabel = (status) => {
+  switch (status) {
+    case 'cancelled':
+      return 'Cancelada';
+    case 'no_show':
+      return 'Não compareceu';
+    case 'pending_payment':
+      return 'Pendente';
+    case 'active':
+      return 'Ativa';
+    case 'done':
+      return 'Feita';
+    default:
+      return status;
+  }
+};
+
+const getStatusBadgeClass = (status) => {
+  switch (status) {
+    case 'cancelled':
+    case 'no_show':
+      return 'badge-danger';
+    case 'pending_payment':
+      return 'badge-pending';
+    case 'active':
+    case 'done':
+      return 'badge-success';
+    default:
+      return 'badge-default';
+  }
+};
+
+const SessionCard = ({ session, users, onEdit }) => {
   const date = toDate(session.sessionDate);
   const time = date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 
@@ -62,7 +93,7 @@ const SessionCard = ({ session, users }) => {
     .filter(Boolean);
 
   return (
-    <div className="session-card">
+    <div className="session-card" onClick={() => onEdit(session)} style={{ cursor: 'pointer' }}>
       <span className="session-time">{time}</span>
       <div className="session-info">
         <span className="session-spoc">{session.spoc}</span>
@@ -93,9 +124,194 @@ const SessionCard = ({ session, users }) => {
         {session.numberOfPlayers < 10 && (
           <span className="warn-tooltip" data-tip="Esta sessão tem menos de 10 jogadores">⚠</span>
         )}
-        <span className={`badge ${session.signalPaid ? 'badge-paid' : 'badge-pending'}`}>
-          {session.signalPaid ? 'Sinal Pago' : 'Pendente'}
+        <span className={`badge ${getStatusBadgeClass(session.status)}`}>
+          {getStatusLabel(session.status)}
         </span>
+      </div>
+    </div>
+  );
+};
+
+const SessionDetailModal = ({ session, users, onClose, onSave }) => {
+  const [formData, setFormData] = useState({
+    spoc: session.spoc || '',
+    numberOfPlayers: session.numberOfPlayers || '',
+    sessionDate: session.sessionDate ? new Date(session.sessionDate.toDate()).toISOString().slice(0, 16) : '',
+    status: session.status || 'active',
+    additionalComments: session.additionalComments || '',
+    monitors: session.monitors || [],
+  });
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
+
+  const handleChange = (e) => {
+    const { name, value, type, checked } = e.target;
+    if (name === 'monitors') {
+      setFormData((prev) => ({
+        ...prev,
+        monitors: checked
+          ? [...prev.monitors, value]
+          : prev.monitors.filter((uid) => uid !== value),
+      }));
+    } else {
+      setFormData((prev) => ({
+        ...prev,
+        [name]: type === 'checkbox' ? checked : value,
+      }));
+    }
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setError('');
+    setSaving(true);
+    try {
+      await onSave(session.id, {
+        spoc: formData.spoc,
+        numberOfPlayers: parseInt(formData.numberOfPlayers, 10),
+        sessionDate: formData.sessionDate,
+        status: formData.status,
+        additionalComments: formData.additionalComments,
+        monitors: formData.monitors,
+      });
+      onClose();
+    } catch {
+      setError('Erro ao guardar sessão. Tenta novamente.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="modal-overlay" onClick={onClose}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '530px' }}>
+        <div className="modal-header">
+          <h2 className="modal-title">Editar Sessão</h2>
+          <button className="modal-close" onClick={onClose} aria-label="Fechar">✕</button>
+        </div>
+
+        <form onSubmit={handleSubmit}>
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="spoc">Responsável</label>
+              <input
+                id="spoc"
+                name="spoc"
+                type="text"
+                value={formData.spoc}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="numberOfPlayers">Nº de Jogadores</label>
+              <input
+                id="numberOfPlayers"
+                name="numberOfPlayers"
+                type="number"
+                min="1"
+                value={formData.numberOfPlayers}
+                onChange={handleChange}
+                required
+              />
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="sessionDate">Data e Hora</label>
+            <input
+              id="sessionDate"
+              name="sessionDate"
+              type="datetime-local"
+              value={formData.sessionDate}
+              onChange={handleChange}
+              required
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="additionalComments">Comentários adicionais</label>
+            <textarea
+              id="additionalComments"
+              name="additionalComments"
+              value={formData.additionalComments}
+              onChange={handleChange}
+              className="form-textarea"
+              placeholder="Notas, requisitos especiais..."
+            />
+          </div>
+
+          <div className="form-group">
+            <label htmlFor="monitorSearch">Monitores</label>
+            <div className="monitors-checklist">
+              {users
+                .filter((u) => u.role === 'monitor' || u.role === 'admin')
+                .map((user) => {
+                  const nickname = user.nickname ? `(${user.nickname}) ` : '';
+                  return (
+                    <div key={user.uuid} className="form-checkbox-item">
+                      <input
+                        id={`monitor-${user.uuid}`}
+                        name="monitors"
+                        type="checkbox"
+                        value={user.uuid}
+                        checked={formData.monitors.includes(user.uuid)}
+                        onChange={handleChange}
+                      />
+                      <label htmlFor={`monitor-${user.uuid}`}>
+                        {nickname}{user.firstName} {user.lastName}
+                      </label>
+                    </div>
+                  );
+                })}
+            </div>
+          </div>
+
+          <div className="form-group">
+            <label>Estado da Sessão</label>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'nowrap', marginTop: '0.5rem' }}>
+              {[
+                { value: 'done', label: 'Feita' },
+                { value: 'active', label: 'Ativa' },
+                { value: 'pending_payment', label: 'Pendente' },
+                { value: 'no_show', label: 'Não compareceu' },
+                { value: 'cancelled', label: 'Cancelada' },
+              ].map((status) => (
+                <button
+                  key={status.value}
+                  type="button"
+                  onClick={() => setFormData((prev) => ({ ...prev, status: status.value }))}
+                  className={`badge ${getStatusBadgeClass(status.value)}`}
+                  style={{
+                    cursor: 'pointer',
+                    border: 'none',
+                    whiteSpace: 'nowrap',
+                    flex: '0 0 auto',
+                    fontSize: '0.75rem',
+                    padding: '0.25rem 0.5rem',
+                    opacity: formData.status === status.value ? 1 : 0.6,
+                    boxShadow: formData.status === status.value ? '0 0 0 2px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.3)' : 'none',
+                    transform: formData.status === status.value ? 'scale(1.05)' : 'scale(1)',
+                    transition: 'all 0.2s ease',
+                  }}
+                >
+                  {formData.status === status.value ? '✓ ' : ''}{status.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {error && <div className="error-msg"><span>⚠</span> {error}</div>}
+
+          <div className="modal-footer">
+            <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
+              Cancelar
+            </button>
+            <button type="submit" className="btn-primary" disabled={saving}>
+              {saving ? 'A guardar...' : 'Guardar alterações'}
+            </button>
+          </div>
+        </form>
       </div>
     </div>
   );
@@ -114,6 +330,8 @@ const Sessions = () => {
   const [success, setSuccess] = useState('');
   const [monitorSearch, setMonitorSearch] = useState('');
   const [displayCount, setDisplayCount] = useState(30);
+  const [selectedSession, setSelectedSession] = useState(null);
+  const [statusFilter, setStatusFilter] = useState(null);
 
   const fetchSessions = async () => {
     try {
@@ -166,7 +384,9 @@ const Sessions = () => {
     const filtered = sessions.filter((s) => {
       const sessionDate = toDate(s.sessionDate);
       const isPast = sessionDate < now;
-      return showPast || !isPast;
+      const pastFilter = showPast || !isPast;
+      const statusFilterMatch = statusFilter ? s.status === statusFilter : true;
+      return pastFilter && statusFilterMatch;
     });
 
     const sorted = [...filtered].sort((a, b) => {
@@ -176,7 +396,7 @@ const Sessions = () => {
     });
 
     return sorted;
-  }, [sessions, showPast, sortAsc]);
+  }, [sessions, showPast, sortAsc, statusFilter]);
 
   const displayedSessions = useMemo(() => filteredSessions.slice(0, displayCount), [filteredSessions, displayCount]);
   const grouped = useMemo(() => groupSessions(displayedSessions, view), [displayedSessions, view]);
@@ -211,7 +431,6 @@ const Sessions = () => {
         spoc: form.spoc,
         numberOfPlayers: parseInt(form.numberOfPlayers, 10),
         sessionDate: form.sessionDate,
-        signalPaid: form.signalPaid,
         additionalComments: form.additionalComments,
         monitors: form.monitors,
       });
@@ -222,6 +441,15 @@ const Sessions = () => {
       setError('Erro ao criar sessão. Tenta novamente.');
     } finally {
       setLoading(false);
+    }
+  };
+
+  const handleSaveSession = async (sessionId, data) => {
+    try {
+      await updateSession(sessionId, data);
+      await fetchSessions();
+    } catch {
+      throw new Error('Erro ao guardar sessão');
     }
   };
 
@@ -255,21 +483,48 @@ const Sessions = () => {
             {sortAsc ? '↑ Data' : '↓ Data'}
           </button>
         </div>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
+          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+            {[
+              { value: 'done', label: 'Feita' },
+              { value: 'active', label: 'Ativa' },
+              { value: 'pending_payment', label: 'Pendente' },
+              { value: 'no_show', label: 'Não compareceu' },
+              { value: 'cancelled', label: 'Cancelada' },
+            ].map((status) => (
+              <button
+                key={status.value}
+                onClick={() => setStatusFilter(statusFilter === status.value ? null : status.value)}
+                className={`badge ${getStatusBadgeClass(status.value)}`}
+                style={{
+                  cursor: 'pointer',
+                  border: 'none',
+                  whiteSpace: 'nowrap',
+                  flex: '0 0 auto',
+                  fontSize: '0.75rem',
+                  padding: '0.25rem 0.5rem',
+                  opacity: statusFilter === status.value ? 1 : 0.6,
+                  boxShadow: statusFilter === status.value ? '0 0 0 2px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.3)' : 'none',
+                  transform: statusFilter === status.value ? 'scale(1.05)' : 'scale(1)',
+                  transition: 'all 0.2s ease',
+                }}
+              >
+                {statusFilter === status.value ? '✓ ' : ''}{status.label}
+              </button>
+            ))}
+          </div>
+        </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <div className="view-toggle">
-            {VIEWS.map((v) => {
-              const viewGrouped = useMemo(() => groupSessions(displayedSessions, v.key), [displayedSessions, v.key]);
-              const viewCount = Object.values(viewGrouped).reduce((sum, g) => sum + g.sessions.length, 0);
-              return (
-                <button
-                  key={v.key}
-                  className={view === v.key ? 'active' : ''}
-                  onClick={() => setView(v.key)}
-                >
-                  {v.label} <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>({viewCount})</span>
-                </button>
-              );
-            })}
+            {VIEWS.map((v) => (
+              <button
+                key={v.key}
+                className={view === v.key ? 'active' : ''}
+                onClick={() => setView(v.key)}
+              >
+                {v.label}
+              </button>
+            ))}
           </div>
           <button className="btn-primary btn-new-session" onClick={openModal}>
             + Nova Sessão
@@ -296,7 +551,7 @@ const Sessions = () => {
                 </div>
                 <div className="session-list">
                   {grouped[key].sessions.map((session) => (
-                    <SessionCard key={session.id} session={session} users={users} />
+                    <SessionCard key={session.id} session={session} users={users} onEdit={setSelectedSession} />
                   ))}
                 </div>
               </div>
@@ -418,17 +673,6 @@ const Sessions = () => {
                 </div>
               </div>
 
-              <div className="form-checkbox-group">
-                <input
-                  id="signalPaid"
-                  name="signalPaid"
-                  type="checkbox"
-                  checked={form.signalPaid}
-                  onChange={handleChange}
-                />
-                <label htmlFor="signalPaid">Sinal pago</label>
-              </div>
-
               {error && <div className="error-msg"><span>⚠</span> {error}</div>}
               {success && <div className="success-msg"><span>✓</span> {success}</div>}
 
@@ -443,6 +687,15 @@ const Sessions = () => {
             </form>
           </div>
         </div>
+      )}
+
+      {selectedSession && (
+        <SessionDetailModal
+          session={selectedSession}
+          users={users}
+          onClose={() => setSelectedSession(null)}
+          onSave={handleSaveSession}
+        />
       )}
     </div>
   );

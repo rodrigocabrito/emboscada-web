@@ -135,24 +135,36 @@ export const getSessions = async () => {
 
 export const addSession = async (data) => {
   const uuid = crypto.randomUUID();
+  const sessionDate = new Date(data.sessionDate);
+
+  // New sessions always start with signalPaid: false and status: pending_payment
   await setDoc(doc(db, 'sessions', uuid), {
     uuid,
     spoc: data.spoc,
     numberOfPlayers: data.numberOfPlayers,
-    sessionDate: Timestamp.fromDate(new Date(data.sessionDate)),
-    signalPaid: data.signalPaid,
+    sessionDate: Timestamp.fromDate(sessionDate),
+    status: 'pending_payment',
     additionalComments: data.additionalComments,
+    monitors: data.monitors || [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });
   return uuid;
 };
 
-export const updateSession = async (id, data) => {
+export const updateSessionStatus = async (id, status) => {
   await updateDoc(doc(db, 'sessions', id), {
-    ...data,
+    status: status,
     updatedAt: serverTimestamp(),
   });
+};
+
+export const updateSession = async (id, data) => {
+  const updateData = { ...data, updatedAt: serverTimestamp() };
+  if (data.sessionDate) {
+    updateData.sessionDate = Timestamp.fromDate(new Date(data.sessionDate));
+  }
+  await updateDoc(doc(db, 'sessions', id), updateData);
 };
 
 export const deleteSession = async (id) => {
