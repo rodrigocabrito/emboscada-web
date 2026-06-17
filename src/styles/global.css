@@ -803,13 +803,7 @@ body {
     grid-template-columns: 1fr;
   }
 
-  .session-card {
-    grid-template-columns: auto 1fr;
-  }
 
-  .session-card .badge {
-    display: none;
-  }
 
   .form-row {
     grid-template-columns: 1fr;
@@ -946,97 +940,6 @@ body {
   color: #fff;
 }
 
-.session-group {
-  margin-bottom: 1.75rem;
-}
-
-.session-group-label {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.1em;
-  color: var(--text-muted);
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 0.75rem;
-}
-
-.session-list {
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-}
-
-.session-card {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 1rem 1.25rem;
-  display: grid;
-  grid-template-columns: 52px 1fr auto;
-  align-items: center;
-  gap: 1rem;
-  box-shadow: var(--shadow-sm);
-  transition: box-shadow var(--transition);
-}
-
-.session-card:hover {
-  box-shadow: var(--shadow);
-}
-
-.session-time {
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--green-700);
-  font-variant-numeric: tabular-nums;
-}
-
-.session-info {
-  display: flex;
-  flex-direction: column;
-  gap: 0.15rem;
-  min-width: 0;
-}
-
-.session-spoc {
-  font-weight: 600;
-  font-size: 0.9rem;
-  color: var(--text);
-}
-
-.session-meta {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-}
-
-/* ─── Monitors ─────────────────────────────────────────────────────────────── */
-.monitors-avatars {
-  display: flex;
-  gap: -8px;
-  align-items: center;
-}
-
-.monitor-avatar {
-  min-width: 28px;
-  min-height: 28px;
-  padding: 0 0.5rem;
-  border-radius: 20px;
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 700;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  border: 2px solid var(--surface);
-  margin-left: -8px;
-  flex-shrink: 0;
-  white-space: nowrap;
-}
-
-.monitor-avatar:first-child {
-  margin-left: 0;
-}
-
 .monitors-checklist {
   display: flex;
   flex-direction: column;
@@ -1070,47 +973,6 @@ body {
   margin: 0;
 }
 
-.warn-tooltip {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  margin-left: 0.35rem;
-  color: #d97706;
-  font-size: 0.78rem;
-  cursor: default;
-  vertical-align: middle;
-}
-
-.warn-tooltip::after {
-  content: attr(data-tip);
-  position: absolute;
-  bottom: calc(100% + 7px);
-  left: 50%;
-  transform: translateX(-50%);
-  background: #1c1c1c;
-  color: #fff;
-  font-size: 0.72rem;
-  font-weight: 400;
-  padding: 0.35rem 0.65rem;
-  border-radius: var(--radius-sm);
-  white-space: nowrap;
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity 0.15s ease;
-  z-index: 10;
-}
-
-.warn-tooltip:hover::after {
-  opacity: 1;
-}
-
-.session-comment {
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
 
 .badge {
   font-size: 0.7rem;
@@ -1438,19 +1300,22 @@ body {
 }
 
 .grid-header button {
-  padding: 0.5rem 1rem;
+  padding: 0.4rem 0.9rem;
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
-  color: var(--text);
+  color: var(--text-muted);
   cursor: pointer;
-  font-size: 0.9rem;
-  transition: all var(--transition);
+  font-size: 0.85rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+  transition: background var(--transition), color var(--transition);
 }
 
 .grid-header button:hover {
-  background: var(--bg-hover);
-  border-color: var(--text);
+  background: var(--green-700);
+  color: #fff;
+  border-color: var(--green-700);
 }
 
 /* ─── Day View ─── */
@@ -1779,103 +1644,6 @@ body {
 
 /* ─── Month View ─── */
 
-.grid-view-month {
-  max-width: 100%;
-  overflow-x: auto;
-}
-
-.grid-weekdays {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
-}
-
-.grid-weekday-label {
-  text-align: center;
-  font-weight: 700;
-  color: var(--text-muted);
-  font-size: 0.9rem;
-  padding: 0.5rem;
-}
-
-.grid-month {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.5rem;
-}
-
-.grid-month-day {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  border-radius: var(--radius-sm);
-  padding: 0.5rem;
-  min-height: 120px;
-  display: flex;
-  flex-direction: column;
-  gap: 0.5rem;
-  overflow: hidden;
-}
-
-.grid-month-day.other-month {
-  background: var(--bg);
-  opacity: 0.5;
-}
-
-.grid-month-day-header {
-  font-weight: 700;
-  color: var(--primary);
-  font-size: 0.95rem;
-  padding-bottom: 0.4rem;
-  border-bottom: 1px solid var(--border);
-}
-
-.grid-month-day-sessions {
-  display: flex;
-  flex-direction: column;
-  gap: 0.3rem;
-  font-size: 0.7rem;
-  flex: 1;
-  overflow-y: auto;
-}
-
-.grid-month-session {
-  background: linear-gradient(135deg, var(--primary), rgba(74, 144, 226, 0.8));
-  color: #fff;
-  padding: 0.3rem 0.4rem;
-  border-radius: 3px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  display: flex;
-  flex-direction: column;
-  gap: 0.1rem;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.grid-month-session:hover {
-  transform: scale(1.05);
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
-}
-
-.grid-month-time {
-  font-weight: 700;
-  opacity: 0.9;
-}
-
-.grid-month-spoc {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-}
-
-.grid-month-more {
-  color: var(--primary);
-  font-size: 0.65rem;
-  font-weight: 600;
-  padding: 0.2rem 0;
-}
 
 /* ─────────────────────────────────────────── RESPONSIVE ─────────────────────────────────────────── */
 
@@ -1896,21 +1664,14 @@ body {
   }
 
   .grid-header button {
-    font-size: 0.8rem;
-    padding: 0.4rem 0.8rem;
+    font-size: 0.78rem;
+    padding: 0.35rem 0.7rem;
   }
 
   .grid-week {
     grid-template-columns: repeat(3, 1fr);
   }
 
-  .grid-month {
-    grid-template-columns: repeat(4, 1fr);
-  }
-
-  .grid-month-day {
-    min-height: 80px;
-  }
 
   .grid-session-card {
     max-width: 150px;

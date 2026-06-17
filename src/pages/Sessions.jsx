@@ -1,11 +1,10 @@
-import { useState, useEffect, useMemo, useCallback } from 'react';
-import { addSession, getSessions, getUsers, updateSessionStatus, updateSession } from '../firebase/firestore';
+import { useState, useEffect, useCallback } from 'react';
+import { addSession, getSessions, getUsers, updateSession } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
 
 const VIEWS = [
   { key: 'day', label: 'Dia' },
   { key: 'week', label: 'Semana' },
-  { key: 'month', label: 'Mês' },
 ];
 
 const EMPTY_FORM = {
@@ -44,35 +43,6 @@ const formatTime = (session) => {
   return d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 };
 
-const groupSessions = (sessions, view) => {
-  const groups = {};
-  sessions.forEach((s) => {
-    const d = toDate(s);
-    let key, label;
-
-    if (view === 'day') {
-      key = d.toISOString().split('T')[0];
-      label = d.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
-    } else if (view === 'week') {
-      const day = d.getDay();
-      const diff = d.getDate() - day + (day === 0 ? -6 : 1);
-      const monday = new Date(d);
-      monday.setDate(diff);
-      monday.setHours(0, 0, 0, 0);
-      const sunday = new Date(monday);
-      sunday.setDate(monday.getDate() + 6);
-      key = monday.toISOString().split('T')[0];
-      label = `${monday.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })} – ${sunday.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' })}`;
-    } else {
-      key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
-      label = d.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' });
-    }
-
-    if (!groups[key]) groups[key] = { label, sessions: [] };
-    groups[key].sessions.push(s);
-  });
-  return groups;
-};
 
 const getStatusLabel = (status) => {
   switch (status) {
@@ -106,52 +76,6 @@ const getStatusBadgeClass = (status) => {
   }
 };
 
-const SessionCard = ({ session, users, onEdit }) => {
-  const time = formatTime(session);
-
-  const monitors = (session.monitors || [])
-    .map((uid) => users.find((u) => u.uuid === uid))
-    .filter(Boolean);
-
-  return (
-    <div className="session-card" onClick={() => onEdit(session)} style={{ cursor: 'pointer' }}>
-      <span className="session-time">{time}</span>
-      <div className="session-info">
-        <span className="session-spoc">{session.spoc}</span>
-        <span className="session-meta">{session.numberOfPlayers} jogadores</span>
-        {session.additionalComments && (
-          <span className="session-comment">{session.additionalComments}</span>
-        )}
-      </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-        {monitors.length > 0 && (
-          <div className="monitors-avatars">
-            {monitors.map((m) => {
-              const displayName = m.nickname || `${m.firstName} ${m.lastName}`;
-              const color = getUserColor(m.uuid);
-              return (
-                <div
-                  key={m.uuid}
-                  className="monitor-avatar"
-                  style={{ backgroundColor: color }}
-                  title={`${m.firstName} ${m.lastName}`}
-                >
-                  {displayName}
-                </div>
-              );
-            })}
-          </div>
-        )}
-        {session.numberOfPlayers < 10 && (
-          <span className="warn-tooltip" data-tip="Esta sessão tem menos de 10 jogadores">⚠</span>
-        )}
-        <span className={`badge ${getStatusBadgeClass(session.status)}`}>
-          {getStatusLabel(session.status)}
-        </span>
-      </div>
-    </div>
-  );
-};
 
 const GridSessionCard = ({ session, users, onEdit }) => {
   const time = formatTime(session);
@@ -404,71 +328,6 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
     );
   }
 
-  if (view === 'month') {
-    const monthStart = new Date(currentDate);
-    monthStart.setDate(1);
-    monthStart.setHours(0, 0, 0, 0);
-
-    const monthEnd = new Date(monthStart);
-    monthEnd.setMonth(monthEnd.getMonth() + 1);
-
-    const firstDayOfWeek = monthStart.getDay();
-    const gridStart = new Date(monthStart);
-    gridStart.setDate(gridStart.getDate() - (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1));
-
-    const days = Array.from({ length: 42 }, (_, i) => {
-      const d = new Date(gridStart);
-      d.setDate(d.getDate() + i);
-      return d;
-    });
-
-    return (
-      <div className="grid-view grid-view-month">
-        <div className="grid-header">
-          <button onClick={() => onDateChange(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}>← Mês Anterior</button>
-          <h3>{currentDate.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</h3>
-          <button onClick={() => onDateChange(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}>Próximo Mês →</button>
-        </div>
-        <div className="grid-weekdays">
-          {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map((d) => (
-            <div key={d} className="grid-weekday-label">{d}</div>
-          ))}
-        </div>
-        <div className="grid-month">
-          {days.map((day, idx) => {
-            const dayEnd = new Date(day);
-            dayEnd.setDate(dayEnd.getDate() + 1);
-
-            const daySessions = sessions
-              .filter((s) => {
-                const sd = toDate(s);
-                return sd >= day && sd < dayEnd;
-              })
-              .sort((a, b) => toDate(a).getTime() - toDate(b).getTime());
-
-            const isCurrentMonth = day.getMonth() === monthStart.getMonth();
-
-            return (
-              <div key={idx} className={`grid-month-day ${!isCurrentMonth ? 'other-month' : ''}`}>
-                <div className="grid-month-day-header">{day.getDate()}</div>
-                <div className="grid-month-day-sessions">
-                  {daySessions.slice(0, 3).map((s) => (
-                    <div key={s.id} className="grid-month-session" onClick={() => onEdit(s)}>
-                      <span className="grid-month-time">{formatTime(s)}</span>
-                      <span className="grid-month-spoc">{s.spoc.substring(0, 8)}</span>
-                    </div>
-                  ))}
-                  {daySessions.length > 3 && (
-                    <div className="grid-month-more">+{daySessions.length - 3}</div>
-                  )}
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
-    );
-  }
 };
 
 const SessionDetailModal = ({ session, users, onClose, onSave }) => {
@@ -678,19 +537,15 @@ const SessionDetailModal = ({ session, users, onClose, onSave }) => {
 };
 
 const Sessions = () => {
-  const [viewMode, setViewMode] = useState('grid');
   const [view, setView] = useState('day');
   const [sessions, setSessions] = useState([]);
   const [users, setUsers] = useState([]);
-  const [showPast, setShowPast] = useState(false);
-  const [sortAsc, setSortAsc] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [monitorSearch, setMonitorSearch] = useState('');
-  const [displayCount, setDisplayCount] = useState(30);
   const [selectedSession, setSelectedSession] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
@@ -737,35 +592,6 @@ const Sessions = () => {
     document.addEventListener('keydown', onKey);
     return () => document.removeEventListener('keydown', onKey);
   }, [modalOpen, closeModal]);
-
-  const now = new Date();
-  now.setHours(0, 0, 0, 0);
-
-  const filteredSessions = useMemo(() => {
-    const filtered = sessions.filter((s) => {
-      const sessionDate = toDate(s);
-      const isPast = sessionDate < now;
-      const pastFilter = showPast || !isPast;
-      return pastFilter;
-    });
-
-    const sorted = [...filtered].sort((a, b) => {
-      const dateA = toDate(a).getTime();
-      const dateB = toDate(b).getTime();
-      return sortAsc ? dateA - dateB : dateB - dateA;
-    });
-
-    return sorted;
-  }, [sessions, showPast, sortAsc]);
-
-  const displayedSessions = useMemo(() => filteredSessions.slice(0, displayCount), [filteredSessions, displayCount]);
-  const grouped = useMemo(() => groupSessions(displayedSessions, view), [displayedSessions, view]);
-  const sortedKeys = useMemo(() => {
-    const keys = Object.keys(grouped);
-    return sortAsc ? keys.sort() : keys.sort().reverse();
-  }, [grouped, sortAsc]);
-
-  const hasMoreSessions = filteredSessions.length > displayCount;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -814,12 +640,6 @@ const Sessions = () => {
     }
   };
 
-  const countLabel = sessions.length === 0
-    ? 'Sem sessões'
-    : sessions.length === 1
-    ? '1 sessão'
-    : `${sessions.length} sessões`;
-
   return (
     <div className="page">
       <div className="page-header">
@@ -829,23 +649,7 @@ const Sessions = () => {
 
       <div className="sessions-toolbar">
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <button
-            className="btn-primary"
-            onClick={() => setShowPast(!showPast)}
-            style={{ padding: '0.5rem 1.1rem', fontSize: '0.85rem', marginTop: 0, width: 'fit-content', opacity: showPast ? 1 : 0.6 }}
-          >
-            {showPast ? '✓ Sessões Passadas' : '○ Sessões Passadas'}
-          </button>
-          <button
-            className="btn-primary"
-            onClick={() => setSortAsc(!sortAsc)}
-            style={{ padding: '0.5rem 1.1rem', fontSize: '0.85rem', marginTop: 0, width: 'fit-content' }}
-          >
-            {sortAsc ? '↑ Data' : '↓ Data'}
-          </button>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
-          <div className="view-toggle" style={{ visibility: viewMode === 'grid' ? 'visible' : 'hidden' }}>
+          <div className="view-toggle">
             {VIEWS.map((v) => (
               <button
                 key={v.key}
@@ -855,20 +659,6 @@ const Sessions = () => {
                 {v.label}
               </button>
             ))}
-          </div>
-          <div className="view-toggle">
-            <button
-              className={viewMode === 'grid' ? 'active' : ''}
-              onClick={() => setViewMode('grid')}
-            >
-              Calendário
-            </button>
-            <button
-              className={viewMode === 'list' ? 'active' : ''}
-              onClick={() => setViewMode('list')}
-            >
-              Lista
-            </button>
           </div>
           <button className="btn-primary btn-new-session" onClick={openModal}>
             + Nova Sessão
@@ -880,48 +670,15 @@ const Sessions = () => {
         <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '2rem' }}>
           Nenhuma sessão criada ainda.
         </p>
-      ) : filteredSessions.length === 0 ? (
-        <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '2rem' }}>
-          {showPast ? 'Nenhuma sessão passada.' : 'Nenhuma sessão futura.'}
-        </p>
-      ) : viewMode === 'grid' ? (
+      ) : (
         <GridView
-          sessions={filteredSessions}
+          sessions={sessions}
           users={users}
           view={view}
           currentDate={currentDate}
           onEdit={setSelectedSession}
           onDateChange={setCurrentDate}
         />
-      ) : (
-        <>
-          {sortedKeys.map((key) => {
-            const count = grouped[key].sessions.length;
-            return (
-              <div key={key} className="session-group">
-                <div className="session-group-label">
-                  {grouped[key].label} <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>({count})</span>
-                </div>
-                <div className="session-list">
-                  {grouped[key].sessions.map((session) => (
-                    <SessionCard key={session.id} session={session} users={users} onEdit={setSelectedSession} />
-                  ))}
-                </div>
-              </div>
-            );
-          })}
-          {hasMoreSessions && (
-            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '2rem', paddingBottom: '2rem' }}>
-              <button
-                className="btn-primary"
-                onClick={() => setDisplayCount((prev) => prev + 30)}
-                style={{ width: 'fit-content', padding: '0.75rem 1.5rem' }}
-              >
-                Mostrar mais
-              </button>
-            </div>
-          )}
-        </>
       )}
 
       {/* Modal */}
