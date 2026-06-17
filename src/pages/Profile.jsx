@@ -12,6 +12,7 @@ const Profile = () => {
   const [infoForm, setInfoForm] = useState({
     firstName: profile?.firstName ?? '',
     lastName: profile?.lastName ?? '',
+    nickname: profile?.nickname ?? '',
   });
 
   useEffect(() => {
@@ -19,6 +20,7 @@ const Profile = () => {
       setInfoForm({
         firstName: profile.firstName ?? '',
         lastName: profile.lastName ?? '',
+        nickname: profile.nickname ?? '',
       });
     }
   }, [profile]);
@@ -98,6 +100,7 @@ const Profile = () => {
         <div className="card profile-avatar-section">
           <div className="profile-avatar-lg">{initials}</div>
           <p className="profile-name">{profile?.firstName} {profile?.lastName}</p>
+          {profile?.nickname && <p className="profile-nickname">{profile.nickname}</p>}
           <p className="profile-role">{profile?.role === 'admin' ? 'Administrador' : 'Monitor'}</p>
         </div>
 
@@ -130,6 +133,18 @@ const Profile = () => {
                   />
                 </div>
               </div>
+              <div className="form-group">
+                <label htmlFor="nickname">Alcunha</label>
+                <input
+                  id="nickname"
+                  name="nickname"
+                  type="text"
+                  value={infoForm.nickname}
+                  onChange={handleInfoChange}
+                  placeholder="Ex: João da Silva"
+                />
+              </div>
+
               <div className="form-group">
                 <label>Email</label>
                 <input

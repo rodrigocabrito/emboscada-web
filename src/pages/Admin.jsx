@@ -10,7 +10,7 @@ const ROLES = [
 
 const ROLE_LABEL = { admin: 'Administrador', monitor: 'Monitor' };
 
-const EMPTY_FORM = { email: '', firstName: '', lastName: '', role: 'monitor' };
+const EMPTY_FORM = { email: '', firstName: '', lastName: '', nickname: '', role: 'monitor' };
 
 const Admin = () => {
   const { user, profile } = useAuth();
@@ -234,6 +234,18 @@ const Admin = () => {
                     placeholder="Silva"
                   />
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="nickname">Alcunha</label>
+                <input
+                  id="nickname"
+                  name="nickname"
+                  type="text"
+                  value={form.nickname}
+                  onChange={handleChange}
+                  placeholder="Ex: Johnny"
+                />
               </div>
 
               <div className="form-group">
