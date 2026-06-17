@@ -23,7 +23,7 @@ const Navbar = () => {
       <div className={`navbar-menu ${menuOpen ? 'open' : ''}`}>
         <ul className="navbar-links">
           <li><Link to="/dashboard" className={isActive('/dashboard')} onClick={close}>Início</Link></li>
-          <li><Link to="/sessoes" className={isActive('/sessoes')} onClick={close}>Sessões</Link></li>
+          <li><Link to="/sessions" className={isActive('/sessions')} onClick={close}>Sessões</Link></li>
           {isAdmin && (
             <li><Link to="/admin" className={isActive('/admin')} onClick={close}>Admin</Link></li>
           )}

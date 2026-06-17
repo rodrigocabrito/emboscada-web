@@ -37,7 +37,7 @@ const AppContent = () => {
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<Login />} />
         <Route
-          path="/sessoes"
+          path="/sessions"
           element={
             <ProtectedRoute>
               <Sessions />
