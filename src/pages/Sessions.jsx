@@ -214,48 +214,61 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
       })
       .sort((a, b) => toDate(a).getTime() - toDate(b).getTime());
 
-    // Calculate display time slots (30-minute intervals) based on sessions
     let startHour = 8;
-    let endHour = 18;
+    let endHour = 20;
 
     if (daySessions.length > 0) {
-      const firstSessionTime = toDate(daySessions[0]);
-      const lastSessionTime = toDate(daySessions[daySessions.length - 1]);
-      const firstSessionHour = firstSessionTime.getHours();
-      const lastSessionHour = lastSessionTime.getHours();
-      // Start 1 hour before first session, end 1 hour after last session (which lasts 2 hours)
+      const firstSessionHour = toDate(daySessions[0]).getHours();
+      const lastSessionHour = toDate(daySessions[daySessions.length - 1]).getHours();
       startHour = Math.max(0, firstSessionHour - 1);
-      endHour = Math.min(24, lastSessionHour + 2 + 1);
+      endHour = Math.min(24, lastSessionHour + 3);
     }
 
-    // Create 30-minute time slots
     const timeSlots = [];
     for (let hour = startHour; hour < endHour; hour++) {
       timeSlots.push({ hour, minute: 0 });
       timeSlots.push({ hour, minute: 30 });
     }
 
-    const slotDuration = 2 * 60; // 2 hours in minutes
+    const ROW_HEIGHT = 30; // px — must match grid-auto-rows in CSS
+    const SESSION_SLOTS = 4; // 2 hours = 4 × 30-min slots
 
-    // Find sessions that start at each slot and calculate overlaps
-    const sessionsByStartSlot = {};
-    timeSlots.forEach((slot, idx) => {
-      sessionsByStartSlot[idx] = [];
+    // Map each session to its start slot index
+    const sessionsWithSlot = daySessions
+      .map((session) => {
+        const sd = toDate(session);
+        const startSlotIdx = timeSlots.findIndex(
+          (slot) => slot.hour === sd.getHours() && slot.minute === sd.getMinutes()
+        );
+        return { session, startSlotIdx };
+      })
+      .filter((s) => s.startSlotIdx !== -1);
+
+    // Greedy column assignment: assign each session the lowest column not
+    // occupied by any overlapping session (sessions last SESSION_SLOTS rows)
+    const columnAssignment = {};
+    const columnFreeAt = []; // columnFreeAt[col] = first slot index where col is free again
+
+    sessionsWithSlot.forEach(({ session, startSlotIdx }) => {
+      let col = 0;
+      while (col < 10 && columnFreeAt[col] !== undefined && columnFreeAt[col] > startSlotIdx) {
+        col++;
+      }
+      columnAssignment[session.id] = col;
+      columnFreeAt[col] = startSlotIdx + SESSION_SLOTS;
     });
 
-    daySessions.forEach((session) => {
-      const sd = toDate(session);
-      const sessionHour = sd.getHours();
-      const sessionMinute = sd.getMinutes();
-
-      // Find the slot this session starts in
-      const startSlotIdx = timeSlots.findIndex(
-        (slot) => slot.hour === sessionHour && slot.minute === sessionMinute
-      );
-
-      if (startSlotIdx !== -1) {
-        sessionsByStartSlot[startSlotIdx].push(session);
-      }
+    // For each session, total visible columns = max column among all overlapping sessions + 1
+    const totalColumnsFor = {};
+    sessionsWithSlot.forEach(({ session, startSlotIdx }) => {
+      const end = startSlotIdx + SESSION_SLOTS;
+      let maxCol = columnAssignment[session.id];
+      sessionsWithSlot.forEach(({ session: other, startSlotIdx: oStart }) => {
+        if (other.id !== session.id && startSlotIdx < oStart + SESSION_SLOTS && end > oStart) {
+          maxCol = Math.max(maxCol, columnAssignment[other.id]);
+        }
+      });
+      totalColumnsFor[session.id] = Math.min(maxCol + 1, 10);
     });
 
     return (
@@ -271,34 +284,42 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
           </div>
         ) : (
           <div className="grid-timeline-30min">
-            {timeSlots.map((slot, idx) => {
-              const sessionsStartingHere = sessionsByStartSlot[idx];
-              const numOverlappingSessions = Math.min(sessionsStartingHere.length, 10);
-
-              return (
-                <div key={idx} className="grid-time-slot">
-                  <div className="grid-slot-label" style={{ gridRow: `${idx + 1} / span 1` }}>
-                    {slot.hour.toString().padStart(2, '0')}:{slot.minute.toString().padStart(2, '0')}
+            {timeSlots.map((slot, idx) => (
+              <div key={idx} className="grid-slot-label" style={{ gridRow: `${idx + 1} / span 1` }}>
+                {slot.hour.toString().padStart(2, '0')}:{slot.minute.toString().padStart(2, '0')}
+              </div>
+            ))}
+            <div
+              className="grid-sessions-container"
+              style={{
+                gridColumn: 2,
+                gridRow: `1 / span ${timeSlots.length + SESSION_SLOTS}`,
+                position: 'relative',
+                height: timeSlots.length * ROW_HEIGHT,
+              }}
+            >
+              {sessionsWithSlot.map(({ session, startSlotIdx }) => {
+                const col = columnAssignment[session.id];
+                const totalCols = totalColumnsFor[session.id];
+                return (
+                  <div
+                    key={session.id}
+                    className="grid-session-card-wrapper"
+                    style={{
+                      position: 'absolute',
+                      top: startSlotIdx * ROW_HEIGHT,
+                      height: SESSION_SLOTS * ROW_HEIGHT,
+                      left: `${(col / totalCols) * 100}%`,
+                      width: `${(1 / totalCols) * 100}%`,
+                      padding: '0 2px',
+                      boxSizing: 'border-box',
+                    }}
+                  >
+                    <GridSessionCard session={session} users={users} onEdit={onEdit} />
                   </div>
-                  {sessionsStartingHere.length > 0 && (
-                    <div
-                      className="grid-session-row"
-                      style={{ gridRow: `${idx + 1} / span 4`, '--overlap-count': numOverlappingSessions }}
-                    >
-                      {sessionsStartingHere.slice(0, 10).map((session, colIdx) => (
-                        <div
-                          key={session.id}
-                          className="grid-session-card-wrapper"
-                          style={{ '--column-index': colIdx, '--total-columns': numOverlappingSessions }}
-                        >
-                          <GridSessionCard session={session} users={users} onEdit={onEdit} />
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
+            </div>
           </div>
         )}
       </div>

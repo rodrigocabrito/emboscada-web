@@ -1493,6 +1493,10 @@ body {
   height: 30px;
 }
 
+.grid-sessions-container {
+  overflow: visible;
+}
+
 .grid-session-row {
   grid-column: 2;
   display: flex;
