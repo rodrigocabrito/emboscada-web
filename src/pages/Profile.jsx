@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateUserProfile, changePassword, logoutUser } from '../firebase/auth';
+import { getUserColor } from '../utils/avatarColors';
 
 const Profile = () => {
   const { user, profile, refreshProfile } = useAuth();
@@ -98,7 +99,9 @@ const Profile = () => {
       <div className="profile-grid">
         {/* Avatar column */}
         <div className="card profile-avatar-section">
-          <div className="profile-avatar-lg">{initials}</div>
+          <div className="profile-avatar-lg" style={{ backgroundColor: getUserColor(user.uid) }}>
+            {initials}
+          </div>
           <p className="profile-name">{profile?.firstName} {profile?.lastName}</p>
           {profile?.nickname && <p className="profile-nickname">{profile.nickname}</p>}
           <p className="profile-role">{profile?.role === 'admin' ? 'Administrador' : 'Monitor'}</p>

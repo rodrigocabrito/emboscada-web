@@ -343,7 +343,6 @@ body {
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  background: var(--green-500);
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
@@ -916,6 +915,65 @@ body {
   color: var(--text-muted);
 }
 
+/* ─── Monitors ─────────────────────────────────────────────────────────────── */
+.monitors-avatars {
+  display: flex;
+  gap: -8px;
+  align-items: center;
+}
+
+.monitor-avatar {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: 2px solid var(--surface);
+  margin-left: -8px;
+  flex-shrink: 0;
+}
+
+.monitor-avatar:first-child {
+  margin-left: 0;
+}
+
+.monitors-checklist {
+  display: flex;
+  flex-direction: column;
+  gap: 0.6rem;
+  padding: 0.75rem;
+  background: var(--green-50);
+  border-radius: var(--radius-sm);
+  border: 1px solid var(--green-100);
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.form-checkbox-item {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.form-checkbox-item input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: var(--green-700);
+  flex-shrink: 0;
+}
+
+.form-checkbox-item label {
+  font-size: 0.9rem;
+  color: var(--text);
+  cursor: pointer;
+  margin: 0;
+}
+
 .warn-tooltip {
   position: relative;
   display: inline-flex;
@@ -1052,7 +1110,6 @@ body {
   width: 96px;
   height: 96px;
   border-radius: 50%;
-  background: var(--green-500);
   color: #fff;
   font-size: 1.9rem;
   font-weight: 700;

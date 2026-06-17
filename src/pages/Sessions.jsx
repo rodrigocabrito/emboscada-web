@@ -1,5 +1,6 @@
 import { useState, useEffect, useMemo, useCallback } from 'react';
-import { addSession, getSessions } from '../firebase/firestore';
+import { addSession, getSessions, getUsers } from '../firebase/firestore';
+import { getUserColor } from '../utils/avatarColors';
 
 const VIEWS = [
   { key: 'day', label: 'Dia' },
@@ -13,6 +14,7 @@ const EMPTY_FORM = {
   sessionDate: '',
   signalPaid: false,
   additionalComments: '',
+  monitors: [],
 };
 
 const toDate = (ts) => {
@@ -51,9 +53,13 @@ const groupSessions = (sessions, view) => {
   return groups;
 };
 
-const SessionCard = ({ session }) => {
+const SessionCard = ({ session, users }) => {
   const date = toDate(session.sessionDate);
   const time = date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+
+  const monitors = (session.monitors || [])
+    .map((uid) => users.find((u) => u.uuid === uid))
+    .filter(Boolean);
 
   return (
     <div className="session-card">
@@ -65,7 +71,25 @@ const SessionCard = ({ session }) => {
           <span className="session-comment">{session.additionalComments}</span>
         )}
       </div>
-      <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {monitors.length > 0 && (
+          <div className="monitors-avatars">
+            {monitors.map((m) => {
+              const initials = `${m.firstName?.[0] ?? ''}${m.lastName?.[0] ?? ''}`.toUpperCase();
+              const color = getUserColor(m.uuid);
+              return (
+                <div
+                  key={m.uuid}
+                  className="monitor-avatar"
+                  style={{ backgroundColor: color }}
+                  title={`${m.firstName} ${m.lastName}`}
+                >
+                  {initials}
+                </div>
+              );
+            })}
+          </div>
+        )}
         {session.numberOfPlayers < 10 && (
           <span className="warn-tooltip" data-tip="Esta sessão tem menos de 10 jogadores">⚠</span>
         )}
@@ -80,6 +104,7 @@ const SessionCard = ({ session }) => {
 const Sessions = () => {
   const [view, setView] = useState('day');
   const [sessions, setSessions] = useState([]);
+  const [users, setUsers] = useState([]);
   const [showPast, setShowPast] = useState(false);
   const [sortAsc, setSortAsc] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
@@ -87,6 +112,7 @@ const Sessions = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
+  const [monitorSearch, setMonitorSearch] = useState('');
 
   const fetchSessions = async () => {
     try {
@@ -97,12 +123,25 @@ const Sessions = () => {
     }
   };
 
-  useEffect(() => { fetchSessions(); }, []);
+  const fetchUsers = async () => {
+    try {
+      const data = await getUsers();
+      setUsers(data);
+    } catch {
+      // silently fail on user fetch
+    }
+  };
+
+  useEffect(() => {
+    fetchSessions();
+    fetchUsers();
+  }, []);
 
   const openModal = () => {
     setForm(EMPTY_FORM);
     setError('');
     setSuccess('');
+    setMonitorSearch('');
     setModalOpen(true);
   };
 
@@ -146,7 +185,16 @@ const Sessions = () => {
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
-    setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    if (name === 'monitors') {
+      setForm((prev) => ({
+        ...prev,
+        monitors: checked
+          ? [...prev.monitors, value]
+          : prev.monitors.filter((uid) => uid !== value),
+      }));
+    } else {
+      setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+    }
   };
 
   const handleSubmit = async (e) => {
@@ -161,6 +209,7 @@ const Sessions = () => {
         sessionDate: form.sessionDate,
         signalPaid: form.signalPaid,
         additionalComments: form.additionalComments,
+        monitors: form.monitors,
       });
       setForm(EMPTY_FORM);
       await fetchSessions();
@@ -243,7 +292,7 @@ const Sessions = () => {
               </div>
               <div className="session-list">
                 {grouped[key].sessions.map((session) => (
-                  <SessionCard key={session.id} session={session} />
+                  <SessionCard key={session.id} session={session} users={users} />
                 ))}
               </div>
             </div>
@@ -312,6 +361,45 @@ const Sessions = () => {
                   className="form-textarea"
                   placeholder="Notas, requisitos especiais..."
                 />
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="monitorSearch">Monitores</label>
+                <input
+                  id="monitorSearch"
+                  type="text"
+                  value={monitorSearch}
+                  onChange={(e) => setMonitorSearch(e.target.value)}
+                  placeholder="Pesquisa por nome ou alcunha..."
+                  style={{ marginBottom: '0.5rem' }}
+                />
+                <div className="monitors-checklist">
+                  {users
+                    .filter((user) => {
+                      const searchLower = monitorSearch.toLowerCase();
+                      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
+                      const nickname = (user.nickname || '').toLowerCase();
+                      return fullName.includes(searchLower) || nickname.includes(searchLower);
+                    })
+                    .map((user) => {
+                      const nickname = user.nickname ? `(${user.nickname}) ` : '';
+                      return (
+                        <div key={user.uuid} className="form-checkbox-item">
+                          <input
+                            id={`monitor-${user.uuid}`}
+                            name="monitors"
+                            type="checkbox"
+                            value={user.uuid}
+                            checked={form.monitors.includes(user.uuid)}
+                            onChange={handleChange}
+                          />
+                          <label htmlFor={`monitor-${user.uuid}`}>
+                            {nickname}{user.firstName} {user.lastName}
+                          </label>
+                        </div>
+                      );
+                    })}
+                </div>
               </div>
 
               <div className="form-checkbox-group">

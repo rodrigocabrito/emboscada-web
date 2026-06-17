@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import { getUserColor } from '../utils/avatarColors';
 
 const Navbar = () => {
-  const { profile, isAdmin } = useAuth();
+  const { user, profile, isAdmin } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
 
@@ -32,7 +33,13 @@ const Navbar = () => {
 
       {/* Right side: avatar + hamburger */}
       <div className="navbar-right">
-        <Link to="/perfil" className={`nav-avatar ${isActive('/perfil')}`} onClick={close} title="Perfil">
+        <Link
+          to="/perfil"
+          className={`nav-avatar ${isActive('/perfil')}`}
+          onClick={close}
+          title="Perfil"
+          style={!profile?.photoURL ? { backgroundColor: getUserColor(user.uid) } : {}}
+        >
           {profile?.photoURL
             ? <img src={profile.photoURL} alt="Avatar" />
             : <span>{initials}</span>
