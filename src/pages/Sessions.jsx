@@ -77,7 +77,26 @@ const getStatusBadgeClass = (status) => {
 };
 
 
-const GridSessionCard = ({ session, users, onEdit }) => {
+const STATUS_LEGEND = [
+  { label: 'Feita',            color: '#15803d', bg: '#dcfce7' },
+  { label: 'Ativa',            color: '#1e40af', bg: '#dbeafe' },
+  { label: 'Pendente',         color: '#854d0e', bg: '#fef9c3' },
+  { label: 'Não compareceu',   color: '#7f1d1d', bg: '#fee2e2' },
+  { label: 'Cancelada',        color: '#374151', bg: '#f3f4f6' },
+];
+
+const GridLegend = () => (
+  <div className="grid-legend">
+    {STATUS_LEGEND.map(({ label, color, bg }) => (
+      <div key={label} className="grid-legend-item">
+        <span className="grid-legend-dot" style={{ background: bg, border: `2px solid ${color}` }} />
+        <span className="grid-legend-label" style={{ color }}>{label}</span>
+      </div>
+    ))}
+  </div>
+);
+
+const GridSessionCard = ({ session, users, onEdit, hideStatus = false }) => {
   const time = formatTime(session);
   const monitors = (session.monitors || [])
     .map((uid) => users.find((u) => u.uuid === uid))
@@ -118,9 +137,11 @@ const GridSessionCard = ({ session, users, onEdit }) => {
           })}
         </div>
       )}
-      <span className={`badge ${getStatusBadgeClass(session.status)}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem' }}>
-        {getStatusLabel(session.status)}
-      </span>
+      {!hideStatus && (
+        <span className={`badge ${getStatusBadgeClass(session.status)}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem' }}>
+          {getStatusLabel(session.status)}
+        </span>
+      )}
     </div>
   );
 };
@@ -253,7 +274,7 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
                       boxSizing: 'border-box',
                     }}
                   >
-                    <GridSessionCard session={session} users={users} onEdit={onEdit} />
+                    <GridSessionCard session={session} users={users} onEdit={onEdit} hideStatus />
                   </div>
                 );
               })}
@@ -317,7 +338,7 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
               <div key={idx} className="grid-day-column">
                 <div className="grid-day-sessions">
                   {daySessions.map((s) => (
-                    <GridSessionCard key={s.id} session={s} users={users} onEdit={onEdit} />
+                    <GridSessionCard key={s.id} session={s} users={users} onEdit={onEdit} hideStatus />
                   ))}
                 </div>
               </div>
@@ -648,6 +669,7 @@ const Sessions = () => {
       </div>
 
       <div className="sessions-toolbar">
+        <GridLegend />
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <div className="view-toggle">
             {VIEWS.map((v) => (
