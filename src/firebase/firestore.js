@@ -180,3 +180,43 @@ export const updateSession = async (id, data) => {
 export const deleteSession = async (id) => {
   await deleteDoc(doc(db, 'sessions', id));
 };
+
+// ─── AVAILABILITY ─────────────────────────────────────────────────────────────
+
+const availDocId = (userId, date) => `${userId}_${date}`;
+
+export const setAvailability = async (userId, date, data) => {
+  await setDoc(doc(db, 'availability', availDocId(userId, date)), {
+    userId,
+    date,
+    available: data.available,
+    typeOfAvailability: data.typeOfAvailability || '',
+    earlierLimit: data.earlierLimit || '',
+    laterLimit: data.laterLimit || '',
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const getAvailabilityForMonth = async (userId, yearMonth) => {
+  const q = query(collection(db, 'availability'), where('userId', '==', userId));
+  const snapshot = await getDocs(q);
+  const map = {};
+  snapshot.docs.forEach((d) => {
+    const data = d.data();
+    if (data.date?.startsWith(yearMonth)) {
+      const day = parseInt(data.date.split('-')[2], 10);
+      map[day] = data;
+    }
+  });
+  return map;
+};
+
+export const deleteAvailability = async (userId, date) => {
+  await deleteDoc(doc(db, 'availability', availDocId(userId, date)));
+};
+
+export const getAvailabilityForDate = async (date) => {
+  const q = query(collection(db, 'availability'), where('date', '==', date));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => d.data());
+};

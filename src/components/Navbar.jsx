@@ -25,6 +25,7 @@ const Navbar = () => {
         <ul className="navbar-links">
           <li><Link to="/home" className={isActive('/home')} onClick={close}>Início</Link></li>
           <li><Link to="/sessions" className={isActive('/sessions')} onClick={close}>Sessões</Link></li>
+          <li><Link to="/availability" className={isActive('/availability')} onClick={close}>Disponibilidades</Link></li>
           <li><Link to="/team" className={isActive('/team')} onClick={close}>Equipa</Link></li>
           {isAdmin && (
             <li><Link to="/admin" className={isActive('/admin')} onClick={close}>Admin</Link></li>

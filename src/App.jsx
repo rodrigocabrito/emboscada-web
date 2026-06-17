@@ -10,6 +10,7 @@ import SessionDetail from './pages/SessionDetail';
 import Team from './pages/Team';
 import Admin from './pages/Admin';
 import AdminUsers from './pages/AdminUsers';
+import Availability from './pages/Availability';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
@@ -76,6 +77,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <Profile />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/availability"
+          element={
+            <ProtectedRoute>
+              <Availability />
             </ProtectedRoute>
           }
         />
