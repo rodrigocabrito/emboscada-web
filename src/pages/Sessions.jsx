@@ -205,15 +205,19 @@ const Sessions = () => {
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <div className="view-toggle">
-            {VIEWS.map((v) => (
-              <button
-                key={v.key}
-                className={view === v.key ? 'active' : ''}
-                onClick={() => setView(v.key)}
-              >
-                {v.label}
-              </button>
-            ))}
+            {VIEWS.map((v) => {
+              const viewGrouped = useMemo(() => groupSessions(filteredSessions, v.key), [filteredSessions, v.key]);
+              const viewCount = Object.values(viewGrouped).reduce((sum, g) => sum + g.sessions.length, 0);
+              return (
+                <button
+                  key={v.key}
+                  className={view === v.key ? 'active' : ''}
+                  onClick={() => setView(v.key)}
+                >
+                  {v.label} <span style={{ fontSize: '0.75rem', opacity: 0.8 }}>({viewCount})</span>
+                </button>
+              );
+            })}
           </div>
           <button className="btn-primary btn-new-session" onClick={openModal}>
             + Nova Sessão
@@ -230,16 +234,21 @@ const Sessions = () => {
           {showPast ? 'Nenhuma sessão passada.' : 'Nenhuma sessão futura.'}
         </p>
       ) : (
-        sortedKeys.map((key) => (
-          <div key={key} className="session-group">
-            <div className="session-group-label">{grouped[key].label}</div>
-            <div className="session-list">
-              {grouped[key].sessions.map((session) => (
-                <SessionCard key={session.id} session={session} />
-              ))}
+        sortedKeys.map((key) => {
+          const count = grouped[key].sessions.length;
+          return (
+            <div key={key} className="session-group">
+              <div className="session-group-label">
+                {grouped[key].label} <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>({count})</span>
+              </div>
+              <div className="session-list">
+                {grouped[key].sessions.map((session) => (
+                  <SessionCard key={session.id} session={session} />
+                ))}
+              </div>
             </div>
-          </div>
-        ))
+          );
+        })
       )}
 
       {/* Modal */}
