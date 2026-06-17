@@ -239,7 +239,7 @@ const AdminUsers = () => {
                 { label: 'Alcunha', value: viewingUser.nickname || '—' },
                 { label: 'Email', value: viewingUser.email },
                 { label: 'Telemóvel', value: viewingUser.phone || '—' },
-                { label: 'Função', value: viewingUser.role === 'admin' ? 'Administrador' : 'Monitor' },
+                { label: 'Função', value: viewingUser.role === 'admin' ? 'Administrador(a)' : 'Monitor(a)' },
                 { label: 'Data de Nascimento', value: viewingUser.birthday ? new Date(viewingUser.birthday).toLocaleDateString('pt-PT') : '—' },
                 { label: 'Membro desde', value: viewingUser.startedAt ? new Date(viewingUser.startedAt).toLocaleDateString('pt-PT') : '—' },
               ].map(({ label, value }) => (

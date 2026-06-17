@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { addSession, getSessions, getUsers } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
 import useEscapeKey from '../hooks/useEscapeKey';
@@ -490,6 +490,7 @@ const SessionViewModal = ({ session, users, onClose, onEdit }) => {
 
 const Sessions = () => {
   const navigate = useNavigate();
+  const location = useLocation();
   const [view, setView] = useState('day');
   const [sessions, setSessions] = useState([]);
   const [users, setUsers] = useState([]);
@@ -500,7 +501,11 @@ const Sessions = () => {
   const [success, setSuccess] = useState('');
   const [monitorSearch, setMonitorSearch] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  const [currentDate, setCurrentDate] = useState(() => {
+    const ret = location.state?.returnDate;
+    if (ret) { const [y, m, d] = ret.split('-'); return new Date(+y, +m - 1, +d); }
+    return new Date();
+  });
   const [hideCancelled, setHideCancelled] = useState(false);
 
   const fetchSessions = async () => {

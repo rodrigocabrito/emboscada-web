@@ -105,7 +105,7 @@ const SessionDetail = () => {
         additionalComments: form.additionalComments,
         monitors: form.monitors,
       });
-      navigate('/sessions');
+      navigate('/sessions', { state: { returnDate: form.sessionDate } });
     } catch {
       setError('Erro ao guardar sessão. Tenta novamente.');
     } finally {
