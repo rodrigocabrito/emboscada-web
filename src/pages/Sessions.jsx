@@ -113,6 +113,7 @@ const Sessions = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
   const [monitorSearch, setMonitorSearch] = useState('');
+  const [displayCount, setDisplayCount] = useState(30);
 
   const fetchSessions = async () => {
     try {
@@ -165,7 +166,7 @@ const Sessions = () => {
     const filtered = sessions.filter((s) => {
       const sessionDate = toDate(s.sessionDate);
       const isPast = sessionDate < now;
-      return showPast ? isPast : !isPast;
+      return showPast || !isPast;
     });
 
     const sorted = [...filtered].sort((a, b) => {
@@ -177,11 +178,14 @@ const Sessions = () => {
     return sorted;
   }, [sessions, showPast, sortAsc]);
 
-  const grouped = useMemo(() => groupSessions(filteredSessions, view), [filteredSessions, view]);
+  const displayedSessions = useMemo(() => filteredSessions.slice(0, displayCount), [filteredSessions, displayCount]);
+  const grouped = useMemo(() => groupSessions(displayedSessions, view), [displayedSessions, view]);
   const sortedKeys = useMemo(() => {
     const keys = Object.keys(grouped);
     return sortAsc ? keys.sort() : keys.sort().reverse();
   }, [grouped, sortAsc]);
+
+  const hasMoreSessions = filteredSessions.length > displayCount;
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -239,23 +243,22 @@ const Sessions = () => {
           <button
             className="btn-primary"
             onClick={() => setShowPast(!showPast)}
-            style={{ width: 'fit-content', padding: '0.5rem 1.1rem', fontSize: '0.85rem', marginTop: 0 }}
+            style={{ padding: '0.5rem 1.1rem', fontSize: '0.85rem', marginTop: 0, width: 'fit-content', opacity: showPast ? 1 : 0.6 }}
           >
-            {showPast ? '← Sessões Futuras' : '→ Sessões Passadas'}
+            {showPast ? '✓ Sessões Passadas' : '○ Sessões Passadas'}
           </button>
           <button
             className="btn-primary"
             onClick={() => setSortAsc(!sortAsc)}
             style={{ padding: '0.5rem 1.1rem', fontSize: '0.85rem', marginTop: 0, width: 'fit-content' }}
-            title={sortAsc ? 'Mais antigos primeiro' : 'Mais recentes primeiro'}
           >
-            {sortAsc ? '↑ Antigos' : '↓ Recentes'}
+            {sortAsc ? '↑ Data' : '↓ Data'}
           </button>
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <div className="view-toggle">
             {VIEWS.map((v) => {
-              const viewGrouped = useMemo(() => groupSessions(filteredSessions, v.key), [filteredSessions, v.key]);
+              const viewGrouped = useMemo(() => groupSessions(displayedSessions, v.key), [displayedSessions, v.key]);
               const viewCount = Object.values(viewGrouped).reduce((sum, g) => sum + g.sessions.length, 0);
               return (
                 <button
@@ -283,21 +286,34 @@ const Sessions = () => {
           {showPast ? 'Nenhuma sessão passada.' : 'Nenhuma sessão futura.'}
         </p>
       ) : (
-        sortedKeys.map((key) => {
-          const count = grouped[key].sessions.length;
-          return (
-            <div key={key} className="session-group">
-              <div className="session-group-label">
-                {grouped[key].label} <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>({count})</span>
+        <>
+          {sortedKeys.map((key) => {
+            const count = grouped[key].sessions.length;
+            return (
+              <div key={key} className="session-group">
+                <div className="session-group-label">
+                  {grouped[key].label} <span style={{ fontSize: '0.8rem', opacity: 0.7 }}>({count})</span>
+                </div>
+                <div className="session-list">
+                  {grouped[key].sessions.map((session) => (
+                    <SessionCard key={session.id} session={session} users={users} />
+                  ))}
+                </div>
               </div>
-              <div className="session-list">
-                {grouped[key].sessions.map((session) => (
-                  <SessionCard key={session.id} session={session} users={users} />
-                ))}
-              </div>
+            );
+          })}
+          {hasMoreSessions && (
+            <div style={{ display: 'flex', justifyContent: 'center', paddingTop: '2rem', paddingBottom: '2rem' }}>
+              <button
+                className="btn-primary"
+                onClick={() => setDisplayCount((prev) => prev + 30)}
+                style={{ width: 'fit-content', padding: '0.75rem 1.5rem' }}
+              >
+                Mostrar mais
+              </button>
             </div>
-          );
-        })
+          )}
+        </>
       )}
 
       {/* Modal */}
