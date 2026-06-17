@@ -623,6 +623,7 @@ body {
 }
 
 .catalog-card {
+  position: relative;
   background: var(--surface);
   border: 1.5px solid var(--border);
   border-radius: var(--radius);
@@ -638,6 +639,33 @@ body {
   border-color: var(--accent);
 }
 
+.catalog-card--drag-over {
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 2px rgba(45,106,79,0.2);
+  transform: scale(1.01);
+}
+
+.catalog-card[draggable] {
+  cursor: default;
+}
+
+.catalog-drag-handle {
+  position: absolute;
+  top: 0.5rem;
+  right: 0.6rem;
+  font-size: 1rem;
+  color: var(--text-muted);
+  opacity: 0.35;
+  cursor: grab;
+  user-select: none;
+  line-height: 1;
+  transition: opacity var(--transition);
+}
+
+.catalog-card:hover .catalog-drag-handle {
+  opacity: 0.7;
+}
+
 .catalog-card-header {
   display: flex;
   align-items: center;
@@ -645,10 +673,39 @@ body {
   gap: 0.5rem;
 }
 
+.catalog-card-header .catalog-card-name {
+  flex: 1;
+}
+
 .catalog-card-name {
   font-size: 1rem;
   font-weight: 700;
   color: var(--text);
+}
+
+.catalog-card-details {
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  margin: 0;
+  padding: 0;
+}
+
+.catalog-card-details li {
+  font-size: 0.82rem;
+  color: var(--text);
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+}
+
+.catalog-card-details li::before {
+  content: '✓';
+  font-size: 0.72rem;
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
 }
 
 .catalog-card-desc {
@@ -683,6 +740,39 @@ body {
   background: var(--green-100);
   border-color: var(--green-500);
   color: var(--green-700);
+}
+
+.catalog-filter-bar {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 1.5rem;
+}
+
+.catalog-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.3rem 0.9rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  font-family: var(--font-body);
+  border-radius: 999px;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background var(--transition), border-color var(--transition), color var(--transition), box-shadow var(--transition);
+}
+
+.catalog-chip:hover {
+  box-shadow: var(--shadow-sm);
+  border-color: #aaa;
+  color: var(--text);
+}
+
+.catalog-chip--active {
+  font-weight: 700;
 }
 
 .btn-table-action--danger {
