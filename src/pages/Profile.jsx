@@ -4,6 +4,31 @@ import { useAuth } from '../context/AuthContext';
 import { updateUserProfile, changePassword, logoutUser } from '../firebase/auth';
 import { getUserColor } from '../utils/avatarColors';
 
+const getAchievements = (startedAt) => {
+  if (!startedAt) return [];
+  const started = new Date(startedAt);
+  const now = new Date();
+  const yearsElapsed = (now - started) / (365.25 * 24 * 60 * 60 * 1000);
+
+  const achievements = [];
+  if (yearsElapsed >= 20) achievements.push(20);
+  if (yearsElapsed >= 10) achievements.push(10);
+  if (yearsElapsed >= 5) achievements.push(5);
+  if (yearsElapsed >= 3) achievements.push(3);
+  if (yearsElapsed >= 1) achievements.push(1);
+  return achievements;
+};
+
+const Achievement = ({ years }) => {
+  const icons = { 1: '🎉', 3: '⭐', 5: '👑', 10: '💎', 20: '🏆' };
+  return (
+    <div className="achievement" title={`${years} ano(s) em Emboscada`}>
+      <span className="achievement-icon">{icons[years]}</span>
+      <span className="achievement-label">{years}y</span>
+    </div>
+  );
+};
+
 const Profile = () => {
   const { user, profile, refreshProfile } = useAuth();
   const navigate = useNavigate();
@@ -14,6 +39,8 @@ const Profile = () => {
     firstName: profile?.firstName ?? '',
     lastName: profile?.lastName ?? '',
     nickname: profile?.nickname ?? '',
+    birthday: profile?.birthday ?? '',
+    startedAt: profile?.startedAt ?? '',
   });
 
   useEffect(() => {
@@ -22,6 +49,8 @@ const Profile = () => {
         firstName: profile.firstName ?? '',
         lastName: profile.lastName ?? '',
         nickname: profile.nickname ?? '',
+        birthday: profile.birthday ?? '',
+        startedAt: profile.startedAt ?? '',
       });
     }
   }, [profile]);
@@ -105,6 +134,14 @@ const Profile = () => {
           <p className="profile-name">{profile?.firstName} {profile?.lastName}</p>
           {profile?.nickname && <p className="profile-nickname">{profile.nickname}</p>}
           <p className="profile-role">{profile?.role === 'admin' ? 'Administrador' : 'Monitor'}</p>
+
+          {getAchievements(profile?.startedAt).length > 0 && (
+            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '1rem' }}>
+              {getAchievements(profile?.startedAt).map((y) => (
+                <Achievement key={y} years={y} />
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Forms column */}
@@ -146,6 +183,29 @@ const Profile = () => {
                   onChange={handleInfoChange}
                   placeholder="Ex: João da Silva"
                 />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="birthday">Data de Nascimento</label>
+                  <input
+                    id="birthday"
+                    name="birthday"
+                    type="date"
+                    value={infoForm.birthday}
+                    onChange={handleInfoChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="startedAt">Membro desde</label>
+                  <input
+                    id="startedAt"
+                    name="startedAt"
+                    type="date"
+                    value={infoForm.startedAt}
+                    onChange={handleInfoChange}
+                  />
+                </div>
               </div>
 
               <div className="form-group">

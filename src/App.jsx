@@ -6,6 +6,7 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Sessions from './pages/Sessions';
+import Team from './pages/Team';
 import Admin from './pages/Admin';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
@@ -41,6 +42,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute>
               <Sessions />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/team"
+          element={
+            <ProtectedRoute>
+              <Team />
             </ProtectedRoute>
           }
         />

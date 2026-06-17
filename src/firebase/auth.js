@@ -19,7 +19,7 @@ import {
 const DEFAULT_PASSWORD = 'Emboscada1234#';
 
 // Create a new user (logs out current admin as a Firebase side effect)
-export const createUser = async (email, firstName, lastName, role) => {
+export const createUser = async (email, firstName, lastName, role, additionalData = {}) => {
   // Create Firebase Auth user
   const userCredential = await createUserWithEmailAndPassword(auth, email, DEFAULT_PASSWORD);
   const user = userCredential.user;
@@ -31,6 +31,7 @@ export const createUser = async (email, firstName, lastName, role) => {
     firstName,
     lastName,
     role,
+    ...additionalData,
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

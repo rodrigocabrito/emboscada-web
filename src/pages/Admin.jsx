@@ -10,7 +10,7 @@ const ROLES = [
 
 const ROLE_LABEL = { admin: 'Administrador', monitor: 'Monitor' };
 
-const EMPTY_FORM = { email: '', firstName: '', lastName: '', nickname: '', role: 'monitor' };
+const EMPTY_FORM = { email: '', firstName: '', lastName: '', nickname: '', birthday: '', startedAt: '', role: 'monitor' };
 
 const Admin = () => {
   const { user, profile } = useAuth();
@@ -78,7 +78,11 @@ const Admin = () => {
     setCreateSuccess('');
     setCreating(true);
     try {
-      await createUser(form.email, form.firstName, form.lastName, form.role);
+      await createUser(form.email, form.firstName, form.lastName, form.role, {
+        nickname: form.nickname,
+        birthday: form.birthday || null,
+        startedAt: form.startedAt || null,
+      });
       setCreateSuccess(`Utilizador ${form.firstName} ${form.lastName} criado com sucesso. A sessão foi terminada — por favor volta a entrar.`);
       setForm(EMPTY_FORM);
     } catch (err) {
@@ -246,6 +250,29 @@ const Admin = () => {
                   onChange={handleChange}
                   placeholder="Ex: Johnny"
                 />
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="birthday">Data de Nascimento</label>
+                  <input
+                    id="birthday"
+                    name="birthday"
+                    type="date"
+                    value={form.birthday}
+                    onChange={handleChange}
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="startedAt">Membro desde</label>
+                  <input
+                    id="startedAt"
+                    name="startedAt"
+                    type="date"
+                    value={form.startedAt}
+                    onChange={handleChange}
+                  />
+                </div>
               </div>
 
               <div className="form-group">
