@@ -20,6 +20,7 @@ const AdminUsers = () => {
 
   const [users, setUsers] = useState([]);
   const [loadingUsers, setLoadingUsers] = useState(true);
+  const [search, setSearch] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState('');
   const [viewingUser, setViewingUser] = useState(null);
@@ -113,9 +114,19 @@ const AdminUsers = () => {
       <div className="admin-section">
         <div className="sessions-toolbar">
           <h2 className="section-title" style={{ marginBottom: 0 }}>Utilizadores</h2>
-          <button className="btn-primary btn-new-session" onClick={openModal}>
-            + Novo Utilizador
-          </button>
+          <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+            <input
+              type="search"
+              className="input-field"
+              placeholder="Pesquisar..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              style={{ width: '200px', padding: '0.4rem 1rem', fontSize: '0.85rem', lineHeight: '1.4' }}
+            />
+            <button className="btn-primary btn-new-session" onClick={openModal}>
+              + Novo Utilizador
+            </button>
+          </div>
         </div>
 
         {deleteError && (
@@ -144,7 +155,19 @@ const AdminUsers = () => {
                 </tr>
               </thead>
               <tbody>
-                {users.map((u) => (
+                {(() => {
+                  const filtered = users.filter((u) => {
+                    const q = search.toLowerCase();
+                    return !q || `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) || u.email?.toLowerCase().includes(q) || u.nickname?.toLowerCase().includes(q);
+                  });
+                  if (!filtered.length) return (
+                    <tr>
+                      <td colSpan={4} style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-muted)', fontSize: '0.9rem' }}>
+                        Nenhum utilizador encontrado para "{search}".
+                      </td>
+                    </tr>
+                  );
+                  return filtered.map((u) => (
                   <tr key={u.uuid}>
                     <td className="td-name">{u.firstName} {u.lastName}</td>
                     <td className="td-muted">{u.email}</td>
@@ -168,7 +191,8 @@ const AdminUsers = () => {
                       </button>
                     </td>
                   </tr>
-                ))}
+                ));
+                })()}
               </tbody>
             </table>
           )}

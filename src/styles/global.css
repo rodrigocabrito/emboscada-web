@@ -257,7 +257,8 @@ body {
   letter-spacing: 0.07em;
 }
 
-.form-group input {
+.form-group input,
+.input-field {
   padding: 0.75rem 1rem;
   border: 1.5px solid var(--border);
   border-radius: var(--radius-sm);
@@ -266,6 +267,12 @@ body {
   color: var(--text);
   background: var(--bg);
   transition: border-color var(--transition), box-shadow var(--transition);
+}
+
+.input-field:focus {
+  outline: none;
+  border-color: var(--green-500);
+  box-shadow: 0 0 0 3px rgba(45,106,79,0.1);
 }
 
 .form-group input:focus {
