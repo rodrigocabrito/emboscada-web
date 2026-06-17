@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { updateUserProfile, changePassword, logoutUser } from '../firebase/auth';
+import { getSessions } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
 
 const getAchievements = (startedAt) => {
@@ -34,6 +35,7 @@ const Profile = () => {
   const navigate = useNavigate();
 
   const initials = `${profile?.firstName?.[0] ?? ''}${profile?.lastName?.[0] ?? ''}`.toUpperCase();
+  const [sessionCount, setSessionCount] = useState(0);
 
   const [infoForm, setInfoForm] = useState({
     firstName: profile?.firstName ?? '',
@@ -54,6 +56,19 @@ const Profile = () => {
       });
     }
   }, [profile]);
+
+  useEffect(() => {
+    const fetchSessionCount = async () => {
+      try {
+        const sessions = await getSessions();
+        const count = sessions.filter((s) => s.monitors?.includes(user.uid)).length;
+        setSessionCount(count);
+      } catch {
+        // silently fail
+      }
+    };
+    fetchSessionCount();
+  }, [user.uid]);
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoSuccess, setInfoSuccess] = useState('');
   const [infoError, setInfoError] = useState('');
@@ -126,22 +141,41 @@ const Profile = () => {
       </div>
 
       <div className="profile-grid">
-        {/* Avatar column */}
-        <div className="card profile-avatar-section">
-          <div className="profile-avatar-lg" style={{ backgroundColor: getUserColor(user.uid) }}>
-            {initials}
-          </div>
-          <p className="profile-name">{profile?.firstName} {profile?.lastName}</p>
-          {profile?.nickname && <p className="profile-nickname">{profile.nickname}</p>}
-          <p className="profile-role">{profile?.role === 'admin' ? 'Administrador' : 'Monitor'}</p>
-
-          {getAchievements(profile?.startedAt).length > 0 && (
-            <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center', marginTop: '1rem' }}>
-              {getAchievements(profile?.startedAt).map((y) => (
-                <Achievement key={y} years={y} />
-              ))}
+        {/* Avatar and Stats column */}
+        <div>
+          <div className="card profile-avatar-section">
+            <div className="profile-avatar-lg" style={{ backgroundColor: getUserColor(user.uid) }}>
+              {initials}
             </div>
-          )}
+            <p className="profile-name">{profile?.firstName} {profile?.lastName}</p>
+            {profile?.nickname && <p className="profile-nickname">{profile.nickname}</p>}
+            <p className="profile-role">{profile?.role === 'admin' ? 'Administrador' : 'Monitor'}</p>
+          </div>
+
+          <div className="card" style={{ marginTop: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+            <h3 style={{ fontSize: '0.9rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '1.5rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Estatísticas</h3>
+            <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', marginBottom: '1.5rem' }}>
+              <div>
+                <div style={{ fontSize: '2rem', fontWeight: 700, color: 'var(--primary)' }}>
+                  {sessionCount}
+                </div>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                  Sessões
+                </div>
+              </div>
+            </div>
+
+            {getAchievements(profile?.startedAt).length > 0 && (
+              <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
+                <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Anos em Emboscada</p>
+                <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', justifyContent: 'center' }}>
+                  {getAchievements(profile?.startedAt).map((y) => (
+                    <Achievement key={y} years={y} />
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Forms column */}
