@@ -11,21 +11,43 @@ const VIEWS = [
 const EMPTY_FORM = {
   spoc: '',
   numberOfPlayers: '',
-  sessionDate: '',
+  sessionDay: '',
+  sessionTime: '',
   additionalComments: '',
   monitors: [],
 };
 
-const toDate = (ts) => {
+const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => [
+  `${String(i).padStart(2, '0')}:00`,
+  `${String(i).padStart(2, '0')}:30`,
+]).flat().filter((t) => t >= '08:00' && t <= '19:30');
+
+// Parse a session into a plain JS Date, timezone-free.
+// New sessions have sessionDatetime "YYYY-MM-DDTHH:MM" (no tz suffix).
+// Legacy sessions have a Firestore Timestamp in sessionDate.
+const toDate = (session) => {
+  if (session?.sessionDatetime) {
+    // No timezone suffix → parsed as local time by the browser, always correct
+    return new Date(session.sessionDatetime);
+  }
+  // Legacy: Firestore Timestamp or ISO string
+  const ts = session?.sessionDate ?? session;
   if (!ts) return new Date();
   if (ts?.toDate) return ts.toDate();
   return new Date(ts);
 };
 
+const formatTime = (session) => {
+  if (session?.sessionTime) return session.sessionTime;
+  // Legacy fallback
+  const d = toDate(session);
+  return d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+};
+
 const groupSessions = (sessions, view) => {
   const groups = {};
   sessions.forEach((s) => {
-    const d = toDate(s.sessionDate);
+    const d = toDate(s);
     let key, label;
 
     if (view === 'day') {
@@ -85,8 +107,7 @@ const getStatusBadgeClass = (status) => {
 };
 
 const SessionCard = ({ session, users, onEdit }) => {
-  const date = toDate(session.sessionDate);
-  const time = date.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+  const time = formatTime(session);
 
   const monitors = (session.monitors || [])
     .map((uid) => users.find((u) => u.uuid === uid))
@@ -106,7 +127,7 @@ const SessionCard = ({ session, users, onEdit }) => {
         {monitors.length > 0 && (
           <div className="monitors-avatars">
             {monitors.map((m) => {
-              const initials = `${m.firstName?.[0] ?? ''}${m.lastName?.[0] ?? ''}`.toUpperCase();
+              const displayName = m.nickname || `${m.firstName} ${m.lastName}`;
               const color = getUserColor(m.uuid);
               return (
                 <div
@@ -115,7 +136,7 @@ const SessionCard = ({ session, users, onEdit }) => {
                   style={{ backgroundColor: color }}
                   title={`${m.firstName} ${m.lastName}`}
                 >
-                  {initials}
+                  {displayName}
                 </div>
               );
             })}
@@ -132,11 +153,287 @@ const SessionCard = ({ session, users, onEdit }) => {
   );
 };
 
+const GridSessionCard = ({ session, users, onEdit }) => {
+  const time = formatTime(session);
+  const monitors = (session.monitors || [])
+    .map((uid) => users.find((u) => u.uuid === uid))
+    .filter(Boolean);
+
+  const statusColorClass = {
+    'done': 'grid-session-done',
+    'active': 'grid-session-active',
+    'pending_payment': 'grid-session-pending',
+    'no_show': 'grid-session-noshow',
+    'cancelled': 'grid-session-cancelled'
+  }[session.status] || 'grid-session-active';
+
+  return (
+    <div
+      className={`grid-session-card ${statusColorClass}`}
+      onClick={() => onEdit(session)}
+      style={{ cursor: 'pointer' }}
+    >
+      <span className="grid-session-time">{time}</span>
+      <span className="grid-session-spoc">{session.spoc}</span>
+      {monitors.length > 0 && (
+        <div className="grid-monitors-mini">
+          {monitors.map((m) => {
+            const displayName = m.nickname || `${m.firstName[0]}${m.lastName[0]}`.toUpperCase();
+            const color = getUserColor(m.uuid);
+            return (
+              <div
+                key={m.uuid}
+                className="grid-monitor-dot"
+                style={{ backgroundColor: color }}
+                title={`${m.firstName} ${m.lastName}`}
+              >
+                {displayName}
+              </div>
+            );
+          })}
+        </div>
+      )}
+      <span className={`badge ${getStatusBadgeClass(session.status)}`} style={{ fontSize: '0.65rem', padding: '0.1rem 0.3rem' }}>
+        {getStatusLabel(session.status)}
+      </span>
+    </div>
+  );
+};
+
+const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) => {
+  if (view === 'day') {
+    const dayStart = new Date(currentDate);
+    dayStart.setHours(0, 0, 0, 0);
+    const dayEnd = new Date(dayStart);
+    dayEnd.setDate(dayEnd.getDate() + 1);
+
+    const daySessions = sessions
+      .filter((s) => {
+        const sd = toDate(s);
+        return sd >= dayStart && sd < dayEnd;
+      })
+      .sort((a, b) => toDate(a).getTime() - toDate(b).getTime());
+
+    // Calculate display time slots (30-minute intervals) based on sessions
+    let startHour = 8;
+    let endHour = 18;
+
+    if (daySessions.length > 0) {
+      const firstSessionTime = toDate(daySessions[0]);
+      const lastSessionTime = toDate(daySessions[daySessions.length - 1]);
+      const firstSessionHour = firstSessionTime.getHours();
+      const lastSessionHour = lastSessionTime.getHours();
+      // Start 1 hour before first session, end 1 hour after last session (which lasts 2 hours)
+      startHour = Math.max(0, firstSessionHour - 1);
+      endHour = Math.min(24, lastSessionHour + 2 + 1);
+    }
+
+    // Create 30-minute time slots
+    const timeSlots = [];
+    for (let hour = startHour; hour < endHour; hour++) {
+      timeSlots.push({ hour, minute: 0 });
+      timeSlots.push({ hour, minute: 30 });
+    }
+
+    const slotDuration = 2 * 60; // 2 hours in minutes
+
+    // Find sessions that start at each slot and calculate overlaps
+    const sessionsByStartSlot = {};
+    timeSlots.forEach((slot, idx) => {
+      sessionsByStartSlot[idx] = [];
+    });
+
+    daySessions.forEach((session) => {
+      const sd = toDate(session);
+      const sessionHour = sd.getHours();
+      const sessionMinute = sd.getMinutes();
+
+      // Find the slot this session starts in
+      const startSlotIdx = timeSlots.findIndex(
+        (slot) => slot.hour === sessionHour && slot.minute === sessionMinute
+      );
+
+      if (startSlotIdx !== -1) {
+        sessionsByStartSlot[startSlotIdx].push(session);
+      }
+    });
+
+    return (
+      <div className="grid-view grid-view-day">
+        <div className="grid-header">
+          <button onClick={() => onDateChange(new Date(currentDate.getTime() - 86400000))}>← Anterior</button>
+          <h3>{currentDate.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3>
+          <button onClick={() => onDateChange(new Date(currentDate.getTime() + 86400000))}>Próximo →</button>
+        </div>
+        {daySessions.length === 0 ? (
+          <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
+            Nenhuma sessão neste dia
+          </div>
+        ) : (
+          <div className="grid-timeline-30min">
+            {timeSlots.map((slot, idx) => {
+              const sessionsStartingHere = sessionsByStartSlot[idx];
+              const numOverlappingSessions = Math.min(sessionsStartingHere.length, 10);
+
+              return (
+                <div key={idx} className="grid-time-slot">
+                  <div className="grid-slot-label" style={{ gridRow: `${idx + 1} / span 1` }}>
+                    {slot.hour.toString().padStart(2, '0')}:{slot.minute.toString().padStart(2, '0')}
+                  </div>
+                  {sessionsStartingHere.length > 0 && (
+                    <div
+                      className="grid-session-row"
+                      style={{ gridRow: `${idx + 1} / span 4`, '--overlap-count': numOverlappingSessions }}
+                    >
+                      {sessionsStartingHere.slice(0, 10).map((session, colIdx) => (
+                        <div
+                          key={session.id}
+                          className="grid-session-card-wrapper"
+                          style={{ '--column-index': colIdx, '--total-columns': numOverlappingSessions }}
+                        >
+                          <GridSessionCard session={session} users={users} onEdit={onEdit} />
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+        )}
+      </div>
+    );
+  }
+
+  if (view === 'week') {
+    const weekStart = new Date(currentDate);
+    const day = weekStart.getDay();
+    const diff = weekStart.getDate() - day + (day === 0 ? -6 : 1);
+    weekStart.setDate(diff);
+    weekStart.setHours(0, 0, 0, 0);
+
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 7);
+
+    const days = Array.from({ length: 7 }, (_, i) => {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+
+    return (
+      <div className="grid-view grid-view-week">
+        <div className="grid-header">
+          <button onClick={() => onDateChange(new Date(currentDate.getTime() - 604800000))}>← Semana Anterior</button>
+          <h3>
+            {weekStart.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })} –{' '}
+            {new Date(weekEnd.getTime() - 86400000).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' })}
+          </h3>
+          <button onClick={() => onDateChange(new Date(currentDate.getTime() + 604800000))}>Próxima Semana →</button>
+        </div>
+        <div className="grid-week">
+          {days.map((day, idx) => {
+            const dayEnd = new Date(day);
+            dayEnd.setDate(dayEnd.getDate() + 1);
+
+            const daySessions = sessions
+              .filter((s) => {
+                const sd = toDate(s);
+                return sd >= day && sd < dayEnd;
+              })
+              .sort((a, b) => toDate(a).getTime() - toDate(b).getTime());
+
+            return (
+              <div key={idx} className="grid-day-column">
+                <div className="grid-day-header">
+                  {day.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric' })}
+                </div>
+                <div className="grid-day-sessions">
+                  {daySessions.map((s) => (
+                    <GridSessionCard key={s.id} session={s} users={users} onEdit={onEdit} />
+                  ))}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+
+  if (view === 'month') {
+    const monthStart = new Date(currentDate);
+    monthStart.setDate(1);
+    monthStart.setHours(0, 0, 0, 0);
+
+    const monthEnd = new Date(monthStart);
+    monthEnd.setMonth(monthEnd.getMonth() + 1);
+
+    const firstDayOfWeek = monthStart.getDay();
+    const gridStart = new Date(monthStart);
+    gridStart.setDate(gridStart.getDate() - (firstDayOfWeek === 0 ? 6 : firstDayOfWeek - 1));
+
+    const days = Array.from({ length: 42 }, (_, i) => {
+      const d = new Date(gridStart);
+      d.setDate(d.getDate() + i);
+      return d;
+    });
+
+    return (
+      <div className="grid-view grid-view-month">
+        <div className="grid-header">
+          <button onClick={() => onDateChange(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1))}>← Mês Anterior</button>
+          <h3>{currentDate.toLocaleDateString('pt-PT', { month: 'long', year: 'numeric' })}</h3>
+          <button onClick={() => onDateChange(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1))}>Próximo Mês →</button>
+        </div>
+        <div className="grid-weekdays">
+          {['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sab', 'Dom'].map((d) => (
+            <div key={d} className="grid-weekday-label">{d}</div>
+          ))}
+        </div>
+        <div className="grid-month">
+          {days.map((day, idx) => {
+            const dayEnd = new Date(day);
+            dayEnd.setDate(dayEnd.getDate() + 1);
+
+            const daySessions = sessions
+              .filter((s) => {
+                const sd = toDate(s);
+                return sd >= day && sd < dayEnd;
+              })
+              .sort((a, b) => toDate(a).getTime() - toDate(b).getTime());
+
+            const isCurrentMonth = day.getMonth() === monthStart.getMonth();
+
+            return (
+              <div key={idx} className={`grid-month-day ${!isCurrentMonth ? 'other-month' : ''}`}>
+                <div className="grid-month-day-header">{day.getDate()}</div>
+                <div className="grid-month-day-sessions">
+                  {daySessions.slice(0, 3).map((s) => (
+                    <div key={s.id} className="grid-month-session" onClick={() => onEdit(s)}>
+                      <span className="grid-month-time">{formatTime(s)}</span>
+                      <span className="grid-month-spoc">{s.spoc.substring(0, 8)}</span>
+                    </div>
+                  ))}
+                  {daySessions.length > 3 && (
+                    <div className="grid-month-more">+{daySessions.length - 3}</div>
+                  )}
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+    );
+  }
+};
+
 const SessionDetailModal = ({ session, users, onClose, onSave }) => {
   const [formData, setFormData] = useState({
     spoc: session.spoc || '',
     numberOfPlayers: session.numberOfPlayers || '',
-    sessionDate: session.sessionDate ? new Date(session.sessionDate.toDate()).toISOString().slice(0, 16) : '',
+    sessionDate: session.sessionDate || '',
+    sessionTime: session.sessionTime || '',
     status: session.status || 'active',
     additionalComments: session.additionalComments || '',
     monitors: session.monitors || [],
@@ -170,6 +467,8 @@ const SessionDetailModal = ({ session, users, onClose, onSave }) => {
         spoc: formData.spoc,
         numberOfPlayers: parseInt(formData.numberOfPlayers, 10),
         sessionDate: formData.sessionDate,
+        sessionTime: formData.sessionTime,
+        sessionDatetime: `${formData.sessionDate}T${formData.sessionTime}`,
         status: formData.status,
         additionalComments: formData.additionalComments,
         monitors: formData.monitors,
@@ -217,16 +516,34 @@ const SessionDetailModal = ({ session, users, onClose, onSave }) => {
             </div>
           </div>
 
-          <div className="form-group">
-            <label htmlFor="sessionDate">Data e Hora</label>
-            <input
-              id="sessionDate"
-              name="sessionDate"
-              type="datetime-local"
-              value={formData.sessionDate}
-              onChange={handleChange}
-              required
-            />
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="sessionDate">Data</label>
+              <input
+                id="sessionDate"
+                name="sessionDate"
+                type="date"
+                value={formData.sessionDate}
+                onChange={handleChange}
+                required
+              />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sessionTime">Hora</label>
+              <select
+                id="sessionTime"
+                name="sessionTime"
+                value={formData.sessionTime}
+                onChange={handleChange}
+                className="form-select"
+                required
+              >
+                <option value="">-- Selecionar hora --</option>
+                {TIME_SLOTS.map((t) => (
+                  <option key={t} value={t}>{t}</option>
+                ))}
+              </select>
+            </div>
           </div>
 
           <div className="form-group">
@@ -305,7 +622,7 @@ const SessionDetailModal = ({ session, users, onClose, onSave }) => {
 
           <div className="modal-footer">
             <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
-              Cancelar
+              Voltar
             </button>
             <button type="submit" className="btn-primary" disabled={saving}>
               {saving ? 'A guardar...' : 'Guardar alterações'}
@@ -318,6 +635,7 @@ const SessionDetailModal = ({ session, users, onClose, onSave }) => {
 };
 
 const Sessions = () => {
+  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
   const [view, setView] = useState('day');
   const [sessions, setSessions] = useState([]);
   const [users, setUsers] = useState([]);
@@ -332,6 +650,7 @@ const Sessions = () => {
   const [displayCount, setDisplayCount] = useState(30);
   const [selectedSession, setSelectedSession] = useState(null);
   const [statusFilter, setStatusFilter] = useState(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
 
   const fetchSessions = async () => {
     try {
@@ -382,7 +701,7 @@ const Sessions = () => {
 
   const filteredSessions = useMemo(() => {
     const filtered = sessions.filter((s) => {
-      const sessionDate = toDate(s.sessionDate);
+      const sessionDate = toDate(s);
       const isPast = sessionDate < now;
       const pastFilter = showPast || !isPast;
       const statusFilterMatch = statusFilter ? s.status === statusFilter : true;
@@ -390,8 +709,8 @@ const Sessions = () => {
     });
 
     const sorted = [...filtered].sort((a, b) => {
-      const dateA = toDate(a.sessionDate).getTime();
-      const dateB = toDate(b.sessionDate).getTime();
+      const dateA = toDate(a).getTime();
+      const dateB = toDate(b).getTime();
       return sortAsc ? dateA - dateB : dateB - dateA;
     });
 
@@ -430,7 +749,8 @@ const Sessions = () => {
       await addSession({
         spoc: form.spoc,
         numberOfPlayers: parseInt(form.numberOfPlayers, 10),
-        sessionDate: form.sessionDate,
+        sessionDate: form.sessionDay,
+        sessionTime: form.sessionTime,
         additionalComments: form.additionalComments,
         monitors: form.monitors,
       });
@@ -516,16 +836,32 @@ const Sessions = () => {
         </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <div className="view-toggle">
-            {VIEWS.map((v) => (
-              <button
-                key={v.key}
-                className={view === v.key ? 'active' : ''}
-                onClick={() => setView(v.key)}
-              >
-                {v.label}
-              </button>
-            ))}
+            <button
+              className={viewMode === 'list' ? 'active' : ''}
+              onClick={() => setViewMode('list')}
+            >
+              Lista
+            </button>
+            <button
+              className={viewMode === 'grid' ? 'active' : ''}
+              onClick={() => setViewMode('grid')}
+            >
+              Calendário
+            </button>
           </div>
+          {viewMode === 'grid' && (
+            <div className="view-toggle">
+              {VIEWS.map((v) => (
+                <button
+                  key={v.key}
+                  className={view === v.key ? 'active' : ''}
+                  onClick={() => setView(v.key)}
+                >
+                  {v.label}
+                </button>
+              ))}
+            </div>
+          )}
           <button className="btn-primary btn-new-session" onClick={openModal}>
             + Nova Sessão
           </button>
@@ -540,6 +876,15 @@ const Sessions = () => {
         <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '2rem' }}>
           {showPast ? 'Nenhuma sessão passada.' : 'Nenhuma sessão futura.'}
         </p>
+      ) : viewMode === 'grid' ? (
+        <GridView
+          sessions={filteredSessions}
+          users={users}
+          view={view}
+          currentDate={currentDate}
+          onEdit={setSelectedSession}
+          onDateChange={setCurrentDate}
+        />
       ) : (
         <>
           {sortedKeys.map((key) => {
@@ -610,16 +955,34 @@ const Sessions = () => {
                 </div>
               </div>
 
-              <div className="form-group">
-                <label htmlFor="sessionDate">Data e Hora</label>
-                <input
-                  id="sessionDate"
-                  name="sessionDate"
-                  type="datetime-local"
-                  value={form.sessionDate}
-                  onChange={handleChange}
-                  required
-                />
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="sessionDay">Data</label>
+                  <input
+                    id="sessionDay"
+                    name="sessionDay"
+                    type="date"
+                    value={form.sessionDay}
+                    onChange={handleChange}
+                    required
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="sessionTime">Hora</label>
+                  <select
+                    id="sessionTime"
+                    name="sessionTime"
+                    value={form.sessionTime}
+                    onChange={handleChange}
+                    className="form-select"
+                    required
+                  >
+                    <option value="">-- Selecionar hora --</option>
+                    {TIME_SLOTS.map((t) => (
+                      <option key={t} value={t}>{t}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               <div className="form-group">
@@ -678,7 +1041,7 @@ const Sessions = () => {
 
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={closeModal} disabled={loading}>
-                  Cancelar
+                  Voltar
                 </button>
                 <button type="submit" className="btn-primary" disabled={loading}>
                   {loading ? 'A criar...' : 'Criar Sessão'}

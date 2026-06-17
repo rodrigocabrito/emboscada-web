@@ -128,21 +128,23 @@ export const deleteBooking = async (id) => {
 // ─── SESSIONS ────────────────────────────────────────────────────────────────
 
 export const getSessions = async () => {
-  const q = query(collection(db, 'sessions'), orderBy('sessionDate', 'asc'));
+  const q = query(collection(db, 'sessions'), orderBy('sessionDatetime', 'asc'));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
 };
 
 export const addSession = async (data) => {
   const uuid = crypto.randomUUID();
-  const sessionDate = new Date(data.sessionDate);
+  // sessionDatetime = "YYYY-MM-DDTHH:MM" — timezone-free sort key
+  const sessionDatetime = `${data.sessionDate}T${data.sessionTime}`;
 
-  // New sessions always start with signalPaid: false and status: pending_payment
   await setDoc(doc(db, 'sessions', uuid), {
     uuid,
     spoc: data.spoc,
     numberOfPlayers: data.numberOfPlayers,
-    sessionDate: Timestamp.fromDate(sessionDate),
+    sessionDate: data.sessionDate,       // "YYYY-MM-DD"
+    sessionTime: data.sessionTime,       // "HH:MM"
+    sessionDatetime,                     // "YYYY-MM-DDTHH:MM" for ordering
     status: 'pending_payment',
     additionalComments: data.additionalComments,
     monitors: data.monitors || [],
@@ -154,15 +156,16 @@ export const addSession = async (data) => {
 
 export const updateSessionStatus = async (id, status) => {
   await updateDoc(doc(db, 'sessions', id), {
-    status: status,
+    status,
     updatedAt: serverTimestamp(),
   });
 };
 
 export const updateSession = async (id, data) => {
   const updateData = { ...data, updatedAt: serverTimestamp() };
-  if (data.sessionDate) {
-    updateData.sessionDate = Timestamp.fromDate(new Date(data.sessionDate));
+  // Rebuild sessionDatetime if date or time changed
+  if (data.sessionDate || data.sessionTime) {
+    updateData.sessionDatetime = `${data.sessionDate}T${data.sessionTime}`;
   }
   await updateDoc(doc(db, 'sessions', id), updateData);
 };
