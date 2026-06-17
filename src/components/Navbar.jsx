@@ -35,8 +35,8 @@ const Navbar = () => {
       {/* Right side: avatar + hamburger */}
       <div className="navbar-right">
         <Link
-          to="/perfil"
-          className={`nav-avatar ${isActive('/perfil')}`}
+          to="/profile"
+          className={`nav-avatar ${isActive('/profile')}`}
           onClick={close}
           title="Perfil"
           style={!profile?.photoURL ? { backgroundColor: getUserColor(user.uid) } : {}}
