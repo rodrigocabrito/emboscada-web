@@ -11,6 +11,14 @@ const FEATURES = [
     active: true,
   },
   {
+    key: 'catalogo',
+    label: 'Catálogo',
+    description: 'Gerir packs, actividades e preços dos serviços.',
+    icon: '🏷️',
+    path: '/admin/catalog',
+    active: true,
+  },
+  {
     key: 'stock',
     label: 'Gerir Stock',
     description: 'Controlo de material e equipamento disponível.',

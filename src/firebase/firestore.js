@@ -181,6 +181,33 @@ export const deleteSession = async (id) => {
   await deleteDoc(doc(db, 'sessions', id));
 };
 
+// ─── CATALOG ─────────────────────────────────────────────────────────────────
+
+export const getCatalogItems = async () => {
+  const q = query(collection(db, 'catalog'), orderBy('createdAt', 'asc'));
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
+
+export const addCatalogItem = async (data) => {
+  return await addDoc(collection(db, 'catalog'), {
+    ...data,
+    createdAt: serverTimestamp(),
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const updateCatalogItem = async (id, data) => {
+  await updateDoc(doc(db, 'catalog', id), {
+    ...data,
+    updatedAt: serverTimestamp(),
+  });
+};
+
+export const deleteCatalogItem = async (id) => {
+  await deleteDoc(doc(db, 'catalog', id));
+};
+
 // ─── AVAILABILITY ─────────────────────────────────────────────────────────────
 
 const availDocId = (userId, date) => `${userId}_${date}`;

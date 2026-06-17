@@ -10,6 +10,7 @@ import SessionDetail from './pages/SessionDetail';
 import Team from './pages/Team';
 import Admin from './pages/Admin';
 import AdminUsers from './pages/AdminUsers';
+import AdminCatalogo from './pages/AdminCatalogo';
 import Availability from './pages/Availability';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
@@ -101,6 +102,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute adminOnly={true}>
               <AdminUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/catalog"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminCatalogo />
             </ProtectedRoute>
           }
         />
