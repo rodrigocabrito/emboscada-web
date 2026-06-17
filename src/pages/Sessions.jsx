@@ -258,17 +258,30 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
       columnFreeAt[col] = startSlotIdx + SESSION_SLOTS;
     });
 
-    // For each session, total visible columns = max column among all overlapping sessions + 1
-    const totalColumnsFor = {};
-    sessionsWithSlot.forEach(({ session, startSlotIdx }) => {
-      const end = startSlotIdx + SESSION_SLOTS;
-      let maxCol = columnAssignment[session.id];
-      sessionsWithSlot.forEach(({ session: other, startSlotIdx: oStart }) => {
-        if (other.id !== session.id && startSlotIdx < oStart + SESSION_SLOTS && end > oStart) {
-          maxCol = Math.max(maxCol, columnAssignment[other.id]);
+    // Group sessions into conflict clusters via union-find so every session in
+    // a chain (A overlaps B, B overlaps C) shares the same total column count.
+    const parent = {};
+    sessionsWithSlot.forEach(({ session }) => { parent[session.id] = session.id; });
+    const find = (id) => {
+      if (parent[id] !== id) parent[id] = find(parent[id]);
+      return parent[id];
+    };
+    sessionsWithSlot.forEach(({ session: s1, startSlotIdx: st1 }, i) => {
+      const end1 = st1 + SESSION_SLOTS;
+      sessionsWithSlot.slice(i + 1).forEach(({ session: s2, startSlotIdx: st2 }) => {
+        if (st1 < st2 + SESSION_SLOTS && end1 > st2) {
+          parent[find(s1.id)] = find(s2.id);
         }
       });
-      totalColumnsFor[session.id] = Math.min(maxCol + 1, 10);
+    });
+    const clusterMaxCol = {};
+    sessionsWithSlot.forEach(({ session }) => {
+      const root = find(session.id);
+      clusterMaxCol[root] = Math.max(clusterMaxCol[root] ?? 0, columnAssignment[session.id]);
+    });
+    const totalColumnsFor = {};
+    sessionsWithSlot.forEach(({ session }) => {
+      totalColumnsFor[session.id] = Math.min(clusterMaxCol[find(session.id)] + 1, 10);
     });
 
     return (
