@@ -458,7 +458,7 @@ body {
   gap: 1.25rem;
 }
 
-/* ─── Stat cards (dashboard) ────────────────────────────────────────────────── */
+/* ─── Stat cards (home) ────────────────────────────────────────────────── */
 .stat-card {
   background: var(--surface);
   border: 1px solid var(--border);

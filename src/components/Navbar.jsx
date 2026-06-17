@@ -23,7 +23,7 @@ const Navbar = () => {
       {/* Nav links (desktop) / dropdown (mobile) */}
       <div className={`navbar-menu ${menuOpen ? 'open' : ''}`}>
         <ul className="navbar-links">
-          <li><Link to="/dashboard" className={isActive('/dashboard')} onClick={close}>Início</Link></li>
+          <li><Link to="/home" className={isActive('/home')} onClick={close}>Início</Link></li>
           <li><Link to="/sessions" className={isActive('/sessions')} onClick={close}>Sessões</Link></li>
           <li><Link to="/team" className={isActive('/team')} onClick={close}>Equipa</Link></li>
           {isAdmin && (

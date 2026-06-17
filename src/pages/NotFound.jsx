@@ -9,7 +9,7 @@ const NotFound = () => {
         <p className="not-found-text">
           Desculpa, a página que procuras não existe ou foi movida para outro local.
         </p>
-        <Link to="/dashboard" className="btn-primary not-found-btn">
+        <Link to="/home" className="btn-primary not-found-btn">
           Voltar ao Início
         </Link>
       </div>

@@ -24,7 +24,7 @@ const Login = () => {
         return;
       }
 
-      const from = location.state?.from || '/dashboard';
+      const from = location.state?.from || '/home';
       navigate(from, { replace: true });
     } catch (err) {
       setError('Email ou password incorretos. Contacte o administrador.');

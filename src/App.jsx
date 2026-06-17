@@ -15,7 +15,7 @@ import './styles/global.css';
 
 const RootRedirect = () => {
   const { user } = useAuth();
-  return user ? <Navigate to="/dashboard" replace /> : <Navigate to="/login" replace />;
+  return user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />;
 };
 
 function App() {
@@ -54,7 +54,7 @@ const AppContent = () => {
           }
         />
         <Route
-          path="/dashboard"
+          path="/home"
           element={
             <ProtectedRoute>
               <Dashboard />
