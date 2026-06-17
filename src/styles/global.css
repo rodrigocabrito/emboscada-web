@@ -504,6 +504,7 @@ body {
   text-overflow: ellipsis;
   max-width: 100%;
   line-height: 1.2;
+  margin-bottom: 0.25rem;
 }
 
 .avail-cell--available {

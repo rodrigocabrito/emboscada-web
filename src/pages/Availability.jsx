@@ -9,7 +9,18 @@ const MONTHS = [
   'Julho', 'Agosto', 'Setembro', 'Outubro', 'Novembro', 'Dezembro',
 ];
 
-const HOURS = Array.from({ length: 15 }, (_, i) => `${String(i + 7).padStart(2, '0')}h`); // 07h–21h
+const HOURS = [];
+for (let h = 7; h <= 21; h++) {
+  HOURS.push(`${String(h).padStart(2, '0')}h00`);
+  if (h < 21) HOURS.push(`${String(h).padStart(2, '0')}h30`);
+}
+
+const toMinutes = (s) => {
+  const [h, m] = s.split('h');
+  return parseInt(h) * 60 + (parseInt(m) || 0);
+};
+
+const formatHour = (s) => s.endsWith('h00') ? s.replace('h00', 'h') : s;
 
 const EMPTY_FORM = { available: true, typeOfAvailability: 'full', earlierLimit: '', laterLimit: '' };
 
@@ -47,6 +58,12 @@ const DayModal = ({ date, existing, onClose, onSaved, onErased }) => {
     const { name, value, type, checked } = e.target;
     if (name === 'available' && !checked) {
       setForm((prev) => ({ ...prev, available: false, typeOfAvailability: '', earlierLimit: '', laterLimit: '' }));
+    } else if (name === 'earlierLimit') {
+      setForm((prev) => ({
+        ...prev,
+        earlierLimit: value,
+        laterLimit: prev.laterLimit && value && toMinutes(prev.laterLimit) <= toMinutes(value) ? '' : prev.laterLimit,
+      }));
     } else {
       setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     }
@@ -133,7 +150,7 @@ const DayModal = ({ date, existing, onClose, onSaved, onErased }) => {
                     className="form-select"
                   >
                     <option value="">-- Sem limite --</option>
-                    {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+                    {HOURS.map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
                   </select>
                 </div>
                 <div className="form-group">
@@ -146,7 +163,7 @@ const DayModal = ({ date, existing, onClose, onSaved, onErased }) => {
                     className="form-select"
                   >
                     <option value="">-- Sem limite --</option>
-                    {HOURS.map((h) => <option key={h} value={h}>{h}</option>)}
+                    {HOURS.filter((h) => !form.earlierLimit || toMinutes(h) > toMinutes(form.earlierLimit)).map((h) => <option key={h} value={h}>{formatHour(h)}</option>)}
                   </select>
                 </div>
               </div>
@@ -302,11 +319,11 @@ const Availability = () => {
                 <span className="avail-day-tag">
                   {(() => {
                     if (isUnavailable) return 'Indisponível';
-                    const e = entry.earlierLimit;
-                    const l = entry.laterLimit;
+                    const e = entry.earlierLimit ? formatHour(entry.earlierLimit) : '';
+                    const l = entry.laterLimit ? formatHour(entry.laterLimit) : '';
                     if (e && !l) return `A partir das ${e}`;
                     if (!e && l) return `Até às ${l}`;
-                    if (e && l) return `${e} – ${l}`;
+                    if (e && l) return `Das ${e} às ${l}`;
                     return 'Disponível';
                   })()}
                 </span>
