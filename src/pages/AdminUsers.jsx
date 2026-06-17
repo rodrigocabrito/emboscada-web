@@ -6,11 +6,11 @@ import { getUsers, deleteUserProfile } from '../firebase/firestore';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 const ROLES = [
-  { label: 'Administrador', value: 'admin' },
-  { label: 'Monitor', value: 'monitor' },
+  { label: 'Administrador(a)', value: 'admin' },
+  { label: 'Monitor(a)', value: 'monitor' },
 ];
 
-const ROLE_LABEL = { admin: 'Administrador', monitor: 'Monitor' };
+const ROLE_LABEL = { admin: 'Administrador(a)', monitor: 'Monitor(a)' };
 
 const EMPTY_FORM = { email: '', firstName: '', lastName: '', nickname: '', birthday: '', startedAt: '', role: 'monitor' };
 

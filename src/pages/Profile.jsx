@@ -151,7 +151,7 @@ const Profile = () => {
             </div>
             <p className="profile-name">{profile?.firstName} {profile?.lastName}</p>
             {profile?.nickname && <p className="profile-nickname">{profile.nickname}</p>}
-            <p className="profile-role">{profile?.role === 'admin' ? 'Administrador' : 'Monitor'}</p>
+            <p className="profile-role">{profile?.role === 'admin' ? 'Administrador(a)' : 'Monitor(a)'}</p>
           </div>
 
           <div className="card" style={{ marginTop: '1rem', padding: '1.5rem', textAlign: 'center' }}>
