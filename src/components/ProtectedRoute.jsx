@@ -6,6 +6,7 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
   const location = useLocation();
 
   if (!user) {
+    // Remember where they were going, so we can redirect after login
     return <Navigate to="/login" state={{ from: location.pathname }} replace />;
   }
 

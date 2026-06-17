@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { createUser, getCurrentUserToken } from '../firebase/auth';
-import { getUsers } from '../firebase/firestore';
+import { createUser } from '../firebase/auth';
+import { getUsers, deleteUserProfile } from '../firebase/firestore';
 
 const ROLES = [
   { label: 'Administrador', value: 'admin' },
@@ -95,21 +95,7 @@ const Admin = () => {
   const handleDeleteConfirm = async (uid) => {
     setDeleteError('');
     try {
-      const token = await getCurrentUserToken();
-      const res = await fetch('/api/delete-user', {
-        method: 'DELETE',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`,
-        },
-        body: JSON.stringify({ uid }),
-      });
-
-      if (!res.ok) {
-        const data = await res.json();
-        throw new Error(data.error || 'Failed to delete user');
-      }
-
+      await deleteUserProfile(uid);
       setUsers((prev) => prev.filter((u) => u.uuid !== uid));
       setDeletingId(null);
     } catch {

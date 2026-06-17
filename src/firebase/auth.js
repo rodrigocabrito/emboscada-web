@@ -64,9 +64,6 @@ export const onAuthChange = (callback) => {
   return onAuthStateChanged(auth, callback);
 };
 
-// Get the current user's ID token for authenticated API calls
-export const getCurrentUserToken = () => auth.currentUser?.getIdToken();
-
 // Update user profile fields in Firestore
 export const updateUserProfile = async (uid, data) => {
   await updateDoc(doc(db, 'users', uid), {
