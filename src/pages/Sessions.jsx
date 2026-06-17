@@ -70,13 +70,15 @@ const getStatusLabel = (status) => {
 const getStatusBadgeClass = (status) => {
   switch (status) {
     case 'cancelled':
+      return 'badge-default';
     case 'no_show':
       return 'badge-danger';
     case 'pending_payment':
       return 'badge-pending';
-    case 'active':
     case 'done':
       return 'badge-success';
+    case 'active':
+      return 'badge-active';
     default:
       return 'badge-default';
   }

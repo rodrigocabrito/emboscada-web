@@ -21,7 +21,7 @@ const STATUS_OPTIONS = [
 const getStatusBadgeClass = (status) => {
   switch (status) {
     case 'done': return 'badge-success';
-    case 'active': return 'badge-success';
+    case 'active': return 'badge-active';
     case 'pending_payment': return 'badge-pending';
     case 'no_show': return 'badge-danger';
     case 'cancelled': return 'badge-default';

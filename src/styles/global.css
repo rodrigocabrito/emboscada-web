@@ -1245,6 +1245,11 @@ body {
   color: var(--green-700);
 }
 
+.badge-active {
+  background: #dbeafe;
+  color: #1d4ed8;
+}
+
 .badge-danger {
   background: #fee2e2;
   color: #991b1b;
