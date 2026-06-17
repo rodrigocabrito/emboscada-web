@@ -1667,6 +1667,11 @@ body {
   text-overflow: ellipsis;
 }
 
+.grid-session-players {
+  font-size: 0.7rem;
+  opacity: 0.8;
+}
+
 .grid-monitors-mini {
   display: flex;
   gap: 0.2rem;
@@ -1674,9 +1679,10 @@ body {
 }
 
 .grid-monitor-dot {
-  width: 20px;
+  min-width: 20px;
   height: 20px;
-  border-radius: 50%;
+  padding: 0 0.4rem;
+  border-radius: 20px;
   font-size: 0.6rem;
   font-weight: 700;
   display: flex;
@@ -1692,6 +1698,51 @@ body {
 .grid-view-week {
   max-width: 100%;
   overflow-x: auto;
+}
+
+.grid-week-header-row {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 0.25rem;
+}
+
+.grid-week-day-label {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 0.4rem 0;
+  border-radius: var(--radius-sm);
+  background: var(--surface);
+  border: 1px solid var(--border);
+}
+
+.grid-week-day-today {
+  background: #15803d;
+  border-color: #166534;
+  color: #fff;
+}
+
+.grid-week-weekday {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  opacity: 0.7;
+}
+
+.grid-week-day-today .grid-week-weekday {
+  color: #bbf7d0;
+  opacity: 1;
+}
+
+.grid-week-daynum {
+  font-size: 1.1rem;
+  font-weight: 700;
+  line-height: 1.2;
+}
+
+.grid-week-day-today .grid-week-daynum {
+  color: #fff;
 }
 
 .grid-week {
@@ -1710,15 +1761,6 @@ body {
   min-height: 300px;
 }
 
-.grid-day-header {
-  padding: 0.75rem;
-  background: linear-gradient(135deg, var(--primary), rgba(74, 144, 226, 0.8));
-  color: #fff;
-  font-weight: 700;
-  text-align: center;
-  font-size: 0.9rem;
-  border-bottom: 2px solid var(--border);
-}
 
 .grid-day-sessions {
   flex: 1;

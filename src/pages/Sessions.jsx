@@ -175,6 +175,7 @@ const GridSessionCard = ({ session, users, onEdit }) => {
     >
       <span className="grid-session-time">{time}</span>
       <span className="grid-session-spoc">{session.spoc}</span>
+      <span className="grid-session-players">👥 {session.numberOfPlayers} jogadores</span>
       {monitors.length > 0 && (
         <div className="grid-monitors-mini">
           {monitors.map((m) => {
@@ -365,6 +366,17 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
           </h3>
           <button onClick={() => onDateChange(new Date(currentDate.getTime() + 604800000))}>Próxima Semana →</button>
         </div>
+        <div className="grid-week-header-row">
+          {days.map((day, idx) => {
+            const isToday = day.toDateString() === new Date().toDateString();
+            return (
+              <div key={idx} className={`grid-week-day-label ${isToday ? 'grid-week-day-today' : ''}`}>
+                <span className="grid-week-weekday">{day.toLocaleDateString('pt-PT', { weekday: 'short' }).replace('.', '')}</span>
+                <span className="grid-week-daynum">{day.getDate()}</span>
+              </div>
+            );
+          })}
+        </div>
         <div className="grid-week">
           {days.map((day, idx) => {
             const dayEnd = new Date(day);
@@ -379,9 +391,6 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
 
             return (
               <div key={idx} className="grid-day-column">
-                <div className="grid-day-header">
-                  {day.toLocaleDateString('pt-PT', { weekday: 'short', day: 'numeric' })}
-                </div>
                 <div className="grid-day-sessions">
                   {daySessions.map((s) => (
                     <GridSessionCard key={s.id} session={s} users={users} onEdit={onEdit} />
@@ -669,7 +678,7 @@ const SessionDetailModal = ({ session, users, onClose, onSave }) => {
 };
 
 const Sessions = () => {
-  const [viewMode, setViewMode] = useState('list'); // 'list' or 'grid'
+  const [viewMode, setViewMode] = useState('grid');
   const [view, setView] = useState('day');
   const [sessions, setSessions] = useState([]);
   const [users, setUsers] = useState([]);
@@ -683,7 +692,6 @@ const Sessions = () => {
   const [monitorSearch, setMonitorSearch] = useState('');
   const [displayCount, setDisplayCount] = useState(30);
   const [selectedSession, setSelectedSession] = useState(null);
-  const [statusFilter, setStatusFilter] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
 
   const fetchSessions = async () => {
@@ -738,8 +746,7 @@ const Sessions = () => {
       const sessionDate = toDate(s);
       const isPast = sessionDate < now;
       const pastFilter = showPast || !isPast;
-      const statusFilterMatch = statusFilter ? s.status === statusFilter : true;
-      return pastFilter && statusFilterMatch;
+      return pastFilter;
     });
 
     const sorted = [...filtered].sort((a, b) => {
@@ -749,7 +756,7 @@ const Sessions = () => {
     });
 
     return sorted;
-  }, [sessions, showPast, sortAsc, statusFilter]);
+  }, [sessions, showPast, sortAsc]);
 
   const displayedSessions = useMemo(() => filteredSessions.slice(0, displayCount), [filteredSessions, displayCount]);
   const grouped = useMemo(() => groupSessions(displayedSessions, view), [displayedSessions, view]);
@@ -837,65 +844,32 @@ const Sessions = () => {
             {sortAsc ? '↑ Data' : '↓ Data'}
           </button>
         </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center', flexWrap: 'wrap' }}>
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
-            {[
-              { value: 'done', label: 'Feita' },
-              { value: 'active', label: 'Ativa' },
-              { value: 'pending_payment', label: 'Pendente' },
-              { value: 'no_show', label: 'Não compareceu' },
-              { value: 'cancelled', label: 'Cancelada' },
-            ].map((status) => (
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <div className="view-toggle" style={{ visibility: viewMode === 'grid' ? 'visible' : 'hidden' }}>
+            {VIEWS.map((v) => (
               <button
-                key={status.value}
-                onClick={() => setStatusFilter(statusFilter === status.value ? null : status.value)}
-                className={`badge ${getStatusBadgeClass(status.value)}`}
-                style={{
-                  cursor: 'pointer',
-                  border: 'none',
-                  whiteSpace: 'nowrap',
-                  flex: '0 0 auto',
-                  fontSize: '0.75rem',
-                  padding: '0.25rem 0.5rem',
-                  opacity: statusFilter === status.value ? 1 : 0.6,
-                  boxShadow: statusFilter === status.value ? '0 0 0 2px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.3)' : 'none',
-                  transform: statusFilter === status.value ? 'scale(1.05)' : 'scale(1)',
-                  transition: 'all 0.2s ease',
-                }}
+                key={v.key}
+                className={view === v.key ? 'active' : ''}
+                onClick={() => setView(v.key)}
               >
-                {statusFilter === status.value ? '✓ ' : ''}{status.label}
+                {v.label}
               </button>
             ))}
           </div>
-        </div>
-        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <div className="view-toggle">
-            <button
-              className={viewMode === 'list' ? 'active' : ''}
-              onClick={() => setViewMode('list')}
-            >
-              Lista
-            </button>
             <button
               className={viewMode === 'grid' ? 'active' : ''}
               onClick={() => setViewMode('grid')}
             >
               Calendário
             </button>
+            <button
+              className={viewMode === 'list' ? 'active' : ''}
+              onClick={() => setViewMode('list')}
+            >
+              Lista
+            </button>
           </div>
-          {viewMode === 'grid' && (
-            <div className="view-toggle">
-              {VIEWS.map((v) => (
-                <button
-                  key={v.key}
-                  className={view === v.key ? 'active' : ''}
-                  onClick={() => setView(v.key)}
-                >
-                  {v.label}
-                </button>
-              ))}
-            </div>
-          )}
           <button className="btn-primary btn-new-session" onClick={openModal}>
             + Nova Sessão
           </button>
