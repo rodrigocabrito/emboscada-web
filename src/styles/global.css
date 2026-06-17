@@ -1124,6 +1124,12 @@ body {
   cursor: not-allowed;
 }
 
+.btn-secondary.active {
+  background: var(--green-50);
+  border-color: var(--green-500);
+  color: var(--green-700);
+}
+
 /* ─── Data table ────────────────────────────────────────────────────────────── */
 .data-table {
   width: 100%;

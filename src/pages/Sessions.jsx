@@ -80,6 +80,8 @@ const SessionCard = ({ session }) => {
 const Sessions = () => {
   const [view, setView] = useState('day');
   const [sessions, setSessions] = useState([]);
+  const [showPast, setShowPast] = useState(false);
+  const [sortAsc, setSortAsc] = useState(true);
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
@@ -117,8 +119,30 @@ const Sessions = () => {
     return () => document.removeEventListener('keydown', onKey);
   }, [modalOpen, closeModal]);
 
-  const grouped = useMemo(() => groupSessions(sessions, view), [sessions, view]);
-  const sortedKeys = useMemo(() => Object.keys(grouped).sort(), [grouped]);
+  const now = new Date();
+  now.setHours(0, 0, 0, 0);
+
+  const filteredSessions = useMemo(() => {
+    const filtered = sessions.filter((s) => {
+      const sessionDate = toDate(s.sessionDate);
+      const isPast = sessionDate < now;
+      return showPast ? isPast : !isPast;
+    });
+
+    const sorted = [...filtered].sort((a, b) => {
+      const dateA = toDate(a.sessionDate).getTime();
+      const dateB = toDate(b.sessionDate).getTime();
+      return sortAsc ? dateA - dateB : dateB - dateA;
+    });
+
+    return sorted;
+  }, [sessions, showPast, sortAsc]);
+
+  const grouped = useMemo(() => groupSessions(filteredSessions, view), [filteredSessions, view]);
+  const sortedKeys = useMemo(() => {
+    const keys = Object.keys(grouped);
+    return sortAsc ? keys.sort() : keys.sort().reverse();
+  }, [grouped, sortAsc]);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -162,7 +186,23 @@ const Sessions = () => {
       </div>
 
       <div className="sessions-toolbar">
-        <h2 className="section-title" style={{ marginBottom: 0 }}>{countLabel}</h2>
+        <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <button
+            className="btn-primary"
+            onClick={() => setShowPast(!showPast)}
+            style={{ width: 'fit-content', padding: '0.5rem 1.1rem', fontSize: '0.85rem', marginTop: 0 }}
+          >
+            {showPast ? '← Sessões Futuras' : '→ Sessões Passadas'}
+          </button>
+          <button
+            className="btn-primary"
+            onClick={() => setSortAsc(!sortAsc)}
+            style={{ padding: '0.5rem 1.1rem', fontSize: '0.85rem', marginTop: 0, width: 'fit-content' }}
+            title={sortAsc ? 'Mais antigos primeiro' : 'Mais recentes primeiro'}
+          >
+            {sortAsc ? '↑ Antigos' : '↓ Recentes'}
+          </button>
+        </div>
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
           <div className="view-toggle">
             {VIEWS.map((v) => (
@@ -184,6 +224,10 @@ const Sessions = () => {
       {sessions.length === 0 ? (
         <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '2rem' }}>
           Nenhuma sessão criada ainda.
+        </p>
+      ) : filteredSessions.length === 0 ? (
+        <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '2rem' }}>
+          {showPast ? 'Nenhuma sessão passada.' : 'Nenhuma sessão futura.'}
         </p>
       ) : (
         sortedKeys.map((key) => (
