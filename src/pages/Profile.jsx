@@ -43,6 +43,7 @@ const Profile = () => {
     nickname: profile?.nickname ?? '',
     birthday: profile?.birthday ?? '',
     startedAt: profile?.startedAt ?? '',
+    phone: profile?.phone ?? '',
   });
 
   useEffect(() => {
@@ -53,6 +54,7 @@ const Profile = () => {
         nickname: profile.nickname ?? '',
         birthday: profile.birthday ?? '',
         startedAt: profile.startedAt ?? '',
+        phone: profile.phone ?? '',
       });
     }
   }, [profile]);
@@ -240,6 +242,18 @@ const Profile = () => {
                     onChange={handleInfoChange}
                   />
                 </div>
+              </div>
+
+              <div className="form-group">
+                <label htmlFor="phone">Telemóvel</label>
+                <input
+                  id="phone"
+                  name="phone"
+                  type="tel"
+                  value={infoForm.phone}
+                  onChange={handleInfoChange}
+                  placeholder="Ex: 912 345 678"
+                />
               </div>
 
               <div className="form-group">

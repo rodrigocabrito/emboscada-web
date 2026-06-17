@@ -1,17 +1,23 @@
 import { useState, useEffect, useCallback } from 'react';
-import { addSession, getSessions, getUsers, updateSession } from '../firebase/firestore';
+import { useNavigate } from 'react-router-dom';
+import { addSession, getSessions, getUsers } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const VIEWS = [
   { key: 'day', label: 'Dia' },
   { key: 'week', label: 'Semana' },
 ];
 
+const SESSION_TYPES = ['Paintball', 'Laser Tag', 'Gel Blast', 'Bubble Football'];
+
 const EMPTY_FORM = {
   spoc: '',
   numberOfPlayers: '',
   sessionDay: '',
   sessionTime: '',
+  typeOfSession: '',
+  caliber: '',
   additionalComments: '',
   monitors: [],
 };
@@ -96,7 +102,7 @@ const GridLegend = () => (
   </div>
 );
 
-const GridSessionCard = ({ session, users, onEdit, hideStatus = false }) => {
+const GridSessionCard = ({ session, users, onEdit, hideStatus = false, hideSpoc = false }) => {
   const time = formatTime(session);
   const monitors = (session.monitors || [])
     .map((uid) => users.find((u) => u.uuid === uid))
@@ -117,8 +123,24 @@ const GridSessionCard = ({ session, users, onEdit, hideStatus = false }) => {
       style={{ cursor: 'pointer' }}
     >
       <span className="grid-session-time">{time}</span>
-      <span className="grid-session-spoc">{session.spoc}</span>
+      {!hideSpoc && <span className="grid-session-spoc">{session.spoc}</span>}
       <span className="grid-session-players">👥 {session.numberOfPlayers} jogadores</span>
+      {session.typeOfSession && (() => {
+        const typeIcons = {
+          'Paintball': '/paintball.png',
+          'Laser Tag': '/laser-tag-icon.png',
+          'Gel Blast': '/gel-blast.png',
+          'Bubble Football': '/bubble-football.png',
+        };
+        const icon = typeIcons[session.typeOfSession];
+        return (
+          <span className="grid-session-type">
+            {icon && <img src={icon} alt="" aria-hidden="true" style={{ width: '12px', height: '12px', objectFit: 'contain', verticalAlign: 'middle' }} />}
+            {' '}{session.typeOfSession}
+          </span>
+        );
+      })()}
+      {session.caliber && <span className="grid-session-caliber"><img src="/caliber.png" alt="" aria-hidden="true" style={{ width: '12px', height: '12px', objectFit: 'contain', verticalAlign: 'middle' }} /> {session.caliber}</span>}
       {monitors.length > 0 && (
         <div className="grid-monitors-mini">
           {monitors.map((m) => {
@@ -146,7 +168,8 @@ const GridSessionCard = ({ session, users, onEdit, hideStatus = false }) => {
   );
 };
 
-const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) => {
+const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange, hideCancelled }) => {
+
   if (view === 'day') {
     const dayStart = new Date(currentDate);
     dayStart.setHours(0, 0, 0, 0);
@@ -156,7 +179,7 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
     const daySessions = sessions
       .filter((s) => {
         const sd = toDate(s);
-        return sd >= dayStart && sd < dayEnd;
+        return sd >= dayStart && sd < dayEnd && !(hideCancelled && s.status === 'cancelled');
       })
       .sort((a, b) => toDate(a).getTime() - toDate(b).getTime());
 
@@ -176,7 +199,7 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
       timeSlots.push({ hour, minute: 30 });
     }
 
-    const ROW_HEIGHT = 30; // px — must match grid-auto-rows in CSS
+    const ROW_HEIGHT = 35; // px — must match grid-auto-rows in CSS
     const SESSION_SLOTS = 4; // 2 hours = 4 × 30-min slots
 
     // Map each session to its start slot index
@@ -230,12 +253,23 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
       totalColumnsFor[session.id] = Math.min(clusterMaxCol[find(session.id)] + 1, 10);
     });
 
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const isToday = currentDate.toDateString() === today.toDateString();
+
     return (
       <div className="grid-view grid-view-day">
-        <div className="grid-header">
-          <button onClick={() => onDateChange(new Date(currentDate.getTime() - 86400000))}>← Anterior</button>
-          <h3>{currentDate.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3>
-          <button onClick={() => onDateChange(new Date(currentDate.getTime() + 86400000))}>Próximo →</button>
+        <div className="grid-header" style={{ flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <button style={{ visibility: isToday ? 'hidden' : 'visible' }} onClick={() => onDateChange(today)}>
+              Hoje
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+            <button onClick={() => onDateChange(new Date(currentDate.getTime() - 86400000))}>← Anterior</button>
+            <h3 style={{ margin: 0 }}>{currentDate.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3>
+            <button onClick={() => onDateChange(new Date(currentDate.getTime() + 86400000))}>Próximo →</button>
+          </div>
         </div>
         {daySessions.length === 0 ? (
           <div style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-muted)' }}>
@@ -269,7 +303,7 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
                       top: startSlotIdx * ROW_HEIGHT,
                       height: SESSION_SLOTS * ROW_HEIGHT,
                       left: `${(col / totalCols) * 100}%`,
-                      width: `${(1 / totalCols) * 100}%`,
+                      width: `${Math.min(70, (1 / totalCols) * 100)}%`,
                       padding: '0 2px',
                       boxSizing: 'border-box',
                     }}
@@ -301,15 +335,29 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
       return d;
     });
 
+    const todayWeekStart = new Date();
+    const todayDay = todayWeekStart.getDay();
+    const todayDiff = todayWeekStart.getDate() - todayDay + (todayDay === 0 ? -6 : 1);
+    todayWeekStart.setDate(todayDiff);
+    todayWeekStart.setHours(0, 0, 0, 0);
+    const isCurrentWeek = weekStart.toDateString() === todayWeekStart.toDateString();
+
     return (
       <div className="grid-view grid-view-week">
-        <div className="grid-header">
-          <button onClick={() => onDateChange(new Date(currentDate.getTime() - 604800000))}>← Semana Anterior</button>
-          <h3>
-            {weekStart.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })} –{' '}
-            {new Date(weekEnd.getTime() - 86400000).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' })}
-          </h3>
-          <button onClick={() => onDateChange(new Date(currentDate.getTime() + 604800000))}>Próxima Semana →</button>
+        <div className="grid-header" style={{ flexDirection: 'column', gap: '0.5rem' }}>
+          <div style={{ display: 'flex', justifyContent: 'center' }}>
+            <button style={{ visibility: isCurrentWeek ? 'hidden' : 'visible' }} onClick={() => onDateChange(new Date())}>
+              Esta Semana
+            </button>
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
+            <button onClick={() => onDateChange(new Date(currentDate.getTime() - 604800000))}>← Semana Anterior</button>
+            <h3 style={{ margin: 0 }}>
+              {weekStart.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })} –{' '}
+              {new Date(weekEnd.getTime() - 86400000).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' })}
+            </h3>
+            <button onClick={() => onDateChange(new Date(currentDate.getTime() + 604800000))}>Próxima Semana →</button>
+          </div>
         </div>
         <div className="grid-week-header-row">
           {days.map((day, idx) => {
@@ -330,7 +378,7 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
             const daySessions = sessions
               .filter((s) => {
                 const sd = toDate(s);
-                return sd >= day && sd < dayEnd;
+                return sd >= day && sd < dayEnd && !(hideCancelled && s.status === 'cancelled');
               })
               .sort((a, b) => toDate(a).getTime() - toDate(b).getTime());
 
@@ -338,7 +386,7 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
               <div key={idx} className="grid-day-column">
                 <div className="grid-day-sessions">
                   {daySessions.map((s) => (
-                    <GridSessionCard key={s.id} session={s} users={users} onEdit={onEdit} hideStatus />
+                    <GridSessionCard key={s.id} session={s} users={users} onEdit={onEdit} hideStatus hideSpoc />
                   ))}
                 </div>
               </div>
@@ -351,213 +399,95 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange }) 
 
 };
 
-const SessionDetailModal = ({ session, users, onClose, onSave }) => {
-  const [formData, setFormData] = useState({
-    spoc: session.spoc || '',
-    numberOfPlayers: session.numberOfPlayers || '',
-    sessionDate: session.sessionDate || '',
-    sessionTime: session.sessionTime || '',
-    status: session.status || 'active',
-    additionalComments: session.additionalComments || '',
-    monitors: session.monitors || [],
-  });
-  const [saving, setSaving] = useState(false);
-  const [error, setError] = useState('');
+const SessionViewModal = ({ session, users, onClose, onEdit }) => {
+  useEscapeKey(onClose);
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (name === 'monitors') {
-      setFormData((prev) => ({
-        ...prev,
-        monitors: checked
-          ? [...prev.monitors, value]
-          : prev.monitors.filter((uid) => uid !== value),
-      }));
-    } else {
-      setFormData((prev) => ({
-        ...prev,
-        [name]: type === 'checkbox' ? checked : value,
-      }));
-    }
-  };
+  const monitors = (session.monitors || [])
+    .map((uid) => users.find((u) => u.uuid === uid))
+    .filter(Boolean);
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
-    setError('');
-    setSaving(true);
-    try {
-      await onSave(session.id, {
-        spoc: formData.spoc,
-        numberOfPlayers: parseInt(formData.numberOfPlayers, 10),
-        sessionDate: formData.sessionDate,
-        sessionTime: formData.sessionTime,
-        sessionDatetime: `${formData.sessionDate}T${formData.sessionTime}`,
-        status: formData.status,
-        additionalComments: formData.additionalComments,
-        monitors: formData.monitors,
-      });
-      onClose();
-    } catch {
-      setError('Erro ao guardar sessão. Tenta novamente.');
-    } finally {
-      setSaving(false);
-    }
-  };
+  const dateFormatted = session.sessionDate
+    ? new Date(session.sessionDate + 'T00:00').toLocaleDateString('pt-PT', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' })
+    : '—';
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '530px' }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
         <div className="modal-header">
-          <h2 className="modal-title">Editar Sessão</h2>
+          <h2 className="modal-title">Sessão</h2>
           <button className="modal-close" onClick={onClose} aria-label="Fechar">✕</button>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="spoc">Responsável</label>
-              <input
-                id="spoc"
-                name="spoc"
-                type="text"
-                value={formData.spoc}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="numberOfPlayers">Nº de Jogadores</label>
-              <input
-                id="numberOfPlayers"
-                name="numberOfPlayers"
-                type="number"
-                min="1"
-                value={formData.numberOfPlayers}
-                onChange={handleChange}
-                required
-              />
-            </div>
+        <div className="session-view-body">
+          <div className="session-view-row">
+            <span className="session-view-label">Responsável</span>
+            <span className="session-view-value">{session.spoc || '—'}</span>
           </div>
-
-          <div className="form-row">
-            <div className="form-group">
-              <label htmlFor="sessionDate">Data</label>
-              <input
-                id="sessionDate"
-                name="sessionDate"
-                type="date"
-                value={formData.sessionDate}
-                onChange={handleChange}
-                required
-              />
-            </div>
-            <div className="form-group">
-              <label htmlFor="sessionTime">Hora</label>
-              <select
-                id="sessionTime"
-                name="sessionTime"
-                value={formData.sessionTime}
-                onChange={handleChange}
-                className="form-select"
-                required
-              >
-                <option value="">-- Selecionar hora --</option>
-                {TIME_SLOTS.map((t) => (
-                  <option key={t} value={t}>{t}</option>
-                ))}
-              </select>
-            </div>
+          <div className="session-view-row">
+            <span className="session-view-label">Nº de Jogadores</span>
+            <span className="session-view-value">{session.numberOfPlayers || '—'}</span>
           </div>
-
-          <div className="form-group">
-            <label htmlFor="additionalComments">Comentários adicionais</label>
-            <textarea
-              id="additionalComments"
-              name="additionalComments"
-              value={formData.additionalComments}
-              onChange={handleChange}
-              className="form-textarea"
-              placeholder="Notas, requisitos especiais..."
-            />
+          <div className="session-view-row">
+            <span className="session-view-label">Data</span>
+            <span className="session-view-value" style={{ textTransform: 'capitalize' }}>{dateFormatted}</span>
           </div>
-
-          <div className="form-group">
-            <label htmlFor="monitorSearch">Monitores</label>
-            <div className="monitors-checklist">
-              {users
-                .filter((u) => u.role === 'monitor' || u.role === 'admin')
-                .map((user) => {
-                  const nickname = user.nickname ? `(${user.nickname}) ` : '';
+          <div className="session-view-row">
+            <span className="session-view-label">Hora</span>
+            <span className="session-view-value">{session.sessionTime || '—'}</span>
+          </div>
+          {session.typeOfSession && (
+            <div className="session-view-row">
+              <span className="session-view-label">Tipo de Sessão</span>
+              <span className="session-view-value">{session.typeOfSession}</span>
+            </div>
+          )}
+          {session.caliber && (
+            <div className="session-view-row">
+              <span className="session-view-label">Calibre</span>
+              <span className="session-view-value">{session.caliber}</span>
+            </div>
+          )}
+          <div className="session-view-row">
+            <span className="session-view-label">Estado</span>
+            <span className={`badge ${getStatusBadgeClass(session.status)}`} style={{ fontSize: '0.78rem' }}>
+              {getStatusLabel(session.status)}
+            </span>
+          </div>
+          {monitors.length > 0 && (
+            <div className="session-view-row">
+              <span className="session-view-label">Monitor(es)</span>
+              <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
+                {monitors.map((m) => {
+                  const color = getUserColor(m.uuid);
                   return (
-                    <div key={user.uuid} className="form-checkbox-item">
-                      <input
-                        id={`monitor-${user.uuid}`}
-                        name="monitors"
-                        type="checkbox"
-                        value={user.uuid}
-                        checked={formData.monitors.includes(user.uuid)}
-                        onChange={handleChange}
-                      />
-                      <label htmlFor={`monitor-${user.uuid}`}>
-                        {nickname}{user.firstName} {user.lastName}
-                      </label>
-                    </div>
+                    <span key={m.uuid} className="grid-monitor-dot" style={{ backgroundColor: color }}>
+                      {m.nickname || `${m.firstName} ${m.lastName}`}
+                    </span>
                   );
                 })}
+              </div>
             </div>
-          </div>
-
-          <div className="form-group">
-            <label>Estado da Sessão</label>
-            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'nowrap', marginTop: '0.5rem' }}>
-              {[
-                { value: 'done', label: 'Feita' },
-                { value: 'active', label: 'Ativa' },
-                { value: 'pending_payment', label: 'Pendente' },
-                { value: 'no_show', label: 'Não compareceu' },
-                { value: 'cancelled', label: 'Cancelada' },
-              ].map((status) => (
-                <button
-                  key={status.value}
-                  type="button"
-                  onClick={() => setFormData((prev) => ({ ...prev, status: status.value }))}
-                  className={`badge ${getStatusBadgeClass(status.value)}`}
-                  style={{
-                    cursor: 'pointer',
-                    border: 'none',
-                    whiteSpace: 'nowrap',
-                    flex: '0 0 auto',
-                    fontSize: '0.75rem',
-                    padding: '0.25rem 0.5rem',
-                    opacity: formData.status === status.value ? 1 : 0.6,
-                    boxShadow: formData.status === status.value ? '0 0 0 2px rgba(0,0,0,0.2), inset 0 0 0 1px rgba(255,255,255,0.3)' : 'none',
-                    transform: formData.status === status.value ? 'scale(1.05)' : 'scale(1)',
-                    transition: 'all 0.2s ease',
-                  }}
-                >
-                  {formData.status === status.value ? '✓ ' : ''}{status.label}
-                </button>
-              ))}
+          )}
+          {session.additionalComments && (
+            <div className="session-view-row session-view-comments">
+              <span className="session-view-label">Comentários</span>
+              <span className="session-view-value">{session.additionalComments}</span>
             </div>
-          </div>
+          )}
+        </div>
 
-          {error && <div className="error-msg"><span>⚠</span> {error}</div>}
-
-          <div className="modal-footer">
-            <button type="button" className="btn-secondary" onClick={onClose} disabled={saving}>
-              Voltar
-            </button>
-            <button type="submit" className="btn-primary" disabled={saving}>
-              {saving ? 'A guardar...' : 'Guardar alterações'}
-            </button>
-          </div>
-        </form>
+        <div className="modal-footer">
+          <button type="button" className="btn-primary" onClick={() => onEdit(session.id)}>
+            Editar
+          </button>
+        </div>
       </div>
     </div>
   );
 };
 
 const Sessions = () => {
+  const navigate = useNavigate();
   const [view, setView] = useState('day');
   const [sessions, setSessions] = useState([]);
   const [users, setUsers] = useState([]);
@@ -569,6 +499,7 @@ const Sessions = () => {
   const [monitorSearch, setMonitorSearch] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
   const [currentDate, setCurrentDate] = useState(new Date());
+  const [hideCancelled, setHideCancelled] = useState(false);
 
   const fetchSessions = async () => {
     try {
@@ -607,12 +538,7 @@ const Sessions = () => {
   }, [loading]);
 
   // Close on Escape key
-  useEffect(() => {
-    if (!modalOpen) return;
-    const onKey = (e) => { if (e.key === 'Escape') closeModal(); };
-    document.addEventListener('keydown', onKey);
-    return () => document.removeEventListener('keydown', onKey);
-  }, [modalOpen, closeModal]);
+  useEscapeKey(closeModal, modalOpen);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -639,6 +565,8 @@ const Sessions = () => {
         numberOfPlayers: parseInt(form.numberOfPlayers, 10),
         sessionDate: form.sessionDay,
         sessionTime: form.sessionTime,
+        typeOfSession: form.typeOfSession,
+        caliber: form.typeOfSession === 'Paintball' ? form.caliber : '',
         additionalComments: form.additionalComments,
         monitors: form.monitors,
       });
@@ -652,17 +580,8 @@ const Sessions = () => {
     }
   };
 
-  const handleSaveSession = async (sessionId, data) => {
-    try {
-      await updateSession(sessionId, data);
-      await fetchSessions();
-    } catch {
-      throw new Error('Erro ao guardar sessão');
-    }
-  };
-
   return (
-    <div className="page">
+    <div className="page page-sessions">
       <div className="page-header">
         <h1>Sessões</h1>
         <p>Gestão de sessões e reservas do parque.</p>
@@ -671,6 +590,13 @@ const Sessions = () => {
       <div className="sessions-toolbar">
         <GridLegend />
         <div style={{ display: 'flex', gap: '0.75rem', alignItems: 'center' }}>
+          <button
+            className="btn-primary"
+            onClick={() => setHideCancelled((prev) => !prev)}
+            style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem', marginTop: 0, width: 'fit-content', opacity: hideCancelled ? 1 : 0.6, visibility: (view === 'day' || view === 'week') ? 'visible' : 'hidden' }}
+          >
+            {hideCancelled ? '✓ Canceladas ocultas' : 'Ocultar Canceladas'}
+          </button>
           <div className="view-toggle">
             {VIEWS.map((v) => (
               <button
@@ -700,6 +626,7 @@ const Sessions = () => {
           currentDate={currentDate}
           onEdit={setSelectedSession}
           onDateChange={setCurrentDate}
+          hideCancelled={hideCancelled}
         />
       )}
 
@@ -715,7 +642,7 @@ const Sessions = () => {
             <form onSubmit={handleSubmit}>
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="spoc">Responsável</label>
+                  <label htmlFor="spoc">Responsável (Cliente)</label>
                   <input
                     id="spoc"
                     name="spoc"
@@ -773,6 +700,41 @@ const Sessions = () => {
               </div>
 
               <div className="form-group">
+                <label htmlFor="typeOfSession">Tipo de Sessão</label>
+                <select
+                  id="typeOfSession"
+                  name="typeOfSession"
+                  value={form.typeOfSession}
+                  onChange={handleChange}
+                  className="form-select"
+                  required
+                >
+                  <option value="">-- Selecionar tipo --</option>
+                  {SESSION_TYPES.map((t) => (
+                    <option key={t} value={t}>{t}</option>
+                  ))}
+                </select>
+              </div>
+
+              {form.typeOfSession === 'Paintball' && (
+                <div className="form-group">
+                  <label>Calibre</label>
+                  <div className="caliber-toggle">
+                    {['.50', '.68'].map((c) => (
+                      <button
+                        key={c}
+                        type="button"
+                        className={`caliber-btn${form.caliber === c ? ' active' : ''}`}
+                        onClick={() => setForm((prev) => ({ ...prev, caliber: c }))}
+                      >
+                        {c}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <div className="form-group">
                 <label htmlFor="additionalComments">Comentários adicionais</label>
                 <textarea
                   id="additionalComments"
@@ -785,42 +747,46 @@ const Sessions = () => {
               </div>
 
               <div className="form-group">
-                <label htmlFor="monitorSearch">Monitores</label>
+                <label>Monitores</label>
                 <input
-                  id="monitorSearch"
                   type="text"
                   value={monitorSearch}
                   onChange={(e) => setMonitorSearch(e.target.value)}
                   placeholder="Pesquisa por nome ou alcunha..."
                   style={{ marginBottom: '0.5rem' }}
                 />
-                <div className="monitors-checklist">
-                  {users
-                    .filter((user) => {
-                      const searchLower = monitorSearch.toLowerCase();
-                      const fullName = `${user.firstName} ${user.lastName}`.toLowerCase();
-                      const nickname = (user.nickname || '').toLowerCase();
-                      return fullName.includes(searchLower) || nickname.includes(searchLower);
-                    })
-                    .map((user) => {
-                      const nickname = user.nickname ? `(${user.nickname}) ` : '';
-                      return (
+                {(() => {
+                  const visible = users.filter((user) => {
+                    if (user.role !== 'monitor' && user.role !== 'admin') return false;
+                    if (form.monitors.includes(user.uuid)) return true;
+                    if (!monitorSearch) return false;
+                    const q = monitorSearch.toLowerCase();
+                    return (
+                      `${user.firstName} ${user.lastName}`.toLowerCase().includes(q) ||
+                      (user.nickname || '').toLowerCase().includes(q)
+                    );
+                  });
+                  if (!visible.length) return null;
+                  return (
+                    <div className="monitors-checklist">
+                      {visible.map((user) => (
                         <div key={user.uuid} className="form-checkbox-item">
                           <input
-                            id={`monitor-${user.uuid}`}
+                            id={`monitor-new-${user.uuid}`}
                             name="monitors"
                             type="checkbox"
                             value={user.uuid}
                             checked={form.monitors.includes(user.uuid)}
                             onChange={handleChange}
                           />
-                          <label htmlFor={`monitor-${user.uuid}`}>
-                            {nickname}{user.firstName} {user.lastName}
+                          <label htmlFor={`monitor-new-${user.uuid}`}>
+                            {user.firstName} {user.lastName}{user.nickname ? ` (${user.nickname})` : ''}
                           </label>
                         </div>
-                      );
-                    })}
-                </div>
+                      ))}
+                    </div>
+                  );
+                })()}
               </div>
 
               {error && <div className="error-msg"><span>⚠</span> {error}</div>}
@@ -840,11 +806,11 @@ const Sessions = () => {
       )}
 
       {selectedSession && (
-        <SessionDetailModal
+        <SessionViewModal
           session={selectedSession}
           users={users}
           onClose={() => setSelectedSession(null)}
-          onSave={handleSaveSession}
+          onEdit={(id) => navigate(`/sessions/${id}`)}
         />
       )}
     </div>

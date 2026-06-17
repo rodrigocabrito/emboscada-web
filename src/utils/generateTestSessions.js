@@ -20,6 +20,7 @@ const COMMENTS = [
 ];
 
 const STATUSES = ['done', 'active', 'pending_payment', 'no_show', 'cancelled'];
+const CALIBERS = ['.50', '.68', ''];
 
 export async function generateTestSessions(count = 70) {
   try {
@@ -44,6 +45,7 @@ export async function generateTestSessions(count = 70) {
       const numberOfPlayers = Math.floor(Math.random() * 35) + 5; // 5 to 40 players
       const comment = COMMENTS[Math.floor(Math.random() * COMMENTS.length)];
       const status = STATUSES[Math.floor(Math.random() * STATUSES.length)];
+      const caliber = CALIBERS[Math.floor(Math.random() * CALIBERS.length)];
 
       const y = sessionDate.getFullYear();
       const m = String(sessionDate.getMonth() + 1).padStart(2, '0');
@@ -58,6 +60,7 @@ export async function generateTestSessions(count = 70) {
         sessionDate: dateStr,
         sessionTime: timeStr,
         sessionDatetime,
+        caliber,
         status,
         additionalComments: comment,
         monitors: [],

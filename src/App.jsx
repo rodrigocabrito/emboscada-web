@@ -6,8 +6,10 @@ import ProtectedRoute from './components/ProtectedRoute';
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
 import Sessions from './pages/Sessions';
+import SessionDetail from './pages/SessionDetail';
 import Team from './pages/Team';
 import Admin from './pages/Admin';
+import AdminUsers from './pages/AdminUsers';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
@@ -46,6 +48,14 @@ const AppContent = () => {
           }
         />
         <Route
+          path="/sessions/:id"
+          element={
+            <ProtectedRoute>
+              <SessionDetail />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/team"
           element={
             <ProtectedRoute>
@@ -74,6 +84,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute adminOnly={true}>
               <Admin />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminUsers />
             </ProtectedRoute>
           }
         />

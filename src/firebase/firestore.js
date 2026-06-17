@@ -127,6 +127,11 @@ export const deleteBooking = async (id) => {
 
 // ─── SESSIONS ────────────────────────────────────────────────────────────────
 
+export const getSession = async (id) => {
+  const docSnap = await getDoc(doc(db, 'sessions', id));
+  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+};
+
 export const getSessions = async () => {
   const q = query(collection(db, 'sessions'), orderBy('sessionDatetime', 'asc'));
   const snapshot = await getDocs(q);
@@ -145,6 +150,8 @@ export const addSession = async (data) => {
     sessionDate: data.sessionDate,       // "YYYY-MM-DD"
     sessionTime: data.sessionTime,       // "HH:MM"
     sessionDatetime,                     // "YYYY-MM-DDTHH:MM" for ordering
+    typeOfSession: data.typeOfSession || '',
+    caliber: data.caliber || '',
     status: 'pending_payment',
     additionalComments: data.additionalComments,
     monitors: data.monitors || [],

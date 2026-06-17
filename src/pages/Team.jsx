@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getUsers, getSessions } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const getAchievements = (startedAt) => {
   if (!startedAt) return [];
@@ -75,6 +76,7 @@ const UserCard = ({ user, onSelect, sessionCount }) => {
 };
 
 const UserModal = ({ user, onClose, sessionCount }) => {
+  useEscapeKey(onClose);
   const initials = `${user.firstName?.[0] ?? ''}${user.lastName?.[0] ?? ''}`.toUpperCase();
   const color = getUserColor(user.uuid);
   const achievements = getAchievements(user.startedAt);
@@ -117,14 +119,16 @@ const UserModal = ({ user, onClose, sessionCount }) => {
           )}
 
           <div style={{ width: '100%', borderTop: '1px solid var(--border)', paddingTop: '1.5rem' }}>
-            <div style={{ marginBottom: '1rem' }}>
-              <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 600 }}>
-                Email
+            {user.phone && (
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 600 }}>
+                  Telemóvel
+                </div>
+                <div style={{ fontSize: '0.95rem', color: 'var(--text)', marginTop: '0.25rem' }}>
+                  {user.phone}
+                </div>
               </div>
-              <div style={{ fontSize: '0.95rem', color: 'var(--text)', marginTop: '0.25rem' }}>
-                {user.email}
-              </div>
-            </div>
+            )}
 
             <div style={{ marginBottom: '1rem' }}>
               <div style={{ fontSize: '0.75rem', textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', fontWeight: 600 }}>
