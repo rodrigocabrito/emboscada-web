@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { getSession, updateSession, getUsers, getCatalogItems } from '../firebase/firestore';
+import useScrollLock from '../hooks/useScrollLock';
+import useEscapeKey from '../hooks/useEscapeKey';
 
 const SESSION_TYPES = ['Paintball', 'Paintball Kids', 'Laser Tag', 'Laser Tag Kids', 'Gel Blast', 'Bubble Football'];
 
@@ -18,9 +20,9 @@ const STATUS_OPTIONS = [
 ];
 
 const PAYMENT_TYPES = [
-  { value: 'card', label: 'Cartão' },
-  { value: 'mbway', label: 'MBWay' },
-  { value: 'cash', label: 'Dinheiro' },
+  { value: 'card', label: 'Cartão', icon: '/visa.png' },
+  { value: 'mbway', label: 'MBWay', icon: '/mbway.png' },
+  { value: 'cash', label: 'Dinheiro', icon: '/cash.png' },
 ];
 
 const getStatusBadgeClass = (status) => {
@@ -57,6 +59,8 @@ const SessionDetail = () => {
   const [monitorSearch, setMonitorSearch] = useState('');
   const [draftExtra, setDraftExtra] = useState({ name: '', quantity: '', unitPrice: '' });
   const [draftOther, setDraftOther] = useState({ name: '', quantity: '', unitPrice: '' });
+  const [payModal, setPayModal] = useState(false);
+  const [confirmPayModal, setConfirmPayModal] = useState(false);
 
   useEffect(() => {
     const load = async () => {
@@ -281,6 +285,11 @@ const SessionDetail = () => {
     setDraftExtra({ name: '', quantity: '', unitPrice: '' });
     setDraftOther({ name: '', quantity: '', unitPrice: '' });
   };
+
+  useScrollLock(payModal);
+  useScrollLock(confirmPayModal);
+  useEscapeKey(() => setPayModal(false), payModal);
+  useEscapeKey(() => setConfirmPayModal(false), confirmPayModal);
 
   if (loading) return <div className="page"><p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '3rem' }}>A carregar…</p></div>;
   if (!form) return <div className="page"><p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '3rem' }}>Sessão não encontrada.</p></div>;
@@ -590,14 +599,63 @@ const SessionDetail = () => {
             </div>
           </div>{/* end card 4 */}
 
-          {/* ── Card 5: Sinal / Resumo / Pagamento ── */}
+          {/* ── Card 5: Resumo ── */}
           <div className="session-detail-card">
-            <div className="form-group">
-              <label htmlFor="signal">Sinal (€)</label>
-              <input id="signal" name="signal" type="number" min="0" step="0.01" value={form.signal} onChange={handleChange} style={{ maxWidth: '140px' }} />
+            <div className="financial-summary">
+              <div className="financial-summary-title">Resumo</div>
+              <div className="financial-row"><span>Packs</span><span>{fmt(financials.packsTotal)} €</span></div>
+              {financials.extrasTotal > 0 && <div className="financial-row"><span>Extras</span><span>{fmt(financials.extrasTotal)} €</span></div>}
+              {financials.othersTotal > 0 && <div className="financial-row"><span>Outros</span><span>{fmt(financials.othersTotal)} €</span></div>}
+              <div className="financial-row financial-row--deduct"><span>Sinal</span><span>− {fmt(financials.signalAmount)} €</span></div>
+              <div className="financial-row financial-row--total"><span>Total</span><span>{fmt(financials.total)} €</span></div>
+            </div>
+            <button
+              type="button"
+              className="btn-primary"
+              style={{ width: '100%', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+              onClick={() => session.status === 'done' ? setConfirmPayModal(true) : setPayModal(true)}
+            >
+              {session.status === 'done' && <img src="/green-check.png" alt="" style={{ width: '18px', height: '18px' }} />}
+              {session.status === 'done' ? 'Pago' : 'Pagar'}
+            </button>
+          </div>{/* end card 5 */}
+
+          </div>{/* end financial items col */}
+
+        </div>{/* end right col */}
+      </div>{/* end layout */}
+
+      {error && <div className="error-msg" style={{ marginTop: '1rem' }}><span>⚠</span> {error}</div>}
+
+      {/* ── Confirm reopen payment modal ── */}
+      {confirmPayModal && (
+        <div className="modal-overlay" onClick={() => setConfirmPayModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Sessão paga</h2>
+              <button className="modal-close" onClick={() => setConfirmPayModal(false)} aria-label="Fechar">✕</button>
+            </div>
+            <p style={{ fontSize: '0.95rem', color: 'var(--text-muted)', margin: '0.5rem 0 1.5rem' }}>
+              Esta sessão já foi paga. Tem a certeza que pretende continuar?
+            </p>
+            <div className="modal-footer">
+              <button type="button" className="btn-secondary" onClick={() => setConfirmPayModal(false)}>Não</button>
+              <button type="button" className="btn-primary" onClick={() => { setConfirmPayModal(false); setPayModal(true); }}>Sim</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* ── Payment modal ── */}
+      {payModal && (
+        <div className="modal-overlay" onClick={() => setPayModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Pagamento</h2>
+              <button className="modal-close" onClick={() => setPayModal(false)} aria-label="Fechar">✕</button>
             </div>
 
-            <div className="financial-summary">
+            <div className="financial-summary" style={{ marginBottom: '1.25rem' }}>
               <div className="financial-summary-title">Resumo</div>
               <div className="financial-row"><span>Packs</span><span>{fmt(financials.packsTotal)} €</span></div>
               {financials.extrasTotal > 0 && <div className="financial-row"><span>Extras</span><span>{fmt(financials.extrasTotal)} €</span></div>}
@@ -607,48 +665,88 @@ const SessionDetail = () => {
             </div>
 
             <div className="form-group">
-              <label>Tipo de Pagamento</label>
-              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
-                {PAYMENT_TYPES.map((pt) => (
-                  <label key={pt.value} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', userSelect: 'none' }}>
-                    <input
-                      type="checkbox"
-                      checked={form.paymentTypes.includes(pt.value)}
-                      onChange={() => togglePaymentType(pt.value)}
-                      style={{ width: '1rem', height: '1rem', accentColor: 'var(--primary)', cursor: 'pointer' }}
-                    />
-                    {pt.label}
-                  </label>
-                ))}
-              </div>
-              {form.paymentTypes.includes('cash') && (() => {
-                const troco = (parseFloat(form.cashPaid) || 0) - financials.total;
-                return (
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.6rem' }}>
-                    <div className="form-group" style={{ margin: 0, flex: '0 0 140px' }}>
-                      <label htmlFor="cashPaid" style={{ fontSize: '0.8rem' }}>Valor entregue (€)</label>
-                      <input id="cashPaid" name="cashPaid" type="number" min="0" step="0.01" value={form.cashPaid} onChange={handleChange} placeholder="0.00" />
-                    </div>
-                    {form.cashPaid !== '' && (
-                      <div style={{ fontSize: '0.875rem', marginTop: '1.1rem' }}>
-                        <span style={{ color: 'var(--text-muted)' }}>Troco: </span>
-                        <strong style={{ color: troco >= 0 ? 'var(--success, #16a34a)' : 'var(--error, #dc2626)' }}>
-                          {troco >= 0 ? fmt(troco) : `− ${fmt(Math.abs(troco))}`} €
-                        </strong>
-                      </div>
-                    )}
-                  </div>
-                );
-              })()}
+              <label htmlFor="signal">Sinal (€)</label>
+              <input id="signal" name="signal" type="number" min="0" step="0.01" value={form.signal} onChange={handleChange} style={{ maxWidth: '140px' }} />
             </div>
-          </div>{/* end card 5 */}
 
-          </div>{/* end financial items col */}
+            <div className="form-group">
+              <label>Tipo de Pagamento</label>
+              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.4rem' }}>
+                {/* Icons — left half */}
+                <div style={{ flex: 1, display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
+                  {PAYMENT_TYPES.map((pt) => {
+                    const selected = form.paymentTypes.includes(pt.value);
+                    return (
+                      <button
+                        key={pt.value}
+                        type="button"
+                        onClick={() => togglePaymentType(pt.value)}
+                        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', userSelect: 'none', background: 'none', border: 'none', padding: 0 }}
+                      >
+                        <div style={{
+                          width: '100%', height: '64px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                          background: selected ? 'var(--primary-light, #d1fae5)' : 'var(--bg)',
+                          border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
+                          transition: 'background 0.15s, border-color 0.15s',
+                        }}>
+                          <img src={pt.icon} alt={pt.label} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
+                        </div>
+                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: selected ? 'var(--primary)' : 'var(--text-muted)' }}>{pt.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {/* Cash input — right half, mirrors Pagar button width */}
+                <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
+                  {form.paymentTypes.includes('cash') && (() => {
+                    const troco = (parseFloat(form.cashPaid) || 0) - financials.total;
+                    return (
+                      <div style={{ width: '100%', marginTop: '-14px' }}>
+                        <label htmlFor="cashPaid" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Montante Recebido</label>
+                      <div style={{ position: 'relative', width: '100%' }}>
+                        <input
+                          id="cashPaid" name="cashPaid" type="number" min="0" step="0.01"
+                          value={form.cashPaid} onChange={handleChange} placeholder="0.00"
+                          style={{ width: '100%', paddingRight: form.cashPaid !== '' ? '5rem' : undefined }}
+                        />
+                        {form.cashPaid !== '' && (
+                          <span style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.78rem', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
+                            Troco: <strong style={{ color: troco >= 0 ? 'var(--success, #16a34a)' : 'var(--error, #dc2626)' }}>
+                              {troco >= 0 ? fmt(troco) : `−${fmt(Math.abs(troco))}`} €
+                            </strong>
+                          </span>
+                        )}
+                      </div>
+                      </div>
+                    );
+                  })()}
+                </div>
+              </div>
+            </div>
 
-        </div>{/* end right col */}
-      </div>{/* end layout */}
-
-      {error && <div className="error-msg" style={{ marginTop: '1rem' }}><span>⚠</span> {error}</div>}
+            <div className="modal-footer">
+              <button type="button" className="btn-secondary" onClick={() => setPayModal(false)}>Fechar</button>
+              <button
+                type="button"
+                className="btn-primary"
+                onClick={async () => {
+                  setForm((prev) => ({ ...prev, status: 'done' }));
+                  setSession((prev) => ({ ...prev, status: 'done' }));
+                  setDirty(true);
+                  setPayModal(false);
+                  try {
+                    await updateSession(id, { status: 'done' });
+                  } catch {
+                    setError('Erro ao atualizar estado. Guarda manualmente.');
+                  }
+                }}
+              >
+                Pagar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <div className="session-detail-footer">
         <button type="button" className="btn-secondary" onClick={handleDiscard} disabled={saving || !dirty}>Descartar alterações</button>
