@@ -5,6 +5,15 @@
   padding: 0;
 }
 
+input[type="number"]::-webkit-inner-spin-button,
+input[type="number"]::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+input[type="number"] {
+  -moz-appearance: textfield;
+}
+
 :root {
   /* Greens */
   --green-50:  #f0faf4;
@@ -889,13 +898,93 @@ body {
 }
 
 /* ── Session detail page ─────────────────────────────────────────── */
+.session-section-divider {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  border-top: 1px solid var(--border);
+  padding-top: 1.25rem;
+  margin-top: 0.5rem;
+  margin-bottom: 0.25rem;
+}
+
+.financial-summary {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 1rem 1.25rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  margin-bottom: 0.25rem;
+}
+
+.financial-summary-title {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--text-muted);
+  margin-bottom: 0.25rem;
+}
+
+.financial-row {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.875rem;
+  color: var(--text);
+}
+
+.financial-row--deduct {
+  color: var(--text-muted);
+}
+
+.financial-row--total {
+  font-size: 1rem;
+  font-weight: 700;
+  color: var(--green-700);
+  border-top: 1px solid var(--border);
+  padding-top: 0.4rem;
+  margin-top: 0.15rem;
+}
+
+
 .session-detail-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
   padding: 1.75rem 2rem;
-  max-width: 680px;
+  max-width: 1300px;
   margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0 3rem;
+}
+
+.session-detail-card .session-detail-footer,
+.session-detail-card .error-msg {
+  grid-column: span 2;
+}
+
+.session-col-left,
+.session-col-right {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  min-width: 0;
+}
+
+.session-col-right-title {
+  font-size: 0.75rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--text-muted);
+  border-bottom: 1px solid var(--border);
+  padding-bottom: 0.75rem;
+  margin-bottom: 1rem;
 }
 
 .session-detail-footer {
@@ -905,6 +994,7 @@ body {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
+  grid-column: span 2;
 }
 
 .session-detail-footer .btn-primary,

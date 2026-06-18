@@ -9,7 +9,7 @@ const VIEWS = [
   { key: 'week', label: 'Semana' },
 ];
 
-const SESSION_TYPES = ['Paintball', 'Laser Tag', 'Gel Blast', 'Bubble Football'];
+const SESSION_TYPES = ['Paintball', 'Paintball Kids', 'Laser Tag', 'Laser Tag Kids', 'Gel Blast', 'Bubble Football'];
 
 const EMPTY_FORM = {
   spoc: '',

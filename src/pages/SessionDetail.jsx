@@ -1,9 +1,8 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSession, updateSession, deleteSession, getUsers } from '../firebase/firestore';
-import { getUserColor } from '../utils/avatarColors';
+import { getSession, updateSession, getUsers, getCatalogItems } from '../firebase/firestore';
 
-const SESSION_TYPES = ['Paintball', 'Laser Tag', 'Gel Blast', 'Bubble Football'];
+const SESSION_TYPES = ['Paintball', 'Paintball Kids', 'Laser Tag', 'Laser Tag Kids', 'Gel Blast', 'Bubble Football'];
 
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => [
   `${String(i).padStart(2, '0')}:00`,
@@ -18,6 +17,12 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelada' },
 ];
 
+const PAYMENT_TYPES = [
+  { value: 'card', label: 'Cartão' },
+  { value: 'mbway', label: 'MBWay' },
+  { value: 'cash', label: 'Dinheiro' },
+];
+
 const getStatusBadgeClass = (status) => {
   switch (status) {
     case 'done': return 'badge-success';
@@ -29,26 +34,32 @@ const getStatusBadgeClass = (status) => {
   }
 };
 
+const fmt = (n) => Number(n || 0).toFixed(2);
+
 const SessionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
   const [session, setSession] = useState(null);
   const [users, setUsers] = useState([]);
+  const [catalogItems, setCatalogItems] = useState([]);
   const [form, setForm] = useState(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [dirty, setDirty] = useState(false);
+  const [saved, setSaved] = useState(false);
   const [monitorSearch, setMonitorSearch] = useState('');
 
   useEffect(() => {
     const load = async () => {
       try {
-        const [s, u] = await Promise.all([getSession(id), getUsers()]);
+        const [s, u, catalog] = await Promise.all([getSession(id), getUsers(), getCatalogItems()]);
         if (!s) { navigate('/sessions', { replace: true }); return; }
         setSession(s);
         setUsers(u);
+        setCatalogItems(catalog);
+        const numPlayers = s.numberOfPlayers || 0;
         setForm({
           spoc: s.spoc || '',
           numberOfPlayers: s.numberOfPlayers || '',
@@ -59,6 +70,16 @@ const SessionDetail = () => {
           status: s.status || 'pending_payment',
           additionalComments: s.additionalComments || '',
           monitors: s.monitors || [],
+          // financial
+          packId: s.packId || '',
+          packName: s.packName || '',
+          numPacks: s.numPacks !== undefined ? String(s.numPacks) : String(numPlayers),
+          packPrice: s.packPrice !== undefined ? String(s.packPrice) : '',
+          extras: s.extras || [],
+          others: s.others || [],
+          signal: s.signal !== undefined ? String(s.signal) : String(numPlayers >= 15 ? 80 : 50),
+          paymentTypes: s.paymentTypes || [],
+          cashPaid: s.cashPaid !== undefined ? String(s.cashPaid) : '',
         });
       } catch {
         setError('Erro ao carregar sessão.');
@@ -69,13 +90,105 @@ const SessionDetail = () => {
     load();
   }, [id, navigate]);
 
+  const packItems = useMemo(() =>
+    catalogItems.filter((i) => i.category === form?.typeOfSession && i.active !== false),
+    [catalogItems, form?.typeOfSession]
+  );
+
+  const extraItems = useMemo(() =>
+    catalogItems.filter((i) => i.category === 'Extras' && i.active !== false),
+    [catalogItems]
+  );
+
+  const otherItems = useMemo(() =>
+    catalogItems.filter((i) => i.category === 'Outro' && i.active !== false),
+    [catalogItems]
+  );
+
+  const financials = useMemo(() => {
+    if (!form) return {};
+    const packsTotal = (parseFloat(form.numPacks) || 0) * (parseFloat(form.packPrice) || 0);
+    const extrasTotal = (form.extras || []).reduce(
+      (sum, e) => sum + (parseFloat(e.quantity) || 0) * (parseFloat(e.unitPrice) || 0), 0
+    );
+    const othersTotal = (form.others || []).reduce(
+      (sum, o) => sum + (parseFloat(o.quantity) || 0) * (parseFloat(o.unitPrice) || 0), 0
+    );
+    const signalAmount = parseFloat(form.signal) || 0;
+    const total = packsTotal + extrasTotal + othersTotal - signalAmount;
+    return { packsTotal, extrasTotal, othersTotal, signalAmount, total };
+  }, [form]);
+
   const handleChange = (e) => {
     const { name, value } = e.target;
+    setForm((prev) => {
+      const next = { ...prev, [name]: value };
+      if (name === 'typeOfSession' && value !== 'Paintball' && value !== 'Paintball Kids') next.caliber = '';
+      if (name === 'typeOfSession') { next.packId = ''; next.packName = ''; next.packPrice = ''; }
+      if (name === 'numberOfPlayers' && prev.signal === String(prev.numberOfPlayers >= 15 ? 80 : 50)) {
+        next.signal = String(parseInt(value) >= 15 ? 80 : 50);
+      }
+      return next;
+    });
+    setDirty(true);
+  };
+
+  const handlePackSelect = (packId) => {
+    const pack = catalogItems.find((i) => i.id === packId);
     setForm((prev) => ({
       ...prev,
-      [name]: value,
-      ...(name === 'typeOfSession' && value !== 'Paintball' ? { caliber: '' } : {}),
+      packId: packId,
+      packName: pack?.name || '',
+      packPrice: pack ? String(pack.price) : '',
     }));
+    setDirty(true);
+  };
+
+  const addExtra = (catalogId) => {
+    const item = extraItems.find((i) => i.id === catalogId);
+    if (!item) return;
+    setForm((prev) => ({
+      ...prev,
+      extras: [...prev.extras, { catalogId: item.id, name: item.name, quantity: '1', unitPrice: String(item.price) }],
+    }));
+    setDirty(true);
+  };
+
+  const updateExtra = (idx, field, value) => {
+    setForm((prev) => {
+      const extras = [...prev.extras];
+      extras[idx] = { ...extras[idx], [field]: value };
+      return { ...prev, extras };
+    });
+    setDirty(true);
+  };
+
+  const removeExtra = (idx) => {
+    setForm((prev) => ({ ...prev, extras: prev.extras.filter((_, i) => i !== idx) }));
+    setDirty(true);
+  };
+
+  const addOther = (catalogId) => {
+    const item = otherItems.find((i) => i.id === catalogId);
+    if (!item) return;
+    setForm((prev) => ({
+      ...prev,
+      others: [...prev.others, { catalogId: item.id, name: item.name, quantity: '1', unitPrice: String(item.price) }],
+    }));
+    setDirty(true);
+  };
+
+  const updateOther = (idx, field, value) => {
+    setForm((prev) => {
+      const others = [...prev.others];
+      others[idx] = { ...others[idx], [field]: value };
+      return { ...prev, others };
+    });
+    setDirty(true);
+  };
+
+  const removeOther = (idx) => {
+    setForm((prev) => ({ ...prev, others: prev.others.filter((_, i) => i !== idx) }));
     setDirty(true);
   };
 
@@ -85,6 +198,16 @@ const SessionDetail = () => {
       monitors: prev.monitors.includes(uid)
         ? prev.monitors.filter((m) => m !== uid)
         : [...prev.monitors, uid],
+    }));
+    setDirty(true);
+  };
+
+  const togglePaymentType = (value) => {
+    setForm((prev) => ({
+      ...prev,
+      paymentTypes: prev.paymentTypes.includes(value)
+        ? prev.paymentTypes.filter((p) => p !== value)
+        : [...prev.paymentTypes, value],
     }));
     setDirty(true);
   };
@@ -100,12 +223,25 @@ const SessionDetail = () => {
         sessionTime: form.sessionTime,
         sessionDatetime: `${form.sessionDate}T${form.sessionTime}`,
         typeOfSession: form.typeOfSession,
-        caliber: form.typeOfSession === 'Paintball' ? form.caliber : '',
+        caliber: (form.typeOfSession === 'Paintball' || form.typeOfSession === 'Paintball Kids') ? form.caliber : '',
         status: form.status,
         additionalComments: form.additionalComments,
         monitors: form.monitors,
+        packId: form.packId,
+        packName: form.packName,
+        numPacks: parseFloat(form.numPacks) || 0,
+        packPrice: parseFloat(form.packPrice) || 0,
+        extras: form.extras.map((e) => ({ ...e, quantity: parseFloat(e.quantity) || 0, unitPrice: parseFloat(e.unitPrice) || 0 })),
+        others: form.others.map((o) => ({ ...o, quantity: parseFloat(o.quantity) || 0, unitPrice: parseFloat(o.unitPrice) || 0 })),
+        signal: parseFloat(form.signal) || 0,
+        paymentTypes: form.paymentTypes,
+        cashPaid: form.paymentTypes.includes('cash') ? (parseFloat(form.cashPaid) || 0) : null,
+        total: financials.total,
       });
-      navigate('/sessions', { state: { returnDate: form.sessionDate } });
+      setSession((prev) => ({ ...prev, ...form }));
+      setDirty(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 3000);
     } catch {
       setError('Erro ao guardar sessão. Tenta novamente.');
     } finally {
@@ -114,30 +250,41 @@ const SessionDetail = () => {
   };
 
   const handleDiscard = () => {
-    navigate('/sessions');
+    const numPlayers = session.numberOfPlayers || 0;
+    setForm({
+      spoc: session.spoc || '',
+      numberOfPlayers: session.numberOfPlayers || '',
+      sessionDate: session.sessionDate || '',
+      sessionTime: session.sessionTime || '',
+      typeOfSession: session.typeOfSession || '',
+      caliber: session.caliber || '',
+      status: session.status || 'pending_payment',
+      additionalComments: session.additionalComments || '',
+      monitors: session.monitors || [],
+      packId: session.packId || '',
+      packName: session.packName || '',
+      numPacks: session.numPacks !== undefined ? String(session.numPacks) : String(numPlayers),
+      packPrice: session.packPrice !== undefined ? String(session.packPrice) : '',
+      extras: session.extras || [],
+      others: session.others || [],
+      signal: session.signal !== undefined ? String(session.signal) : String(numPlayers >= 15 ? 80 : 50),
+      paymentTypes: session.paymentTypes || [],
+      cashPaid: session.cashPaid !== undefined ? String(session.cashPaid) : '',
+    });
+    setDirty(false);
   };
 
-  if (loading) {
-    return (
-      <div className="page">
-        <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '3rem' }}>A carregar…</p>
-      </div>
-    );
-  }
-
-  if (!form) {
-    return (
-      <div className="page">
-        <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '3rem' }}>Sessão não encontrada.</p>
-      </div>
-    );
-  }
+  if (loading) return <div className="page"><p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '3rem' }}>A carregar…</p></div>;
+  if (!form) return <div className="page"><p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '3rem' }}>Sessão não encontrada.</p></div>;
 
   const monitorUsers = users.filter((u) => u.role === 'monitor' || u.role === 'admin');
 
   return (
     <div className="page">
       <div className="page-header">
+        <button className="btn-secondary" style={{ width: 'auto', marginBottom: '1rem' }} onClick={() => navigate('/sessions', { state: { returnDate: form.sessionDate } })}>
+          ← Voltar
+        </button>
         <h1 style={{ marginBottom: '0.25rem' }}>
           Sessão — {session.sessionDate
             ? new Date(session.sessionDate + 'T00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })
@@ -148,90 +295,48 @@ const SessionDetail = () => {
       </div>
 
       <div className="session-detail-card">
+        <div className="session-col-left">
+        {/* ── Sessão ── */}
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="spoc">Responsável</label>
-            <input
-              id="spoc"
-              name="spoc"
-              type="text"
-              value={form.spoc}
-              onChange={handleChange}
-              required
-            />
+            <input id="spoc" name="spoc" type="text" value={form.spoc} onChange={handleChange} required />
           </div>
           <div className="form-group">
             <label htmlFor="numberOfPlayers">Nº de Jogadores</label>
-            <input
-              id="numberOfPlayers"
-              name="numberOfPlayers"
-              type="number"
-              min="1"
-              value={form.numberOfPlayers}
-              onChange={handleChange}
-              required
-            />
+            <input id="numberOfPlayers" name="numberOfPlayers" type="number" min="1" value={form.numberOfPlayers} onChange={handleChange} required />
           </div>
         </div>
 
         <div className="form-row">
           <div className="form-group">
             <label htmlFor="sessionDate">Data</label>
-            <input
-              id="sessionDate"
-              name="sessionDate"
-              type="date"
-              value={form.sessionDate}
-              onChange={handleChange}
-              required
-            />
+            <input id="sessionDate" name="sessionDate" type="date" value={form.sessionDate} onChange={handleChange} required />
           </div>
           <div className="form-group">
             <label htmlFor="sessionTime">Hora</label>
-            <select
-              id="sessionTime"
-              name="sessionTime"
-              value={form.sessionTime}
-              onChange={handleChange}
-              className="form-select"
-              required
-            >
+            <select id="sessionTime" name="sessionTime" value={form.sessionTime} onChange={handleChange} className="form-select" required>
               <option value="">-- Selecionar hora --</option>
-              {TIME_SLOTS.map((t) => (
-                <option key={t} value={t}>{t}</option>
-              ))}
+              {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
         </div>
 
         <div className="form-group">
           <label htmlFor="typeOfSession">Tipo de Sessão</label>
-          <select
-            id="typeOfSession"
-            name="typeOfSession"
-            value={form.typeOfSession}
-            onChange={handleChange}
-            className="form-select"
-            required
-          >
+          <select id="typeOfSession" name="typeOfSession" value={form.typeOfSession} onChange={handleChange} className="form-select" required>
             <option value="">-- Selecionar tipo --</option>
-            {SESSION_TYPES.map((t) => (
-              <option key={t} value={t}>{t}</option>
-            ))}
+            {SESSION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
           </select>
         </div>
 
-        {form.typeOfSession === 'Paintball' && (
+        {(form.typeOfSession === 'Paintball' || form.typeOfSession === 'Paintball Kids') && (
           <div className="form-group">
             <label>Calibre</label>
             <div className="caliber-toggle">
               {['.50', '.68'].map((c) => (
-                <button
-                  key={c}
-                  type="button"
-                  className={`caliber-btn${form.caliber === c ? ' active' : ''}`}
-                  onClick={() => { setForm((prev) => ({ ...prev, caliber: c })); setDirty(true); }}
-                >
+                <button key={c} type="button" className={`caliber-btn${form.caliber === c ? ' active' : ''}`}
+                  onClick={() => { setForm((prev) => ({ ...prev, caliber: c })); setDirty(true); }}>
                   {c}
                 </button>
               ))}
@@ -243,22 +348,9 @@ const SessionDetail = () => {
           <label>Estado da Sessão</label>
           <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
             {STATUS_OPTIONS.map((s) => (
-              <button
-                key={s.value}
-                type="button"
-                onClick={() => { setForm((prev) => ({ ...prev, status: s.value })); setDirty(true); }}
+              <button key={s.value} type="button" onClick={() => { setForm((prev) => ({ ...prev, status: s.value })); setDirty(true); }}
                 className={`badge ${getStatusBadgeClass(s.value)}`}
-                style={{
-                  cursor: 'pointer',
-                  border: 'none',
-                  fontSize: '0.78rem',
-                  padding: '0.25rem 0.6rem',
-                  opacity: form.status === s.value ? 1 : 0.5,
-                  boxShadow: form.status === s.value ? '0 0 0 2px rgba(0,0,0,0.2)' : 'none',
-                  transform: form.status === s.value ? 'scale(1.05)' : 'scale(1)',
-                  transition: 'all 0.15s ease',
-                }}
-              >
+                style={{ cursor: 'pointer', border: 'none', fontSize: '0.78rem', padding: '0.25rem 0.6rem', opacity: form.status === s.value ? 1 : 0.5, boxShadow: form.status === s.value ? '0 0 0 2px rgba(0,0,0,0.2)' : 'none', transform: form.status === s.value ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.15s ease' }}>
                 {form.status === s.value ? '✓ ' : ''}{s.label}
               </button>
             ))}
@@ -267,50 +359,26 @@ const SessionDetail = () => {
 
         <div className="form-group">
           <label htmlFor="additionalComments">Comentários adicionais</label>
-          <textarea
-            id="additionalComments"
-            name="additionalComments"
-            value={form.additionalComments}
-            onChange={handleChange}
-            className="form-textarea"
-            placeholder="Notas, requisitos especiais..."
-            rows={3}
-          />
+          <textarea id="additionalComments" name="additionalComments" value={form.additionalComments} onChange={handleChange} className="form-textarea" placeholder="Notas, requisitos especiais..." rows={3} />
         </div>
 
         <div className="form-group">
           <label>Monitores</label>
-          <input
-            type="text"
-            value={monitorSearch}
-            onChange={(e) => setMonitorSearch(e.target.value)}
-            placeholder="Pesquisa por nome ou alcunha..."
-            style={{ marginBottom: '0.5rem' }}
-          />
+          <input type="text" value={monitorSearch} onChange={(e) => setMonitorSearch(e.target.value)} placeholder="Pesquisa por nome ou alcunha..." style={{ marginBottom: '0.5rem' }} />
           {(() => {
             const visible = monitorUsers.filter((u) => {
               if (form.monitors.includes(u.uuid)) return true;
               if (!monitorSearch) return false;
               const q = monitorSearch.toLowerCase();
-              return (
-                `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) ||
-                (u.nickname || '').toLowerCase().includes(q)
-              );
+              return `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) || (u.nickname || '').toLowerCase().includes(q);
             });
             if (!visible.length) return null;
             return (
               <div className="monitors-checklist">
                 {visible.map((u) => (
                   <div key={u.uuid} className="form-checkbox-item">
-                    <input
-                      id={`monitor-${u.uuid}`}
-                      type="checkbox"
-                      checked={form.monitors.includes(u.uuid)}
-                      onChange={() => toggleMonitor(u.uuid)}
-                    />
-                    <label htmlFor={`monitor-${u.uuid}`}>
-                      {u.firstName} {u.lastName}{u.nickname ? ` (${u.nickname})` : ''}
-                    </label>
+                    <input id={`monitor-${u.uuid}`} type="checkbox" checked={form.monitors.includes(u.uuid)} onChange={() => toggleMonitor(u.uuid)} />
+                    <label htmlFor={`monitor-${u.uuid}`}>{u.firstName} {u.lastName}{u.nickname ? ` (${u.nickname})` : ''}</label>
                   </div>
                 ))}
               </div>
@@ -318,22 +386,189 @@ const SessionDetail = () => {
           })()}
         </div>
 
-        {error && <div className="error-msg"><span>⚠</span> {error}</div>}
+        </div>{/* end session-col-left */}
+
+        <div className="session-col-right">
+        {/* ── Financeiro ── */}
+        <div className="session-col-right-title">Financeiro</div>
+
+        <div className="form-row" style={{ gridTemplateColumns: '2fr 1fr 1fr' }}>
+          <div className="form-group">
+            <label htmlFor="packId">Pack</label>
+            <select id="packId" value={form.packId} onChange={(e) => handlePackSelect(e.target.value)} className="form-select">
+              <option value="">-- Selecionar pack --</option>
+              {packItems.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+            </select>
+          </div>
+          <div className="form-group">
+            <label htmlFor="numPacks">Nº de packs</label>
+            <input id="numPacks" name="numPacks" type="number" min="10" step="1" value={form.numPacks} onChange={handleChange} onBlur={(e) => { const v = parseInt(e.target.value) || 0; if (v > 0 && v < 10) setForm((p) => ({ ...p, numPacks: '10' })); }} />
+          </div>
+          <div className="form-group">
+            <label htmlFor="packPrice">€/ pack</label>
+            <input id="packPrice" name="packPrice" type="number" min="0" step="0.01" value={form.packPrice} onChange={handleChange} placeholder="0.00" />
+          </div>
+        </div>
+        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '-0.5rem', marginBottom: '0.75rem' }}>
+          Subtotal packs: <strong style={{ color: 'var(--text)' }}>{fmt(financials.packsTotal)} €</strong>
+        </p>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.5rem 0 0.25rem' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Extras</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+        </div>
+
+        {/* Extras */}
+        <div className="form-group">
+
+          {form.extras.length > 0 && (
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem 0.2rem 0', borderBottom: '1px solid var(--border)' }}>Item</th>
+                  <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border)', width: '72px' }}>Qtd</th>
+                  <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border)', width: '90px' }}>€/un</th>
+                  <th style={{ borderBottom: '1px solid var(--border)', width: '28px' }} />
+                </tr>
+              </thead>
+              <tbody>
+                {form.extras.map((extra, idx) => (
+                  <tr key={idx}>
+                    <td style={{ padding: '0.3rem 0.4rem 0.3rem 0', color: 'var(--text)' }}>{extra.name}</td>
+                    <td style={{ padding: '0.3rem 0.4rem' }}><input type="number" min="0" step="1" value={extra.quantity} onChange={(e) => updateExtra(idx, 'quantity', e.target.value)} style={{ width: '100%', textAlign: 'center' }} /></td>
+                    <td style={{ padding: '0.3rem 0.4rem' }}><input type="number" min="0" step="0.01" value={extra.unitPrice} onChange={(e) => updateExtra(idx, 'unitPrice', e.target.value)} style={{ width: '100%', textAlign: 'center' }} /></td>
+                    <td style={{ padding: '0.3rem 0', textAlign: 'center' }}><button type="button" onClick={() => removeExtra(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error)', fontSize: '1rem', lineHeight: 1 }}>✕</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {extraItems.length > 0 && (
+            <select className="form-select" value="" onChange={(e) => { if (e.target.value) addExtra(e.target.value); }} style={{ width: '160px', fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}>
+              <option value="">+ Adicionar extra</option>
+              {extraItems.map((e) => <option key={e.id} value={e.id}>{e.name} ({fmt(e.price)} €)</option>)}
+            </select>
+          )}
+        </div>
+
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.5rem 0 0.25rem' }}>
+          <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Outros</span>
+          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
+        </div>
+
+        {/* Outros */}
+        <div className="form-group">
+
+          {form.others.length > 0 && (
+            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
+              <thead>
+                <tr>
+                  <th style={{ textAlign: 'left', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem 0.2rem 0', borderBottom: '1px solid var(--border)' }}>Item</th>
+                  <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border)', width: '72px' }}>Qtd</th>
+                  <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border)', width: '90px' }}>€/un</th>
+                  <th style={{ borderBottom: '1px solid var(--border)', width: '28px' }} />
+                </tr>
+              </thead>
+              <tbody>
+                {form.others.map((other, idx) => (
+                  <tr key={idx}>
+                    <td style={{ padding: '0.3rem 0.4rem 0.3rem 0', color: 'var(--text)' }}>{other.name}</td>
+                    <td style={{ padding: '0.3rem 0.4rem' }}><input type="number" min="0" step="1" value={other.quantity} onChange={(e) => updateOther(idx, 'quantity', e.target.value)} style={{ width: '100%', textAlign: 'center' }} /></td>
+                    <td style={{ padding: '0.3rem 0.4rem' }}><input type="number" min="0" step="0.01" value={other.unitPrice} onChange={(e) => updateOther(idx, 'unitPrice', e.target.value)} style={{ width: '100%', textAlign: 'center' }} /></td>
+                    <td style={{ padding: '0.3rem 0', textAlign: 'center' }}><button type="button" onClick={() => removeOther(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error)', fontSize: '1rem', lineHeight: 1 }}>✕</button></td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          )}
+          {otherItems.length > 0 && (
+            <select className="form-select" value="" onChange={(e) => { if (e.target.value) addOther(e.target.value); }} style={{ width: '160px', fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}>
+              <option value="">+ Adicionar outro</option>
+              {otherItems.map((o) => <option key={o.id} value={o.id}>{o.name} ({fmt(o.price)} €)</option>)}
+            </select>
+          )}
+        </div>
+
+        {/* Sinal */}
+        <div className="form-row">
+          <div className="form-group">
+            <label htmlFor="signal">Sinal (€)</label>
+            <input id="signal" name="signal" type="number" min="0" step="0.01" value={form.signal} onChange={handleChange} />
+          </div>
+          <div className="form-group" />
+        </div>
+
+        {/* Resumo */}
+        <div className="financial-summary">
+          <div className="financial-summary-title">Resumo</div>
+          <div className="financial-row"><span>Packs ({form.numPacks || 0} × {fmt(form.packPrice)} €)</span><span>{fmt(financials.packsTotal)} €</span></div>
+          {financials.extrasTotal > 0 && <div className="financial-row"><span>Extras</span><span>{fmt(financials.extrasTotal)} €</span></div>}
+          {financials.othersTotal > 0 && <div className="financial-row"><span>Outros</span><span>{fmt(financials.othersTotal)} €</span></div>}
+          <div className="financial-row financial-row--deduct"><span>Sinal</span><span>− {fmt(financials.signalAmount)} €</span></div>
+          <div className="financial-row financial-row--total"><span>Total</span><span>{fmt(financials.total)} €</span></div>
+        </div>
+
+        {/* Pagamento */}
+        <div className="form-group">
+          <label>Tipo de Pagamento</label>
+          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+            {PAYMENT_TYPES.map((pt) => (
+              <label key={pt.value} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', userSelect: 'none' }}>
+                <input
+                  type="checkbox"
+                  checked={form.paymentTypes.includes(pt.value)}
+                  onChange={() => togglePaymentType(pt.value)}
+                  style={{ width: '1rem', height: '1rem', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                />
+                {pt.label}
+              </label>
+            ))}
+          </div>
+          {form.paymentTypes.includes('cash') && (() => {
+            const troco = (parseFloat(form.cashPaid) || 0) - financials.total;
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.6rem' }}>
+                <div className="form-group" style={{ margin: 0, flex: '0 0 140px' }}>
+                  <label htmlFor="cashPaid" style={{ fontSize: '0.8rem' }}>Valor entregue (€)</label>
+                  <input id="cashPaid" name="cashPaid" type="number" min="0" step="0.01" value={form.cashPaid} onChange={handleChange} placeholder="0.00" />
+                </div>
+                {form.cashPaid !== '' && (
+                  <div style={{ fontSize: '0.875rem', marginTop: '1.1rem' }}>
+                    <span style={{ color: 'var(--text-muted)' }}>Troco: </span>
+                    <strong style={{ color: troco >= 0 ? 'var(--success, #16a34a)' : 'var(--error, #dc2626)' }}>
+                      {troco >= 0 ? fmt(troco) : `− ${fmt(Math.abs(troco))}`} €
+                    </strong>
+                  </div>
+                )}
+              </div>
+            );
+          })()}
+        </div>
+
+        </div>{/* end session-col-right */}
+
+        {error && <div className="error-msg" style={{ gridColumn: 'span 2' }}><span>⚠</span> {error}</div>}
 
         <div className="session-detail-footer">
-          <button type="button" className="btn-secondary" onClick={handleDiscard} disabled={saving}>
-            Descartar alterações
-          </button>
-          <button
-            type="button"
-            className="btn-primary"
-            onClick={handleSave}
-            disabled={saving || !dirty}
-          >
+          <button type="button" className="btn-secondary" onClick={handleDiscard} disabled={saving || !dirty}>Descartar alterações</button>
+          <button type="button" className="btn-primary" onClick={handleSave} disabled={saving || !dirty}>
             {saving ? 'A guardar…' : 'Guardar alterações'}
           </button>
         </div>
       </div>
+
+      {saved && (
+        <div style={{
+          position: 'fixed', bottom: '1.5rem', right: '1.5rem',
+          background: 'var(--success, #16a34a)', color: '#fff',
+          padding: '0.6rem 1.1rem', borderRadius: '0.5rem',
+          fontSize: '0.875rem', fontWeight: 600,
+          boxShadow: '0 4px 12px rgba(0,0,0,0.15)',
+          zIndex: 9999, display: 'flex', alignItems: 'center', gap: '0.5rem',
+        }}>
+          ✓ Alterações guardadas
+        </div>
+      )}
     </div>
   );
 };
