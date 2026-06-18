@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom';
 import { addSession, getSessions, getUsers } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
 import useEscapeKey from '../hooks/useEscapeKey';
+import useScrollLock from '../hooks/useScrollLock';
 
 const VIEWS = [
   { key: 'day', label: 'Dia' },
@@ -12,20 +13,21 @@ const VIEWS = [
 const SESSION_TYPES = ['Paintball', 'Paintball Kids', 'Laser Tag', 'Laser Tag Kids', 'Gel Blast', 'Bubble Football'];
 
 const EMPTY_FORM = {
-  spoc: '',
-  numberOfPlayers: '',
+  spocName: '',
+  spocEmail: '',
+  spocPhoneNumber: '',
+  expectedNumberOfPlayers: '',
   sessionDay: '',
   sessionTime: '',
   typeOfSession: '',
   caliber: '',
   additionalComments: '',
-  monitors: [],
 };
 
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => [
   `${String(i).padStart(2, '0')}:00`,
   `${String(i).padStart(2, '0')}:30`,
-]).flat().filter((t) => t >= '08:00' && t <= '19:30');
+]).flat().filter((t) => t >= '06:00' && t <= '23:30');
 
 // Parse a session into a plain JS Date, timezone-free.
 // New sessions have sessionDatetime "YYYY-MM-DDTHH:MM" (no tz suffix).
@@ -125,8 +127,8 @@ const GridSessionCard = ({ session, users, onEdit, hideStatus = false, hideSpoc 
       style={{ cursor: 'pointer' }}
     >
       <span className="grid-session-time">{time}</span>
-      {!hideSpoc && <span className="grid-session-spoc">{session.spoc}</span>}
-      <span className="grid-session-players">👥 {session.numberOfPlayers} jogadores</span>
+      {!hideSpoc && <span className="grid-session-spoc">{session.spocName || session.spoc || ''}</span>}
+      <span className="grid-session-players">👥 {session.expectedNumberOfPlayers ?? session.numberOfPlayers} jogadores</span>
       {session.typeOfSession && (() => {
         const typeIcons = {
           'Paintball': '/paintball.png',
@@ -414,7 +416,7 @@ const SessionViewModal = ({ session, users, onClose, onEdit }) => {
 
   return (
     <div className="modal-overlay" onClick={onClose}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '480px' }}>
+      <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '600px' }}>
         <div className="modal-header">
           <h2 className="modal-title">Sessão</h2>
           <button className="modal-close" onClick={onClose} aria-label="Fechar">✕</button>
@@ -423,11 +425,11 @@ const SessionViewModal = ({ session, users, onClose, onEdit }) => {
         <div className="session-view-body">
           <div className="session-view-row">
             <span className="session-view-label">Responsável</span>
-            <span className="session-view-value">{session.spoc || '—'}</span>
+            <span className="session-view-value">{session.spocName || session.spoc || '—'}</span>
           </div>
           <div className="session-view-row">
             <span className="session-view-label">Nº de Jogadores</span>
-            <span className="session-view-value">{session.numberOfPlayers || '—'}</span>
+            <span className="session-view-value">{session.expectedNumberOfPlayers ?? session.numberOfPlayers ?? '—'}</span>
           </div>
           <div className="session-view-row">
             <span className="session-view-label">Data</span>
@@ -437,6 +439,18 @@ const SessionViewModal = ({ session, users, onClose, onEdit }) => {
             <span className="session-view-label">Hora</span>
             <span className="session-view-value">{session.sessionTime || '—'}</span>
           </div>
+          {session.spocEmail && (
+            <div className="session-view-row">
+              <span className="session-view-label">Email</span>
+              <span className="session-view-value">{session.spocEmail}</span>
+            </div>
+          )}
+          {session.spocPhoneNumber && (
+            <div className="session-view-row">
+              <span className="session-view-label">Telemóvel</span>
+              <span className="session-view-value">{session.spocPhoneNumber}</span>
+            </div>
+          )}
           {session.typeOfSession && (
             <div className="session-view-row">
               <span className="session-view-label">Tipo de Sessão</span>
@@ -546,6 +560,8 @@ const Sessions = () => {
 
   // Close on Escape key
   useEscapeKey(closeModal, modalOpen);
+  useScrollLock(modalOpen);
+  useScrollLock(!!selectedSession);
 
   const handleChange = (e) => {
     const { name, value, type, checked } = e.target;
@@ -568,14 +584,15 @@ const Sessions = () => {
     setLoading(true);
     try {
       await addSession({
-        spoc: form.spoc,
-        numberOfPlayers: parseInt(form.numberOfPlayers, 10),
+        spocName: form.spocName,
+        spocEmail: form.spocEmail,
+        spocPhoneNumber: form.spocPhoneNumber,
+        expectedNumberOfPlayers: parseInt(form.expectedNumberOfPlayers, 10),
         sessionDate: form.sessionDay,
         sessionTime: form.sessionTime,
         typeOfSession: form.typeOfSession,
         caliber: form.typeOfSession === 'Paintball' ? form.caliber : '',
         additionalComments: form.additionalComments,
-        monitors: form.monitors,
       });
       setForm(EMPTY_FORM);
       await fetchSessions();
@@ -649,12 +666,12 @@ const Sessions = () => {
             <form onSubmit={handleSubmit}>
               <div className="form-row">
                 <div className="form-group">
-                  <label htmlFor="spoc">Responsável (Cliente)</label>
+                  <label htmlFor="spocName">Responsável (Cliente)</label>
                   <input
-                    id="spoc"
-                    name="spoc"
+                    id="spocName"
+                    name="spocName"
                     type="text"
-                    value={form.spoc}
+                    value={form.spocName}
                     onChange={handleChange}
                     placeholder="Nome do responsável"
                     autoFocus
@@ -662,16 +679,41 @@ const Sessions = () => {
                   />
                 </div>
                 <div className="form-group">
-                  <label htmlFor="numberOfPlayers">Nº de Jogadores</label>
+                  <label htmlFor="expectedNumberOfPlayers">Nº de Jogadores</label>
                   <input
-                    id="numberOfPlayers"
-                    name="numberOfPlayers"
+                    id="expectedNumberOfPlayers"
+                    name="expectedNumberOfPlayers"
                     type="number"
                     min="1"
-                    value={form.numberOfPlayers}
+                    value={form.expectedNumberOfPlayers}
                     onChange={handleChange}
                     placeholder="Ex: 10"
                     required
+                  />
+                </div>
+              </div>
+
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="spocEmail">Email</label>
+                  <input
+                    id="spocEmail"
+                    name="spocEmail"
+                    type="email"
+                    value={form.spocEmail}
+                    onChange={handleChange}
+                    placeholder="email@exemplo.com"
+                  />
+                </div>
+                <div className="form-group">
+                  <label htmlFor="spocPhoneNumber">Telemóvel</label>
+                  <input
+                    id="spocPhoneNumber"
+                    name="spocPhoneNumber"
+                    type="tel"
+                    value={form.spocPhoneNumber}
+                    onChange={handleChange}
+                    placeholder="9XX XXX XXX"
                   />
                 </div>
               </div>
@@ -751,49 +793,6 @@ const Sessions = () => {
                   className="form-textarea"
                   placeholder="Notas, requisitos especiais..."
                 />
-              </div>
-
-              <div className="form-group">
-                <label>Monitores</label>
-                <input
-                  type="text"
-                  value={monitorSearch}
-                  onChange={(e) => setMonitorSearch(e.target.value)}
-                  placeholder="Pesquisa por nome ou alcunha..."
-                  style={{ marginBottom: '0.5rem' }}
-                />
-                {(() => {
-                  const visible = users.filter((user) => {
-                    if (user.role !== 'monitor' && user.role !== 'admin') return false;
-                    if (form.monitors.includes(user.uuid)) return true;
-                    if (!monitorSearch) return false;
-                    const q = monitorSearch.toLowerCase();
-                    return (
-                      `${user.firstName} ${user.lastName}`.toLowerCase().includes(q) ||
-                      (user.nickname || '').toLowerCase().includes(q)
-                    );
-                  });
-                  if (!visible.length) return null;
-                  return (
-                    <div className="monitors-checklist">
-                      {visible.map((user) => (
-                        <div key={user.uuid} className="form-checkbox-item">
-                          <input
-                            id={`monitor-new-${user.uuid}`}
-                            name="monitors"
-                            type="checkbox"
-                            value={user.uuid}
-                            checked={form.monitors.includes(user.uuid)}
-                            onChange={handleChange}
-                          />
-                          <label htmlFor={`monitor-new-${user.uuid}`}>
-                            {user.firstName} {user.lastName}{user.nickname ? ` (${user.nickname})` : ''}
-                          </label>
-                        </div>
-                      ))}
-                    </div>
-                  );
-                })()}
               </div>
 
               {error && <div className="error-msg"><span>⚠</span> {error}</div>}

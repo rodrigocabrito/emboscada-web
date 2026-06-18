@@ -36,6 +36,11 @@ const getStatusBadgeClass = (status) => {
 
 const fmt = (n) => Number(n || 0).toFixed(2);
 
+const defaultNumPacks = (actual, expected) => {
+  const n = parseInt(actual) > 0 ? parseInt(actual) : parseInt(expected) || 0;
+  return String(Math.max(n > 0 ? n : 0, n > 0 ? 10 : 0));
+};
+
 const SessionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
@@ -50,6 +55,8 @@ const SessionDetail = () => {
   const [dirty, setDirty] = useState(false);
   const [saved, setSaved] = useState(false);
   const [monitorSearch, setMonitorSearch] = useState('');
+  const [draftExtra, setDraftExtra] = useState({ name: '', quantity: '', unitPrice: '' });
+  const [draftOther, setDraftOther] = useState({ name: '', quantity: '', unitPrice: '' });
 
   useEffect(() => {
     const load = async () => {
@@ -59,10 +66,13 @@ const SessionDetail = () => {
         setSession(s);
         setUsers(u);
         setCatalogItems(catalog);
-        const numPlayers = s.numberOfPlayers || 0;
+        const numPlayers = s.expectedNumberOfPlayers ?? s.numberOfPlayers ?? 0;
         setForm({
-          spoc: s.spoc || '',
-          numberOfPlayers: s.numberOfPlayers || '',
+          spocName: s.spocName || s.spoc || '',
+          spocEmail: s.spocEmail || '',
+          spocPhoneNumber: s.spocPhoneNumber || '',
+          expectedNumberOfPlayers: numPlayers || '',
+          actualNumberOfPlayers: s.actualNumberOfPlayers !== undefined ? String(s.actualNumberOfPlayers) : '',
           sessionDate: s.sessionDate || '',
           sessionTime: s.sessionTime || '',
           typeOfSession: s.typeOfSession || '',
@@ -73,7 +83,7 @@ const SessionDetail = () => {
           // financial
           packId: s.packId || '',
           packName: s.packName || '',
-          numPacks: s.numPacks !== undefined ? String(s.numPacks) : String(numPlayers),
+          numPacks: s.numPacks !== undefined ? String(s.numPacks) : defaultNumPacks(s.actualNumberOfPlayers, numPlayers),
           packPrice: s.packPrice !== undefined ? String(s.packPrice) : '',
           extras: s.extras || [],
           others: s.others || [],
@@ -90,19 +100,24 @@ const SessionDetail = () => {
     load();
   }, [id, navigate]);
 
+  const sortedCatalog = useMemo(() =>
+    [...catalogItems].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity)),
+    [catalogItems]
+  );
+
   const packItems = useMemo(() =>
-    catalogItems.filter((i) => i.category === form?.typeOfSession && i.active !== false),
-    [catalogItems, form?.typeOfSession]
+    sortedCatalog.filter((i) => i.category === form?.typeOfSession && i.active !== false),
+    [sortedCatalog, form?.typeOfSession]
   );
 
   const extraItems = useMemo(() =>
-    catalogItems.filter((i) => i.category === 'Extras' && i.active !== false),
-    [catalogItems]
+    sortedCatalog.filter((i) => i.category === 'Extras' && i.active !== false),
+    [sortedCatalog]
   );
 
   const otherItems = useMemo(() =>
-    catalogItems.filter((i) => i.category === 'Outro' && i.active !== false),
-    [catalogItems]
+    sortedCatalog.filter((i) => i.category === 'Outro' && i.active !== false),
+    [sortedCatalog]
   );
 
   const financials = useMemo(() => {
@@ -125,8 +140,11 @@ const SessionDetail = () => {
       const next = { ...prev, [name]: value };
       if (name === 'typeOfSession' && value !== 'Paintball' && value !== 'Paintball Kids') next.caliber = '';
       if (name === 'typeOfSession') { next.packId = ''; next.packName = ''; next.packPrice = ''; }
-      if (name === 'numberOfPlayers' && prev.signal === String(prev.numberOfPlayers >= 15 ? 80 : 50)) {
+      if (name === 'expectedNumberOfPlayers' && prev.signal === String((prev.expectedNumberOfPlayers || 0) >= 15 ? 80 : 50)) {
         next.signal = String(parseInt(value) >= 15 ? 80 : 50);
+      }
+      if (name === 'actualNumberOfPlayers') {
+        next.numPacks = defaultNumPacks(value, prev.expectedNumberOfPlayers);
       }
       return next;
     });
@@ -144,15 +162,6 @@ const SessionDetail = () => {
     setDirty(true);
   };
 
-  const addExtra = (catalogId) => {
-    const item = extraItems.find((i) => i.id === catalogId);
-    if (!item) return;
-    setForm((prev) => ({
-      ...prev,
-      extras: [...prev.extras, { catalogId: item.id, name: item.name, quantity: '1', unitPrice: String(item.price) }],
-    }));
-    setDirty(true);
-  };
 
   const updateExtra = (idx, field, value) => {
     setForm((prev) => {
@@ -168,15 +177,6 @@ const SessionDetail = () => {
     setDirty(true);
   };
 
-  const addOther = (catalogId) => {
-    const item = otherItems.find((i) => i.id === catalogId);
-    if (!item) return;
-    setForm((prev) => ({
-      ...prev,
-      others: [...prev.others, { catalogId: item.id, name: item.name, quantity: '1', unitPrice: String(item.price) }],
-    }));
-    setDirty(true);
-  };
 
   const updateOther = (idx, field, value) => {
     setForm((prev) => {
@@ -217,8 +217,11 @@ const SessionDetail = () => {
     setSaving(true);
     try {
       await updateSession(id, {
-        spoc: form.spoc,
-        numberOfPlayers: parseInt(form.numberOfPlayers, 10),
+        spocName: form.spocName,
+        spocEmail: form.spocEmail,
+        spocPhoneNumber: form.spocPhoneNumber,
+        expectedNumberOfPlayers: parseInt(form.expectedNumberOfPlayers, 10),
+        actualNumberOfPlayers: form.actualNumberOfPlayers !== '' ? parseInt(form.actualNumberOfPlayers, 10) : null,
         sessionDate: form.sessionDate,
         sessionTime: form.sessionTime,
         sessionDatetime: `${form.sessionDate}T${form.sessionTime}`,
@@ -250,10 +253,13 @@ const SessionDetail = () => {
   };
 
   const handleDiscard = () => {
-    const numPlayers = session.numberOfPlayers || 0;
+    const numPlayers = session.expectedNumberOfPlayers ?? session.numberOfPlayers ?? 0;
     setForm({
-      spoc: session.spoc || '',
-      numberOfPlayers: session.numberOfPlayers || '',
+      spocName: session.spocName || session.spoc || '',
+      spocEmail: session.spocEmail || '',
+      spocPhoneNumber: session.spocPhoneNumber || '',
+      expectedNumberOfPlayers: numPlayers || '',
+      actualNumberOfPlayers: session.actualNumberOfPlayers !== undefined ? String(session.actualNumberOfPlayers) : '',
       sessionDate: session.sessionDate || '',
       sessionTime: session.sessionTime || '',
       typeOfSession: session.typeOfSession || '',
@@ -263,7 +269,7 @@ const SessionDetail = () => {
       monitors: session.monitors || [],
       packId: session.packId || '',
       packName: session.packName || '',
-      numPacks: session.numPacks !== undefined ? String(session.numPacks) : String(numPlayers),
+      numPacks: session.numPacks !== undefined ? String(session.numPacks) : defaultNumPacks(session.actualNumberOfPlayers, numPlayers),
       packPrice: session.packPrice !== undefined ? String(session.packPrice) : '',
       extras: session.extras || [],
       others: session.others || [],
@@ -272,6 +278,8 @@ const SessionDetail = () => {
       cashPaid: session.cashPaid !== undefined ? String(session.cashPaid) : '',
     });
     setDirty(false);
+    setDraftExtra({ name: '', quantity: '', unitPrice: '' });
+    setDraftOther({ name: '', quantity: '', unitPrice: '' });
   };
 
   if (loading) return <div className="page"><p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '3rem' }}>A carregar…</p></div>;
@@ -280,281 +288,373 @@ const SessionDetail = () => {
   const monitorUsers = users.filter((u) => u.role === 'monitor' || u.role === 'admin');
 
   return (
-    <div className="page">
-      <div className="page-header">
-        <button className="btn-secondary" style={{ width: 'auto', marginBottom: '1rem' }} onClick={() => navigate('/sessions', { state: { returnDate: form.sessionDate } })}>
+    <div className="page page-session-detail">
+      <div className="page-header" style={{ border: 'none', paddingBottom: 0, marginBottom: '1rem' }}>
+        <button className="btn-secondary" style={{ width: 'auto' }} onClick={() => navigate('/sessions', { state: { returnDate: form.sessionDate } })}>
           ← Voltar
         </button>
-        <h1 style={{ marginBottom: '0.25rem' }}>
-          Sessão — {session.sessionDate
-            ? new Date(session.sessionDate + 'T00:00').toLocaleDateString('pt-PT', { day: 'numeric', month: 'long', year: 'numeric' })
-            : ''}
-          {session.sessionTime ? ` às ${session.sessionTime}` : ''}
-        </h1>
-        <p style={{ margin: 0 }}>Responsável: <strong>{session.spoc}</strong></p>
       </div>
 
-      <div className="session-detail-card">
-        <div className="session-col-left">
-        {/* ── Sessão ── */}
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="spoc">Responsável</label>
-            <input id="spoc" name="spoc" type="text" value={form.spoc} onChange={handleChange} required />
-          </div>
-          <div className="form-group">
-            <label htmlFor="numberOfPlayers">Nº de Jogadores</label>
-            <input id="numberOfPlayers" name="numberOfPlayers" type="number" min="1" value={form.numberOfPlayers} onChange={handleChange} required />
-          </div>
-        </div>
+      <div className="session-detail-layout">
 
-        <div className="form-row">
+        {/* ── Card 1: Sessão ── */}
+        <div className="session-detail-card">
           <div className="form-group">
-            <label htmlFor="sessionDate">Data</label>
-            <input id="sessionDate" name="sessionDate" type="date" value={form.sessionDate} onChange={handleChange} required />
+            <label htmlFor="spocName">Responsável (Cliente)</label>
+            <input id="spocName" name="spocName" type="text" value={form.spocName} onChange={handleChange} placeholder="Nome do responsável" required />
           </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="spocEmail">Email</label>
+              <input id="spocEmail" name="spocEmail" type="email" value={form.spocEmail} onChange={handleChange} placeholder="email@exemplo.com" />
+            </div>
+            <div className="form-group">
+              <label htmlFor="spocPhoneNumber">Telemóvel</label>
+              <input id="spocPhoneNumber" name="spocPhoneNumber" type="tel" value={form.spocPhoneNumber} onChange={handleChange} placeholder="9XX XXX XXX" />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="expectedNumberOfPlayers">Nº de Jogadores (Esperado)</label>
+              <input id="expectedNumberOfPlayers" name="expectedNumberOfPlayers" type="number" min="1" value={form.expectedNumberOfPlayers} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="actualNumberOfPlayers">Nº de Jogadores (Real)</label>
+              <input id="actualNumberOfPlayers" name="actualNumberOfPlayers" type="number" min="0" value={form.actualNumberOfPlayers} onChange={handleChange} placeholder="—" />
+            </div>
+          </div>
+
+          <div className="form-row">
+            <div className="form-group">
+              <label htmlFor="sessionDate">Data</label>
+              <input id="sessionDate" name="sessionDate" type="date" value={form.sessionDate} onChange={handleChange} required />
+            </div>
+            <div className="form-group">
+              <label htmlFor="sessionTime">Hora</label>
+              <select id="sessionTime" name="sessionTime" value={form.sessionTime} onChange={handleChange} className="form-select" required>
+                <option value="">-- Selecionar hora --</option>
+                {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+          </div>
+
           <div className="form-group">
-            <label htmlFor="sessionTime">Hora</label>
-            <select id="sessionTime" name="sessionTime" value={form.sessionTime} onChange={handleChange} className="form-select" required>
-              <option value="">-- Selecionar hora --</option>
-              {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
+            <label htmlFor="typeOfSession">Tipo de Sessão</label>
+            <select id="typeOfSession" name="typeOfSession" value={form.typeOfSession} onChange={handleChange} className="form-select" required>
+              <option value="">-- Selecionar tipo --</option>
+              {SESSION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
           </div>
-        </div>
 
-        <div className="form-group">
-          <label htmlFor="typeOfSession">Tipo de Sessão</label>
-          <select id="typeOfSession" name="typeOfSession" value={form.typeOfSession} onChange={handleChange} className="form-select" required>
-            <option value="">-- Selecionar tipo --</option>
-            {SESSION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
-          </select>
-        </div>
+          {(form.typeOfSession === 'Paintball' || form.typeOfSession === 'Paintball Kids') && (
+            <div className="form-group">
+              <label>Calibre</label>
+              <div className="caliber-toggle">
+                {['.50', '.68'].map((c) => (
+                  <button key={c} type="button" className={`caliber-btn${form.caliber === c ? ' active' : ''}`}
+                    onClick={() => { setForm((prev) => ({ ...prev, caliber: c })); setDirty(true); }}>
+                    {c}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
 
-        {(form.typeOfSession === 'Paintball' || form.typeOfSession === 'Paintball Kids') && (
           <div className="form-group">
-            <label>Calibre</label>
-            <div className="caliber-toggle">
-              {['.50', '.68'].map((c) => (
-                <button key={c} type="button" className={`caliber-btn${form.caliber === c ? ' active' : ''}`}
-                  onClick={() => { setForm((prev) => ({ ...prev, caliber: c })); setDirty(true); }}>
-                  {c}
+            <label>Estado da Sessão</label>
+            <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
+              {STATUS_OPTIONS.map((s) => (
+                <button key={s.value} type="button" onClick={() => { setForm((prev) => ({ ...prev, status: s.value })); setDirty(true); }}
+                  className={`badge ${getStatusBadgeClass(s.value)}`}
+                  style={{ cursor: 'pointer', border: 'none', fontSize: '0.78rem', padding: '0.25rem 0.6rem', opacity: form.status === s.value ? 1 : 0.5, boxShadow: form.status === s.value ? '0 0 0 2px rgba(0,0,0,0.2)' : 'none', transform: form.status === s.value ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.15s ease' }}>
+                  {form.status === s.value ? '✓ ' : ''}{s.label}
                 </button>
               ))}
             </div>
           </div>
-        )}
 
-        <div className="form-group">
-          <label>Estado da Sessão</label>
-          <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
-            {STATUS_OPTIONS.map((s) => (
-              <button key={s.value} type="button" onClick={() => { setForm((prev) => ({ ...prev, status: s.value })); setDirty(true); }}
-                className={`badge ${getStatusBadgeClass(s.value)}`}
-                style={{ cursor: 'pointer', border: 'none', fontSize: '0.78rem', padding: '0.25rem 0.6rem', opacity: form.status === s.value ? 1 : 0.5, boxShadow: form.status === s.value ? '0 0 0 2px rgba(0,0,0,0.2)' : 'none', transform: form.status === s.value ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.15s ease' }}>
-                {form.status === s.value ? '✓ ' : ''}{s.label}
-              </button>
-            ))}
-          </div>
-        </div>
-
-        <div className="form-group">
-          <label htmlFor="additionalComments">Comentários adicionais</label>
-          <textarea id="additionalComments" name="additionalComments" value={form.additionalComments} onChange={handleChange} className="form-textarea" placeholder="Notas, requisitos especiais..." rows={3} />
-        </div>
-
-        <div className="form-group">
-          <label>Monitores</label>
-          <input type="text" value={monitorSearch} onChange={(e) => setMonitorSearch(e.target.value)} placeholder="Pesquisa por nome ou alcunha..." style={{ marginBottom: '0.5rem' }} />
-          {(() => {
-            const visible = monitorUsers.filter((u) => {
-              if (form.monitors.includes(u.uuid)) return true;
-              if (!monitorSearch) return false;
-              const q = monitorSearch.toLowerCase();
-              return `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) || (u.nickname || '').toLowerCase().includes(q);
-            });
-            if (!visible.length) return null;
-            return (
-              <div className="monitors-checklist">
-                {visible.map((u) => (
-                  <div key={u.uuid} className="form-checkbox-item">
-                    <input id={`monitor-${u.uuid}`} type="checkbox" checked={form.monitors.includes(u.uuid)} onChange={() => toggleMonitor(u.uuid)} />
-                    <label htmlFor={`monitor-${u.uuid}`}>{u.firstName} {u.lastName}{u.nickname ? ` (${u.nickname})` : ''}</label>
-                  </div>
-                ))}
-              </div>
-            );
-          })()}
-        </div>
-
-        </div>{/* end session-col-left */}
-
-        <div className="session-col-right">
-        {/* ── Financeiro ── */}
-        <div className="session-col-right-title">Financeiro</div>
-
-        <div className="form-row" style={{ gridTemplateColumns: '2fr 1fr 1fr' }}>
           <div className="form-group">
-            <label htmlFor="packId">Pack</label>
-            <select id="packId" value={form.packId} onChange={(e) => handlePackSelect(e.target.value)} className="form-select">
-              <option value="">-- Selecionar pack --</option>
-              {packItems.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-            </select>
+            <label htmlFor="additionalComments">Comentários adicionais</label>
+            <textarea id="additionalComments" name="additionalComments" value={form.additionalComments} onChange={handleChange} className="form-textarea" placeholder="Notas, requisitos especiais..." rows={3} />
           </div>
+
           <div className="form-group">
-            <label htmlFor="numPacks">Nº de packs</label>
-            <input id="numPacks" name="numPacks" type="number" min="10" step="1" value={form.numPacks} onChange={handleChange} onBlur={(e) => { const v = parseInt(e.target.value) || 0; if (v > 0 && v < 10) setForm((p) => ({ ...p, numPacks: '10' })); }} />
-          </div>
-          <div className="form-group">
-            <label htmlFor="packPrice">€/ pack</label>
-            <input id="packPrice" name="packPrice" type="number" min="0" step="0.01" value={form.packPrice} onChange={handleChange} placeholder="0.00" />
-          </div>
-        </div>
-        <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '-0.5rem', marginBottom: '0.75rem' }}>
-          Subtotal packs: <strong style={{ color: 'var(--text)' }}>{fmt(financials.packsTotal)} €</strong>
-        </p>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.5rem 0 0.25rem' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Extras</span>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-        </div>
-
-        {/* Extras */}
-        <div className="form-group">
-
-          {form.extras.length > 0 && (
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem 0.2rem 0', borderBottom: '1px solid var(--border)' }}>Item</th>
-                  <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border)', width: '72px' }}>Qtd</th>
-                  <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border)', width: '90px' }}>€/un</th>
-                  <th style={{ borderBottom: '1px solid var(--border)', width: '28px' }} />
-                </tr>
-              </thead>
-              <tbody>
-                {form.extras.map((extra, idx) => (
-                  <tr key={idx}>
-                    <td style={{ padding: '0.3rem 0.4rem 0.3rem 0', color: 'var(--text)' }}>{extra.name}</td>
-                    <td style={{ padding: '0.3rem 0.4rem' }}><input type="number" min="0" step="1" value={extra.quantity} onChange={(e) => updateExtra(idx, 'quantity', e.target.value)} style={{ width: '100%', textAlign: 'center' }} /></td>
-                    <td style={{ padding: '0.3rem 0.4rem' }}><input type="number" min="0" step="0.01" value={extra.unitPrice} onChange={(e) => updateExtra(idx, 'unitPrice', e.target.value)} style={{ width: '100%', textAlign: 'center' }} /></td>
-                    <td style={{ padding: '0.3rem 0', textAlign: 'center' }}><button type="button" onClick={() => removeExtra(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error)', fontSize: '1rem', lineHeight: 1 }}>✕</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {extraItems.length > 0 && (
-            <select className="form-select" value="" onChange={(e) => { if (e.target.value) addExtra(e.target.value); }} style={{ width: '160px', fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}>
-              <option value="">+ Adicionar extra</option>
-              {extraItems.map((e) => <option key={e.id} value={e.id}>{e.name} ({fmt(e.price)} €)</option>)}
-            </select>
-          )}
-        </div>
-
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', margin: '0.5rem 0 0.25rem' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', whiteSpace: 'nowrap' }}>Outros</span>
-          <div style={{ flex: 1, height: '1px', background: 'var(--border)' }} />
-        </div>
-
-        {/* Outros */}
-        <div className="form-group">
-
-          {form.others.length > 0 && (
-            <table style={{ width: '100%', borderCollapse: 'collapse', marginBottom: '0.5rem', fontSize: '0.875rem' }}>
-              <thead>
-                <tr>
-                  <th style={{ textAlign: 'left', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem 0.2rem 0', borderBottom: '1px solid var(--border)' }}>Item</th>
-                  <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border)', width: '72px' }}>Qtd</th>
-                  <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', borderBottom: '1px solid var(--border)', width: '90px' }}>€/un</th>
-                  <th style={{ borderBottom: '1px solid var(--border)', width: '28px' }} />
-                </tr>
-              </thead>
-              <tbody>
-                {form.others.map((other, idx) => (
-                  <tr key={idx}>
-                    <td style={{ padding: '0.3rem 0.4rem 0.3rem 0', color: 'var(--text)' }}>{other.name}</td>
-                    <td style={{ padding: '0.3rem 0.4rem' }}><input type="number" min="0" step="1" value={other.quantity} onChange={(e) => updateOther(idx, 'quantity', e.target.value)} style={{ width: '100%', textAlign: 'center' }} /></td>
-                    <td style={{ padding: '0.3rem 0.4rem' }}><input type="number" min="0" step="0.01" value={other.unitPrice} onChange={(e) => updateOther(idx, 'unitPrice', e.target.value)} style={{ width: '100%', textAlign: 'center' }} /></td>
-                    <td style={{ padding: '0.3rem 0', textAlign: 'center' }}><button type="button" onClick={() => removeOther(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--error)', fontSize: '1rem', lineHeight: 1 }}>✕</button></td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          )}
-          {otherItems.length > 0 && (
-            <select className="form-select" value="" onChange={(e) => { if (e.target.value) addOther(e.target.value); }} style={{ width: '160px', fontSize: '0.8rem', padding: '0.3rem 0.6rem' }}>
-              <option value="">+ Adicionar outro</option>
-              {otherItems.map((o) => <option key={o.id} value={o.id}>{o.name} ({fmt(o.price)} €)</option>)}
-            </select>
-          )}
-        </div>
-
-        {/* Sinal */}
-        <div className="form-row">
-          <div className="form-group">
-            <label htmlFor="signal">Sinal (€)</label>
-            <input id="signal" name="signal" type="number" min="0" step="0.01" value={form.signal} onChange={handleChange} />
-          </div>
-          <div className="form-group" />
-        </div>
-
-        {/* Resumo */}
-        <div className="financial-summary">
-          <div className="financial-summary-title">Resumo</div>
-          <div className="financial-row"><span>Packs ({form.numPacks || 0} × {fmt(form.packPrice)} €)</span><span>{fmt(financials.packsTotal)} €</span></div>
-          {financials.extrasTotal > 0 && <div className="financial-row"><span>Extras</span><span>{fmt(financials.extrasTotal)} €</span></div>}
-          {financials.othersTotal > 0 && <div className="financial-row"><span>Outros</span><span>{fmt(financials.othersTotal)} €</span></div>}
-          <div className="financial-row financial-row--deduct"><span>Sinal</span><span>− {fmt(financials.signalAmount)} €</span></div>
-          <div className="financial-row financial-row--total"><span>Total</span><span>{fmt(financials.total)} €</span></div>
-        </div>
-
-        {/* Pagamento */}
-        <div className="form-group">
-          <label>Tipo de Pagamento</label>
-          <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
-            {PAYMENT_TYPES.map((pt) => (
-              <label key={pt.value} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', userSelect: 'none' }}>
-                <input
-                  type="checkbox"
-                  checked={form.paymentTypes.includes(pt.value)}
-                  onChange={() => togglePaymentType(pt.value)}
-                  style={{ width: '1rem', height: '1rem', accentColor: 'var(--primary)', cursor: 'pointer' }}
-                />
-                {pt.label}
-              </label>
-            ))}
-          </div>
-          {form.paymentTypes.includes('cash') && (() => {
-            const troco = (parseFloat(form.cashPaid) || 0) - financials.total;
-            return (
-              <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.6rem' }}>
-                <div className="form-group" style={{ margin: 0, flex: '0 0 140px' }}>
-                  <label htmlFor="cashPaid" style={{ fontSize: '0.8rem' }}>Valor entregue (€)</label>
-                  <input id="cashPaid" name="cashPaid" type="number" min="0" step="0.01" value={form.cashPaid} onChange={handleChange} placeholder="0.00" />
+            <label>Monitores</label>
+            <input type="text" value={monitorSearch} onChange={(e) => setMonitorSearch(e.target.value)} placeholder="Pesquisa por nome ou alcunha..." style={{ marginBottom: '0.5rem' }} />
+            {(() => {
+              const visible = monitorUsers.filter((u) => {
+                if (form.monitors.includes(u.uuid)) return true;
+                if (!monitorSearch) return false;
+                const q = monitorSearch.toLowerCase();
+                return `${u.firstName} ${u.lastName}`.toLowerCase().includes(q) || (u.nickname || '').toLowerCase().includes(q);
+              });
+              if (!visible.length) return null;
+              return (
+                <div className="monitors-checklist">
+                  {visible.map((u) => (
+                    <div key={u.uuid} className="form-checkbox-item">
+                      <input id={`monitor-${u.uuid}`} type="checkbox" checked={form.monitors.includes(u.uuid)} onChange={() => toggleMonitor(u.uuid)} />
+                      <label htmlFor={`monitor-${u.uuid}`}>{u.firstName} {u.lastName}{u.nickname ? ` (${u.nickname})` : ''}</label>
+                    </div>
+                  ))}
                 </div>
-                {form.cashPaid !== '' && (
-                  <div style={{ fontSize: '0.875rem', marginTop: '1.1rem' }}>
-                    <span style={{ color: 'var(--text-muted)' }}>Troco: </span>
-                    <strong style={{ color: troco >= 0 ? 'var(--success, #16a34a)' : 'var(--error, #dc2626)' }}>
-                      {troco >= 0 ? fmt(troco) : `− ${fmt(Math.abs(troco))}`} €
-                    </strong>
-                  </div>
-                )}
+              );
+            })()}
+          </div>
+        </div>{/* end card 1 */}
+
+        {/* ── Right column ── */}
+        <div className="session-detail-right-col">
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+
+          {/* ── Card 2: Pack ── */}
+          <div className="session-detail-card">
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr>
+                    <th style={{ fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem 0.2rem 0' }}>Pack</th>
+                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>Qtd</th>
+                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>€/un</th>
+                    <th style={{ width: '28px' }} />
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td style={{ padding: '0.25rem 0.4rem 0.25rem 0' }}>
+                      {!form.typeOfSession ? (
+                        <span style={{ fontSize: '0.8rem', color: 'var(--error, #dc2626)', fontStyle: 'italic' }}>Selecione o tipo de sessão</span>
+                      ) : (
+                        <select id="packId" value={form.packId} onChange={(e) => handlePackSelect(e.target.value)} className="form-select" style={{ width: '100%' }}>
+                          <option value="">-- Selecionar pack --</option>
+                          {packItems.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
+                        </select>
+                      )}
+                    </td>
+                    <td style={{ padding: '0.25rem 0.4rem' }}>
+                      <input id="numPacks" name="numPacks" type="number" min="10" step="1" value={form.numPacks} onChange={handleChange} onBlur={(e) => { const v = parseInt(e.target.value) || 0; if (v > 0 && v < 10) setForm((p) => ({ ...p, numPacks: '10' })); }} style={{ width: '100%', textAlign: 'center', borderColor: form.packId && !form.numPacks ? 'var(--error, #dc2626)' : undefined }} />
+                    </td>
+                    <td style={{ padding: '0.25rem 0.4rem' }}>
+                      <input id="packPrice" name="packPrice" type="number" min="0" step="0.01" value={form.packPrice} onChange={handleChange} style={{ width: '100%', textAlign: 'center' }} />
+                    </td>
+                    <td style={{ width: '28px' }} />
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem', marginBottom: 0 }}>
+              Subtotal: <strong style={{ color: 'var(--text)' }}>{fmt(financials.packsTotal)} €</strong>
+            </p>
+          </div>{/* end card 2 */}
+
+          {/* ── Card 3: Extras ── */}
+          <div className="session-detail-card">
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr>
+                    <th style={{ fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem 0.2rem 0' }}>Extras</th>
+                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>Qtd</th>
+                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>€/un</th>
+                    <th style={{ width: '28px' }} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...form.extras, draftExtra].map((extra, idx) => {
+                    const isNew = idx === form.extras.length;
+                    return (
+                      <tr key={idx}>
+                        <td style={{ padding: '0.25rem 0.4rem 0.25rem 0' }}>
+                          <input
+                            type="text"
+                            list="extra-datalist"
+                            value={extra.name}
+                            placeholder="Escreve ou seleciona..."
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const match = extraItems.find((i) => i.name === val);
+                              if (isNew) {
+                                setDraftExtra((d) => ({ ...d, name: val, unitPrice: match ? String(match.price) : d.unitPrice, catalogId: match?.id || '' }));
+                              } else {
+                                setForm((prev) => { const arr = [...prev.extras]; arr[idx] = { ...arr[idx], name: val, catalogId: match?.id || arr[idx].catalogId, unitPrice: match ? String(match.price) : arr[idx].unitPrice }; return { ...prev, extras: arr }; });
+                                setDirty(true);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (isNew && draftExtra.name.trim()) {
+                                setForm((prev) => ({ ...prev, extras: [...prev.extras, { catalogId: draftExtra.catalogId || '', name: draftExtra.name.trim(), quantity: draftExtra.quantity, unitPrice: draftExtra.unitPrice }] }));
+                                setDraftExtra({ name: '', quantity: '', unitPrice: '' });
+                                setDirty(true);
+                              }
+                            }}
+                            style={{ width: '100%' }}
+                          />
+                        </td>
+                        <td style={{ padding: '0.25rem 0.4rem' }}>
+                          <input type="number" min="0" step="1" value={extra.quantity}
+                            onChange={(e) => isNew ? setDraftExtra((d) => ({ ...d, quantity: e.target.value })) : updateExtra(idx, 'quantity', e.target.value)}
+                            style={{ width: '100%', textAlign: 'center', borderColor: extra.name && !extra.quantity ? 'var(--error, #dc2626)' : undefined }} />
+                        </td>
+                        <td style={{ padding: '0.25rem 0.4rem' }}>
+                          <input type="number" min="0" step="0.01" value={extra.unitPrice}
+                            onChange={(e) => isNew ? setDraftExtra((d) => ({ ...d, unitPrice: e.target.value })) : updateExtra(idx, 'unitPrice', e.target.value)}
+                            style={{ width: '100%', textAlign: 'center' }} />
+                        </td>
+                        <td style={{ padding: '0.25rem 0', textAlign: 'center' }}>
+                          {!isNew && <button type="button" onClick={() => removeExtra(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}><img src="/trash-squared.png" alt="Eliminar" style={{ width: '28px', height: '28px', display: 'block' }} /></button>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <datalist id="extra-datalist">
+                {extraItems.map((i) => <option key={i.id} value={i.name} />)}
+              </datalist>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem', marginBottom: 0 }}>
+                Subtotal: <strong style={{ color: 'var(--text)' }}>{fmt(financials.extrasTotal)} €</strong>
+              </p>
+            </div>
+          </div>{/* end card 3 */}
+
+          {/* ── Card 4: Outros ── */}
+          <div className="session-detail-card">
+            <div className="form-group" style={{ marginBottom: 0 }}>
+              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
+                <thead>
+                  <tr>
+                    <th style={{ fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem 0.2rem 0' }}>Outros</th>
+                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>Qtd</th>
+                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>€/un</th>
+                    <th style={{ width: '28px' }} />
+                  </tr>
+                </thead>
+                <tbody>
+                  {[...form.others, draftOther].map((other, idx) => {
+                    const isNew = idx === form.others.length;
+                    return (
+                      <tr key={idx}>
+                        <td style={{ padding: '0.25rem 0.4rem 0.25rem 0' }}>
+                          <input
+                            type="text"
+                            list="other-datalist"
+                            value={other.name}
+                            placeholder="Escreve ou seleciona..."
+                            onChange={(e) => {
+                              const val = e.target.value;
+                              const match = otherItems.find((i) => i.name === val);
+                              if (isNew) {
+                                setDraftOther((d) => ({ ...d, name: val, unitPrice: match ? String(match.price) : d.unitPrice, catalogId: match?.id || '' }));
+                              } else {
+                                setForm((prev) => { const arr = [...prev.others]; arr[idx] = { ...arr[idx], name: val, catalogId: match?.id || arr[idx].catalogId, unitPrice: match ? String(match.price) : arr[idx].unitPrice }; return { ...prev, others: arr }; });
+                                setDirty(true);
+                              }
+                            }}
+                            onBlur={() => {
+                              if (isNew && draftOther.name.trim()) {
+                                setForm((prev) => ({ ...prev, others: [...prev.others, { catalogId: draftOther.catalogId || '', name: draftOther.name.trim(), quantity: draftOther.quantity, unitPrice: draftOther.unitPrice }] }));
+                                setDraftOther({ name: '', quantity: '', unitPrice: '' });
+                                setDirty(true);
+                              }
+                            }}
+                            style={{ width: '100%' }}
+                          />
+                        </td>
+                        <td style={{ padding: '0.25rem 0.4rem' }}>
+                          <input type="number" min="0" step="1" value={other.quantity}
+                            onChange={(e) => isNew ? setDraftOther((d) => ({ ...d, quantity: e.target.value })) : updateOther(idx, 'quantity', e.target.value)}
+                            style={{ width: '100%', textAlign: 'center', borderColor: other.name && !other.quantity ? 'var(--error, #dc2626)' : undefined }} />
+                        </td>
+                        <td style={{ padding: '0.25rem 0.4rem' }}>
+                          <input type="number" min="0" step="0.01" value={other.unitPrice}
+                            onChange={(e) => isNew ? setDraftOther((d) => ({ ...d, unitPrice: e.target.value })) : updateOther(idx, 'unitPrice', e.target.value)}
+                            style={{ width: '100%', textAlign: 'center' }} />
+                        </td>
+                        <td style={{ padding: '0.25rem 0', textAlign: 'center' }}>
+                          {!isNew && <button type="button" onClick={() => removeOther(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}><img src="/trash-squared.png" alt="Eliminar" style={{ width: '28px', height: '28px', display: 'block' }} /></button>}
+                        </td>
+                      </tr>
+                    );
+                  })}
+                </tbody>
+              </table>
+              <datalist id="other-datalist">
+                {otherItems.map((i) => <option key={i.id} value={i.name} />)}
+              </datalist>
+              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem', marginBottom: 0 }}>
+                Subtotal: <strong style={{ color: 'var(--text)' }}>{fmt(financials.othersTotal)} €</strong>
+              </p>
+            </div>
+          </div>{/* end card 4 */}
+
+          {/* ── Card 5: Sinal / Resumo / Pagamento ── */}
+          <div className="session-detail-card">
+            <div className="form-group">
+              <label htmlFor="signal">Sinal (€)</label>
+              <input id="signal" name="signal" type="number" min="0" step="0.01" value={form.signal} onChange={handleChange} style={{ maxWidth: '140px' }} />
+            </div>
+
+            <div className="financial-summary">
+              <div className="financial-summary-title">Resumo</div>
+              <div className="financial-row"><span>Packs</span><span>{fmt(financials.packsTotal)} €</span></div>
+              {financials.extrasTotal > 0 && <div className="financial-row"><span>Extras</span><span>{fmt(financials.extrasTotal)} €</span></div>}
+              {financials.othersTotal > 0 && <div className="financial-row"><span>Outros</span><span>{fmt(financials.othersTotal)} €</span></div>}
+              <div className="financial-row financial-row--deduct"><span>Sinal</span><span>− {fmt(financials.signalAmount)} €</span></div>
+              <div className="financial-row financial-row--total"><span>Total</span><span>{fmt(financials.total)} €</span></div>
+            </div>
+
+            <div className="form-group">
+              <label>Tipo de Pagamento</label>
+              <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', marginTop: '0.4rem' }}>
+                {PAYMENT_TYPES.map((pt) => (
+                  <label key={pt.value} style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', cursor: 'pointer', fontWeight: 600, fontSize: '0.875rem', userSelect: 'none' }}>
+                    <input
+                      type="checkbox"
+                      checked={form.paymentTypes.includes(pt.value)}
+                      onChange={() => togglePaymentType(pt.value)}
+                      style={{ width: '1rem', height: '1rem', accentColor: 'var(--primary)', cursor: 'pointer' }}
+                    />
+                    {pt.label}
+                  </label>
+                ))}
               </div>
-            );
-          })()}
-        </div>
+              {form.paymentTypes.includes('cash') && (() => {
+                const troco = (parseFloat(form.cashPaid) || 0) - financials.total;
+                return (
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem', marginTop: '0.6rem' }}>
+                    <div className="form-group" style={{ margin: 0, flex: '0 0 140px' }}>
+                      <label htmlFor="cashPaid" style={{ fontSize: '0.8rem' }}>Valor entregue (€)</label>
+                      <input id="cashPaid" name="cashPaid" type="number" min="0" step="0.01" value={form.cashPaid} onChange={handleChange} placeholder="0.00" />
+                    </div>
+                    {form.cashPaid !== '' && (
+                      <div style={{ fontSize: '0.875rem', marginTop: '1.1rem' }}>
+                        <span style={{ color: 'var(--text-muted)' }}>Troco: </span>
+                        <strong style={{ color: troco >= 0 ? 'var(--success, #16a34a)' : 'var(--error, #dc2626)' }}>
+                          {troco >= 0 ? fmt(troco) : `− ${fmt(Math.abs(troco))}`} €
+                        </strong>
+                      </div>
+                    )}
+                  </div>
+                );
+              })()}
+            </div>
+          </div>{/* end card 5 */}
 
-        </div>{/* end session-col-right */}
+          </div>{/* end financial items col */}
 
-        {error && <div className="error-msg" style={{ gridColumn: 'span 2' }}><span>⚠</span> {error}</div>}
+        </div>{/* end right col */}
+      </div>{/* end layout */}
 
-        <div className="session-detail-footer">
-          <button type="button" className="btn-secondary" onClick={handleDiscard} disabled={saving || !dirty}>Descartar alterações</button>
-          <button type="button" className="btn-primary" onClick={handleSave} disabled={saving || !dirty}>
-            {saving ? 'A guardar…' : 'Guardar alterações'}
-          </button>
-        </div>
+      {error && <div className="error-msg" style={{ marginTop: '1rem' }}><span>⚠</span> {error}</div>}
+
+      <div className="session-detail-footer">
+        <button type="button" className="btn-secondary" onClick={handleDiscard} disabled={saving || !dirty}>Descartar alterações</button>
+        <button type="button" className="btn-primary" onClick={handleSave} disabled={saving || !dirty}>
+          {saving ? 'A guardar…' : 'Guardar alterações'}
+        </button>
       </div>
 
       {saved && (

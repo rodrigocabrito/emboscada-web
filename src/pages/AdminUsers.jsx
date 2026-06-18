@@ -4,6 +4,7 @@ import { useAuth } from '../context/AuthContext';
 import { createUser } from '../firebase/auth';
 import { getUsers, deleteUserProfile } from '../firebase/firestore';
 import useEscapeKey from '../hooks/useEscapeKey';
+import useScrollLock from '../hooks/useScrollLock';
 
 const ROLES = [
   { label: 'Administrador(a)', value: 'admin' },
@@ -58,6 +59,7 @@ const AdminUsers = () => {
   }, [creating]);
 
   useEscapeKey(closeModal, modalOpen);
+  useScrollLock(modalOpen);
 
   const closeConfirm = () => { setDeletingId(null); setDeleteError(''); };
   useEscapeKey(closeConfirm, !!deletingId);
@@ -151,7 +153,7 @@ const AdminUsers = () => {
                   <th>Nome</th>
                   <th>Email</th>
                   <th>Função</th>
-                  <th></th>
+                  <th>Ações</th>
                 </tr>
               </thead>
               <tbody>
@@ -180,14 +182,16 @@ const AdminUsers = () => {
                       <button
                         className="btn-table-action"
                         onClick={() => setViewingUser(u)}
+                        aria-label="Ver detalhes"
                       >
-                        Ver detalhes
+                        <img src="/eye.png" alt="Ver detalhes" style={{ width: '22px', height: '22px' }} />
                       </button>
                       <button
                         className="btn-table-delete"
                         onClick={() => { setDeleteError(''); setDeletingId(u.uuid); }}
+                        aria-label="Eliminar"
                       >
-                        Eliminar
+                        <img src="/trash.png" alt="Eliminar" style={{ width: '22px', height: '22px' }} />
                       </button>
                     </td>
                   </tr>

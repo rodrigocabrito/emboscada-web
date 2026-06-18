@@ -145,16 +145,18 @@ export const addSession = async (data) => {
 
   await setDoc(doc(db, 'sessions', uuid), {
     uuid,
-    spoc: data.spoc,
-    numberOfPlayers: data.numberOfPlayers,
-    sessionDate: data.sessionDate,       // "YYYY-MM-DD"
-    sessionTime: data.sessionTime,       // "HH:MM"
-    sessionDatetime,                     // "YYYY-MM-DDTHH:MM" for ordering
+    spocName: data.spocName || '',
+    spocEmail: data.spocEmail || '',
+    spocPhoneNumber: data.spocPhoneNumber || '',
+    expectedNumberOfPlayers: data.expectedNumberOfPlayers,
+    sessionDate: data.sessionDate,
+    sessionTime: data.sessionTime,
+    sessionDatetime,
     typeOfSession: data.typeOfSession || '',
     caliber: data.caliber || '',
     status: 'pending_payment',
     additionalComments: data.additionalComments,
-    monitors: data.monitors || [],
+    monitors: [],
     createdAt: serverTimestamp(),
     updatedAt: serverTimestamp(),
   });

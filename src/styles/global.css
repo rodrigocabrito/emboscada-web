@@ -884,9 +884,11 @@ body {
 }
 
 .session-view-comments .session-view-value {
-  white-space: pre-wrap;
   font-size: 0.88rem;
   color: var(--text-muted);
+  white-space: pre-wrap;
+  max-height: 4.5rem;
+  overflow-y: auto;
 }
 
 .session-view-body .grid-monitor-dot {
@@ -951,40 +953,28 @@ body {
 }
 
 
+.session-detail-layout {
+  display: flex;
+  align-items: flex-start;
+  gap: 1.25rem;
+}
+
 .session-detail-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1.75rem 2rem;
-  max-width: 1300px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 0 3rem;
-}
-
-.session-detail-card .session-detail-footer,
-.session-detail-card .error-msg {
-  grid-column: span 2;
-}
-
-.session-col-left,
-.session-col-right {
+  padding: 1.5rem 1.75rem;
   display: flex;
   flex-direction: column;
-  gap: 0;
   min-width: 0;
 }
 
-.session-col-right-title {
-  font-size: 0.75rem;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.09em;
-  color: var(--text-muted);
-  border-bottom: 1px solid var(--border);
-  padding-bottom: 0.75rem;
-  margin-bottom: 1rem;
+.session-detail-right-col {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+  flex: 1;
+  min-width: 0;
 }
 
 .session-detail-footer {
@@ -994,7 +984,6 @@ body {
   margin-top: 1.5rem;
   padding-top: 1.25rem;
   border-top: 1px solid var(--border);
-  grid-column: span 2;
 }
 
 .session-detail-footer .btn-primary,
@@ -1047,6 +1036,7 @@ body {
 .page-sessions {
   max-width: 1600px;
 }
+
 
 .page-header {
   margin-bottom: 2rem;
@@ -1526,7 +1516,7 @@ body {
   border-radius: var(--radius-lg);
   box-shadow: var(--shadow-lg);
   width: 100%;
-  max-width: 500px;
+  max-width: 680px;
   max-height: 90vh;
   overflow-y: auto;
   padding: 1.75rem;
@@ -1912,7 +1902,7 @@ body {
   display: flex;
   justify-content: flex-end;
   align-items: center;
-  gap: 0.5rem;
+  gap: 1.25rem;
 }
 
 .role-badge {
@@ -1935,36 +1925,33 @@ body {
 }
 
 .btn-table-action {
-  background: var(--surface);
-  border: 1px solid var(--border);
-  color: var(--text);
-  padding: 0.3rem 0.75rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-family: var(--font-body);
+  background: none;
+  border: none;
+  padding: 0;
   cursor: pointer;
-  transition: border-color var(--transition), background var(--transition);
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.6;
+  transition: opacity var(--transition);
 }
 
 .btn-table-action:hover {
-  border-color: var(--primary);
-  background: var(--bg);
+  opacity: 1;
 }
 
 .btn-table-delete {
-  background: var(--error);
+  background: none;
   border: none;
-  color: white;
-  padding: 0.3rem 0.75rem;
-  border-radius: var(--radius-sm);
-  font-size: 0.8rem;
-  font-family: var(--font-body);
+  padding: 0;
   cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.6;
   transition: opacity var(--transition);
 }
 
 .btn-table-delete:hover {
-  opacity: 0.85;
+  opacity: 1;
 }
 
 
