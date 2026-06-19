@@ -216,36 +216,36 @@ const SessionDetail = () => {
     setDirty(true);
   };
 
-  const handleSave = async () => {
+  const saveForm = async (f) => {
     setError('');
     setSaving(true);
     try {
       await updateSession(id, {
-        spocName: form.spocName,
-        spocEmail: form.spocEmail,
-        spocPhoneNumber: form.spocPhoneNumber,
-        expectedNumberOfPlayers: parseInt(form.expectedNumberOfPlayers, 10),
-        actualNumberOfPlayers: form.actualNumberOfPlayers !== '' ? parseInt(form.actualNumberOfPlayers, 10) : null,
-        sessionDate: form.sessionDate,
-        sessionTime: form.sessionTime,
-        sessionDatetime: `${form.sessionDate}T${form.sessionTime}`,
-        typeOfSession: form.typeOfSession,
-        caliber: (form.typeOfSession === 'Paintball' || form.typeOfSession === 'Paintball Kids') ? form.caliber : '',
-        status: form.status,
-        additionalComments: form.additionalComments,
-        monitors: form.monitors,
-        packId: form.packId,
-        packName: form.packName,
-        numPacks: parseFloat(form.numPacks) || 0,
-        packPrice: parseFloat(form.packPrice) || 0,
-        extras: form.extras.map((e) => ({ ...e, quantity: parseFloat(e.quantity) || 0, unitPrice: parseFloat(e.unitPrice) || 0 })),
-        others: form.others.map((o) => ({ ...o, quantity: parseFloat(o.quantity) || 0, unitPrice: parseFloat(o.unitPrice) || 0 })),
-        signal: parseFloat(form.signal) || 0,
-        paymentTypes: form.paymentTypes,
-        cashPaid: form.paymentTypes.includes('cash') ? (parseFloat(form.cashPaid) || 0) : null,
+        spocName: f.spocName,
+        spocEmail: f.spocEmail,
+        spocPhoneNumber: f.spocPhoneNumber,
+        expectedNumberOfPlayers: parseInt(f.expectedNumberOfPlayers, 10),
+        actualNumberOfPlayers: f.actualNumberOfPlayers !== '' ? parseInt(f.actualNumberOfPlayers, 10) : null,
+        sessionDate: f.sessionDate,
+        sessionTime: f.sessionTime,
+        sessionDatetime: `${f.sessionDate}T${f.sessionTime}`,
+        typeOfSession: f.typeOfSession,
+        caliber: (f.typeOfSession === 'Paintball' || f.typeOfSession === 'Paintball Kids') ? f.caliber : '',
+        status: f.status,
+        additionalComments: f.additionalComments,
+        monitors: f.monitors,
+        packId: f.packId,
+        packName: f.packName,
+        numPacks: parseFloat(f.numPacks) || 0,
+        packPrice: parseFloat(f.packPrice) || 0,
+        extras: f.extras.map((e) => ({ ...e, quantity: parseFloat(e.quantity) || 0, unitPrice: parseFloat(e.unitPrice) || 0 })),
+        others: f.others.map((o) => ({ ...o, quantity: parseFloat(o.quantity) || 0, unitPrice: parseFloat(o.unitPrice) || 0 })),
+        signal: parseFloat(f.signal) || 0,
+        paymentTypes: f.paymentTypes,
+        cashPaid: f.paymentTypes.includes('cash') ? (parseFloat(f.cashPaid) || 0) : null,
         total: financials.total,
       });
-      setSession((prev) => ({ ...prev, ...form }));
+      setSession((prev) => ({ ...prev, ...f }));
       setDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -255,6 +255,8 @@ const SessionDetail = () => {
       setSaving(false);
     }
   };
+
+  const handleSave = () => saveForm(form);
 
   const handleDiscard = () => {
     const numPlayers = session.expectedNumberOfPlayers ?? session.numberOfPlayers ?? 0;
@@ -299,7 +301,7 @@ const SessionDetail = () => {
   return (
     <div className="page page-session-detail">
       <div className="page-header" style={{ border: 'none', paddingBottom: 0, marginBottom: '1rem' }}>
-        <button className="btn-secondary" style={{ width: 'auto' }} onClick={() => navigate('/sessions', { state: { returnDate: form.sessionDate } })}>
+        <button className="btn-secondary" style={{ width: 'auto' }} onClick={() => navigate(-1)}>
           ← Voltar
         </button>
       </div>
@@ -730,15 +732,10 @@ const SessionDetail = () => {
                 type="button"
                 className="btn-primary"
                 onClick={async () => {
-                  setForm((prev) => ({ ...prev, status: 'done' }));
-                  setSession((prev) => ({ ...prev, status: 'done' }));
-                  setDirty(true);
+                  const updatedForm = { ...form, status: 'done' };
+                  setForm(updatedForm);
                   setPayModal(false);
-                  try {
-                    await updateSession(id, { status: 'done' });
-                  } catch {
-                    setError('Erro ao atualizar estado. Guarda manualmente.');
-                  }
+                  await saveForm(updatedForm);
                 }}
               >
                 Pagar

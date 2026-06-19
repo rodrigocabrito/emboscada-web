@@ -11,6 +11,9 @@ import {
   query,
   where,
   orderBy,
+  limit,
+  startAfter,
+  getCountFromServer,
   serverTimestamp,
   Timestamp,
 } from 'firebase/firestore';
@@ -136,6 +139,44 @@ export const getSessions = async () => {
   const q = query(collection(db, 'sessions'), orderBy('sessionDatetime', 'asc'));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+};
+
+const buildSessionConstraints = (filters = {}) => {
+  const c = [];
+  const types = filters.typeOfSession ?? [];
+  const statuses = filters.status ?? [];
+  // Firestore allows at most one 'in' operator per query — typeOfSession takes priority
+  if (types.length > 0) {
+    c.push(where('typeOfSession', 'in', types));
+  } else if (statuses.length > 0) {
+    c.push(where('status', 'in', statuses));
+  }
+  if (filters.dateFrom) c.push(where('sessionDatetime', '>=', filters.dateFrom));
+  if (filters.dateTo) c.push(where('sessionDatetime', '<=', filters.dateTo + 'T23:59'));
+  return c;
+};
+
+export const getSessionsCount = async (filters = {}) => {
+  const constraints = buildSessionConstraints(filters);
+  const q = constraints.length ? query(collection(db, 'sessions'), ...constraints) : collection(db, 'sessions');
+  const snap = await getCountFromServer(q);
+  return snap.data().count;
+};
+
+export const getSessionsPage = async (pageSize = 30, afterDoc = null, filters = {}) => {
+  const hasEqualityFilter = !!(filters.typeOfSession?.length || filters.status?.length);
+  const constraints = buildSessionConstraints(filters);
+  // orderBy on a different field than the where clause needs a composite index.
+  // Skip it when equality filters are active — results are sorted client-side instead.
+  if (!hasEqualityFilter) constraints.unshift(orderBy('sessionDatetime', 'asc'));
+  if (afterDoc) constraints.push(startAfter(afterDoc));
+  constraints.push(limit(pageSize));
+  const snapshot = await getDocs(query(collection(db, 'sessions'), ...constraints));
+  return {
+    sessions: snapshot.docs.map((d) => ({ id: d.id, ...d.data() })),
+    lastDoc: snapshot.docs[snapshot.docs.length - 1] ?? null,
+    hasMore: snapshot.docs.length === pageSize,
+  };
 };
 
 export const addSession = async (data) => {

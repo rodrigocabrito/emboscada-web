@@ -3,8 +3,16 @@ import { useAuth } from '../context/AuthContext';
 
 const FEATURES = [
   {
+    key: 'sessions',
+    label: 'Sessões',
+    description: 'Consulta, filtra e gere todas as sessões registadas.',
+    icon: '📋',
+    path: '/admin/sessions',
+    active: true,
+  },
+  {
     key: 'users',
-    label: 'Gerir Utilizadores',
+    label: 'Utilizadores',
     description: 'Criar, consultar e eliminar utilizadores da plataforma.',
     icon: '👥',
     path: '/admin/users',
@@ -20,7 +28,7 @@ const FEATURES = [
   },
   {
     key: 'stock',
-    label: 'Gerir Stock',
+    label: 'Stock',
     description: 'Controlo de material e equipamento disponível.',
     icon: '📦',
     path: null,
@@ -28,7 +36,7 @@ const FEATURES = [
   },
   {
     key: 'schedule',
-    label: 'Fazer Escala',
+    label: 'Escala',
     description: 'Planeamento e gestão de turnos da equipa.',
     icon: '📅',
     path: null,
