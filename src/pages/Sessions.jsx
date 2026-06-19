@@ -307,7 +307,7 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange, hi
                       top: startSlotIdx * ROW_HEIGHT,
                       height: SESSION_SLOTS * ROW_HEIGHT,
                       left: `${(col / totalCols) * 100}%`,
-                      width: `${Math.min(70, (1 / totalCols) * 100)}%`,
+                      width: `${Math.min(35, (1 / totalCols) * 100)}%`,
                       padding: '0 2px',
                       boxSizing: 'border-box',
                     }}
