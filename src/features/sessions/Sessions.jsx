@@ -1,9 +1,10 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
-import { addSession, getSessions, getUsers } from '../firebase/firestore';
-import { getUserColor } from '../utils/avatarColors';
-import useEscapeKey from '../hooks/useEscapeKey';
-import useScrollLock from '../hooks/useScrollLock';
+import { addSession } from '../../firebase/firestore';
+import { useSessions } from './hooks/useSessions';
+import { getUserColor } from '../../utils/avatarColors';
+import useEscapeKey from '../../hooks/useEscapeKey';
+import useScrollLock from '../../hooks/useScrollLock';
 
 const VIEWS = [
   { key: 'day', label: 'Dia' },
@@ -506,8 +507,7 @@ const Sessions = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [view, setView] = useState('day');
-  const [sessions, setSessions] = useState([]);
-  const [users, setUsers] = useState([]);
+  const { sessions, users, refetchSessions } = useSessions();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
@@ -521,29 +521,6 @@ const Sessions = () => {
     return new Date();
   });
   const [hideCancelled, setHideCancelled] = useState(false);
-
-  const fetchSessions = async () => {
-    try {
-      const data = await getSessions();
-      setSessions(data);
-    } catch {
-      // silently fail on list fetch
-    }
-  };
-
-  const fetchUsers = async () => {
-    try {
-      const data = await getUsers();
-      setUsers(data);
-    } catch {
-      // silently fail on user fetch
-    }
-  };
-
-  useEffect(() => {
-    fetchSessions();
-    fetchUsers();
-  }, []);
 
   const openModal = () => {
     setForm(EMPTY_FORM);
@@ -595,7 +572,7 @@ const Sessions = () => {
         additionalComments: form.additionalComments,
       });
       setForm(EMPTY_FORM);
-      await fetchSessions();
+      await refetchSessions();
       setModalOpen(false);
     } catch {
       setError('Erro ao criar sessão. Tenta novamente.');

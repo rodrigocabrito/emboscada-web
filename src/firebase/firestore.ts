@@ -16,100 +16,117 @@ import {
   getCountFromServer,
   serverTimestamp,
   Timestamp,
+  DocumentSnapshot,
+  type QueryConstraint,
 } from 'firebase/firestore';
+import type {
+  Session,
+  User,
+  CatalogItem,
+  Customer,
+  Booking,
+  Event,
+  Availability,
+  SessionFilters,
+  SessionsPage,
+  LineItem,
+  PaymentType,
+  SessionType,
+  SessionStatus,
+} from '../types';
 
 // ─── USERS ───────────────────────────────────────────────────────────────────
 
-export const getUsers = async () => {
+export const getUsers = async (): Promise<User[]> => {
   const snapshot = await getDocs(collection(db, 'users'));
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snapshot.docs.map((d) => ({ uuid: d.id, ...d.data() }) as User);
 };
 
-export const deleteUserProfile = async (uid) => {
+export const deleteUserProfile = async (uid: string): Promise<void> => {
   await deleteDoc(doc(db, 'users', uid));
 };
 
 // ─── CUSTOMERS ───────────────────────────────────────────────────────────────
 
-export const getCustomers = async () => {
+export const getCustomers = async (): Promise<Customer[]> => {
   const snapshot = await getDocs(collection(db, 'customers'));
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Customer);
 };
 
-export const getCustomer = async (id) => {
+export const getCustomer = async (id: string): Promise<Customer | null> => {
   const docSnap = await getDoc(doc(db, 'customers', id));
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+  return docSnap.exists() ? ({ id: docSnap.id, ...docSnap.data() } as Customer) : null;
 };
 
-export const addCustomer = async (data) => {
+export const addCustomer = async (data: Omit<Customer, 'id' | 'createdAt'>): Promise<import('firebase/firestore').DocumentReference> => {
   return await addDoc(collection(db, 'customers'), {
     ...data,
     createdAt: new Date().toISOString(),
   });
 };
 
-export const updateCustomer = async (id, data) => {
+export const updateCustomer = async (id: string, data: Partial<Customer>): Promise<void> => {
   await updateDoc(doc(db, 'customers', id), {
     ...data,
     updatedAt: new Date().toISOString(),
   });
 };
 
-export const deleteCustomer = async (id) => {
+export const deleteCustomer = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'customers', id));
 };
 
 // ─── EVENTS ──────────────────────────────────────────────────────────────────
 
-export const getEvents = async () => {
+export const getEvents = async (): Promise<Event[]> => {
   const q = query(collection(db, 'events'), orderBy('date', 'asc'));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Event);
 };
 
-export const getEvent = async (id) => {
+export const getEvent = async (id: string): Promise<Event | null> => {
   const docSnap = await getDoc(doc(db, 'events', id));
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+  return docSnap.exists() ? ({ id: docSnap.id, ...docSnap.data() } as Event) : null;
 };
 
-export const addEvent = async (data) => {
+export const addEvent = async (data: Omit<Event, 'id' | 'createdAt'>): Promise<import('firebase/firestore').DocumentReference> => {
   return await addDoc(collection(db, 'events'), {
     ...data,
     createdAt: new Date().toISOString(),
   });
 };
 
-export const updateEvent = async (id, data) => {
+export const updateEvent = async (id: string, data: Partial<Event>): Promise<void> => {
   await updateDoc(doc(db, 'events', id), {
     ...data,
     updatedAt: new Date().toISOString(),
   });
 };
 
-export const deleteEvent = async (id) => {
+export const deleteEvent = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'events', id));
 };
 
 // ─── BOOKINGS ────────────────────────────────────────────────────────────────
 
-export const getBookings = async () => {
+export const getBookings = async (): Promise<Booking[]> => {
   const snapshot = await getDocs(collection(db, 'bookings'));
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Booking);
 };
 
-export const getBookingsByCustomer = async (customerId) => {
+export const getBookingsByCustomer = async (customerId: string): Promise<Booking[]> => {
   const q = query(collection(db, 'bookings'), where('customerId', '==', customerId));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Booking);
 };
 
-export const getBookingsByEvent = async (eventId) => {
+export const getBookingsByEvent = async (eventId: string): Promise<Booking[]> => {
   const q = query(collection(db, 'bookings'), where('eventId', '==', eventId));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Booking);
 };
 
-export const addBooking = async (data) => {
+export const addBooking = async (data: Omit<Booking, 'id' | 'status' | 'createdAt'>): Promise<import('firebase/firestore').DocumentReference> => {
   return await addDoc(collection(db, 'bookings'), {
     ...data,
     status: 'pending',
@@ -117,32 +134,32 @@ export const addBooking = async (data) => {
   });
 };
 
-export const updateBooking = async (id, data) => {
+export const updateBooking = async (id: string, data: Partial<Booking>): Promise<void> => {
   await updateDoc(doc(db, 'bookings', id), {
     ...data,
     updatedAt: new Date().toISOString(),
   });
 };
 
-export const deleteBooking = async (id) => {
+export const deleteBooking = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'bookings', id));
 };
 
 // ─── SESSIONS ────────────────────────────────────────────────────────────────
 
-export const getSession = async (id) => {
+export const getSession = async (id: string): Promise<Session | null> => {
   const docSnap = await getDoc(doc(db, 'sessions', id));
-  return docSnap.exists() ? { id: docSnap.id, ...docSnap.data() } : null;
+  return docSnap.exists() ? ({ id: docSnap.id, ...docSnap.data() } as Session) : null;
 };
 
-export const getSessions = async () => {
+export const getSessions = async (): Promise<Session[]> => {
   const q = query(collection(db, 'sessions'), orderBy('sessionDatetime', 'asc'));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Session);
 };
 
-const buildSessionConstraints = (filters = {}) => {
-  const c = [];
+const buildSessionConstraints = (filters: SessionFilters = {}): QueryConstraint[] => {
+  const c: QueryConstraint[] = [];
   const types = filters.typeOfSession ?? [];
   const statuses = filters.status ?? [];
   // Firestore allows at most one 'in' operator per query — typeOfSession takes priority
@@ -156,14 +173,18 @@ const buildSessionConstraints = (filters = {}) => {
   return c;
 };
 
-export const getSessionsCount = async (filters = {}) => {
+export const getSessionsCount = async (filters: SessionFilters = {}): Promise<number> => {
   const constraints = buildSessionConstraints(filters);
   const q = constraints.length ? query(collection(db, 'sessions'), ...constraints) : collection(db, 'sessions');
   const snap = await getCountFromServer(q);
   return snap.data().count;
 };
 
-export const getSessionsPage = async (pageSize = 30, afterDoc = null, filters = {}) => {
+export const getSessionsPage = async (
+  pageSize = 30,
+  afterDoc: DocumentSnapshot | null = null,
+  filters: SessionFilters = {}
+): Promise<SessionsPage> => {
   const hasEqualityFilter = !!(filters.typeOfSession?.length || filters.status?.length);
   const constraints = buildSessionConstraints(filters);
   // orderBy on a different field than the where clause needs a composite index.
@@ -173,13 +194,25 @@ export const getSessionsPage = async (pageSize = 30, afterDoc = null, filters = 
   constraints.push(limit(pageSize));
   const snapshot = await getDocs(query(collection(db, 'sessions'), ...constraints));
   return {
-    sessions: snapshot.docs.map((d) => ({ id: d.id, ...d.data() })),
+    sessions: snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Session),
     lastDoc: snapshot.docs[snapshot.docs.length - 1] ?? null,
     hasMore: snapshot.docs.length === pageSize,
   };
 };
 
-export const addSession = async (data) => {
+interface AddSessionInput {
+  spocName: string;
+  spocEmail: string;
+  spocPhoneNumber: string;
+  expectedNumberOfPlayers: number;
+  sessionDate: string;
+  sessionTime: string;
+  typeOfSession: SessionType | '';
+  caliber: string;
+  additionalComments: string;
+}
+
+export const addSession = async (data: AddSessionInput): Promise<string> => {
   const uuid = crypto.randomUUID();
   // sessionDatetime = "YYYY-MM-DDTHH:MM" — timezone-free sort key
   const sessionDatetime = `${data.sessionDate}T${data.sessionTime}`;
@@ -195,7 +228,7 @@ export const addSession = async (data) => {
     sessionDatetime,
     typeOfSession: data.typeOfSession || '',
     caliber: data.caliber || '',
-    status: 'pending_payment',
+    status: 'pending_payment' as SessionStatus,
     additionalComments: data.additionalComments,
     monitors: [],
     createdAt: serverTimestamp(),
@@ -204,15 +237,41 @@ export const addSession = async (data) => {
   return uuid;
 };
 
-export const updateSessionStatus = async (id, status) => {
+export const updateSessionStatus = async (id: string, status: SessionStatus): Promise<void> => {
   await updateDoc(doc(db, 'sessions', id), {
     status,
     updatedAt: serverTimestamp(),
   });
 };
 
-export const updateSession = async (id, data) => {
-  const updateData = { ...data, updatedAt: serverTimestamp() };
+interface UpdateSessionInput {
+  spocName?: string;
+  spocEmail?: string;
+  spocPhoneNumber?: string;
+  expectedNumberOfPlayers?: number;
+  actualNumberOfPlayers?: number | null;
+  sessionDate?: string;
+  sessionTime?: string;
+  sessionDatetime?: string;
+  typeOfSession?: SessionType | '';
+  caliber?: string;
+  status?: SessionStatus;
+  additionalComments?: string;
+  monitors?: string[];
+  packId?: string;
+  packName?: string;
+  numPacks?: number;
+  packPrice?: number;
+  extras?: LineItem[];
+  others?: LineItem[];
+  signal?: number;
+  paymentTypes?: PaymentType[];
+  cashPaid?: number | null;
+  total?: number;
+}
+
+export const updateSession = async (id: string, data: UpdateSessionInput): Promise<void> => {
+  const updateData: Record<string, unknown> = { ...data, updatedAt: serverTimestamp() };
   // Rebuild sessionDatetime if date or time changed
   if (data.sessionDate || data.sessionTime) {
     updateData.sessionDatetime = `${data.sessionDate}T${data.sessionTime}`;
@@ -220,19 +279,19 @@ export const updateSession = async (id, data) => {
   await updateDoc(doc(db, 'sessions', id), updateData);
 };
 
-export const deleteSession = async (id) => {
+export const deleteSession = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'sessions', id));
 };
 
 // ─── CATALOG ─────────────────────────────────────────────────────────────────
 
-export const getCatalogItems = async () => {
+export const getCatalogItems = async (): Promise<CatalogItem[]> => {
   const q = query(collection(db, 'catalog'), orderBy('createdAt', 'asc'));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }));
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as CatalogItem);
 };
 
-export const addCatalogItem = async (data) => {
+export const addCatalogItem = async (data: Omit<CatalogItem, 'id' | 'createdAt' | 'updatedAt'>): Promise<import('firebase/firestore').DocumentReference> => {
   return await addDoc(collection(db, 'catalog'), {
     ...data,
     createdAt: serverTimestamp(),
@@ -240,22 +299,29 @@ export const addCatalogItem = async (data) => {
   });
 };
 
-export const updateCatalogItem = async (id, data) => {
+export const updateCatalogItem = async (id: string, data: Partial<Omit<CatalogItem, 'id' | 'createdAt' | 'updatedAt'>>): Promise<void> => {
   await updateDoc(doc(db, 'catalog', id), {
     ...data,
     updatedAt: serverTimestamp(),
   });
 };
 
-export const deleteCatalogItem = async (id) => {
+export const deleteCatalogItem = async (id: string): Promise<void> => {
   await deleteDoc(doc(db, 'catalog', id));
 };
 
 // ─── AVAILABILITY ─────────────────────────────────────────────────────────────
 
-const availDocId = (userId, date) => `${userId}_${date}`;
+const availDocId = (userId: string, date: string) => `${userId}_${date}`;
 
-export const setAvailability = async (userId, date, data) => {
+interface SetAvailabilityInput {
+  available: boolean;
+  typeOfAvailability?: string;
+  earlierLimit?: string;
+  laterLimit?: string;
+}
+
+export const setAvailability = async (userId: string, date: string, data: SetAvailabilityInput): Promise<void> => {
   await setDoc(doc(db, 'availability', availDocId(userId, date)), {
     userId,
     date,
@@ -267,12 +333,12 @@ export const setAvailability = async (userId, date, data) => {
   });
 };
 
-export const getAvailabilityForMonth = async (userId, yearMonth) => {
+export const getAvailabilityForMonth = async (userId: string, yearMonth: string): Promise<Record<number, Availability>> => {
   const q = query(collection(db, 'availability'), where('userId', '==', userId));
   const snapshot = await getDocs(q);
-  const map = {};
+  const map: Record<number, Availability> = {};
   snapshot.docs.forEach((d) => {
-    const data = d.data();
+    const data = d.data() as Availability;
     if (data.date?.startsWith(yearMonth)) {
       const day = parseInt(data.date.split('-')[2], 10);
       map[day] = data;
@@ -281,12 +347,12 @@ export const getAvailabilityForMonth = async (userId, yearMonth) => {
   return map;
 };
 
-export const deleteAvailability = async (userId, date) => {
+export const deleteAvailability = async (userId: string, date: string): Promise<void> => {
   await deleteDoc(doc(db, 'availability', availDocId(userId, date)));
 };
 
-export const getAvailabilityForDate = async (date) => {
+export const getAvailabilityForDate = async (date: string): Promise<Availability[]> => {
   const q = query(collection(db, 'availability'), where('date', '==', date));
   const snapshot = await getDocs(q);
-  return snapshot.docs.map((d) => d.data());
+  return snapshot.docs.map((d) => d.data() as Availability);
 };

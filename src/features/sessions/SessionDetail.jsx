@@ -1,8 +1,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { getSession, updateSession, getUsers, getCatalogItems } from '../firebase/firestore';
-import useScrollLock from '../hooks/useScrollLock';
-import useEscapeKey from '../hooks/useEscapeKey';
+import { updateSession } from '../../firebase/firestore';
+import { useSession } from './hooks/useSession';
+import LineItemsTable from './components/LineItemsTable';
+import PaymentModal from './components/PaymentModal';
+import useScrollLock from '../../hooks/useScrollLock';
+import useEscapeKey from '../../hooks/useEscapeKey';
 
 const SESSION_TYPES = ['Paintball', 'Paintball Kids', 'Laser Tag', 'Laser Tag Kids', 'Gel Blast', 'Bubble Football'];
 
@@ -19,11 +22,6 @@ const STATUS_OPTIONS = [
   { value: 'cancelled', label: 'Cancelada' },
 ];
 
-const PAYMENT_TYPES = [
-  { value: 'card', label: 'Cartão', icon: '/visa.png' },
-  { value: 'mbway', label: 'MBWay', icon: '/mbway.png' },
-  { value: 'cash', label: 'Dinheiro', icon: '/cash.png' },
-];
 
 const getStatusBadgeClass = (status) => {
   switch (status) {
@@ -47,11 +45,8 @@ const SessionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  const [session, setSession] = useState(null);
-  const [users, setUsers] = useState([]);
-  const [catalogItems, setCatalogItems] = useState([]);
+  const { session, updateSessionCache, users, catalogItems, loading } = useSession(id);
   const [form, setForm] = useState(null);
-  const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
   const [dirty, setDirty] = useState(false);
@@ -63,46 +58,33 @@ const SessionDetail = () => {
   const [confirmPayModal, setConfirmPayModal] = useState(false);
 
   useEffect(() => {
-    const load = async () => {
-      try {
-        const [s, u, catalog] = await Promise.all([getSession(id), getUsers(), getCatalogItems()]);
-        if (!s) { navigate('/sessions', { replace: true }); return; }
-        setSession(s);
-        setUsers(u);
-        setCatalogItems(catalog);
-        const numPlayers = s.expectedNumberOfPlayers ?? s.numberOfPlayers ?? 0;
-        setForm({
-          spocName: s.spocName || s.spoc || '',
-          spocEmail: s.spocEmail || '',
-          spocPhoneNumber: s.spocPhoneNumber || '',
-          expectedNumberOfPlayers: numPlayers || '',
-          actualNumberOfPlayers: s.actualNumberOfPlayers !== undefined ? String(s.actualNumberOfPlayers) : '',
-          sessionDate: s.sessionDate || '',
-          sessionTime: s.sessionTime || '',
-          typeOfSession: s.typeOfSession || '',
-          caliber: s.caliber || '',
-          status: s.status || 'pending_payment',
-          additionalComments: s.additionalComments || '',
-          monitors: s.monitors || [],
-          // financial
-          packId: s.packId || '',
-          packName: s.packName || '',
-          numPacks: s.numPacks !== undefined ? String(s.numPacks) : defaultNumPacks(s.actualNumberOfPlayers, numPlayers),
-          packPrice: s.packPrice !== undefined ? String(s.packPrice) : '',
-          extras: s.extras || [],
-          others: s.others || [],
-          signal: s.signal !== undefined ? String(s.signal) : String(numPlayers >= 15 ? 80 : 50),
-          paymentTypes: s.paymentTypes || [],
-          cashPaid: s.cashPaid !== undefined ? String(s.cashPaid) : '',
-        });
-      } catch {
-        setError('Erro ao carregar sessão.');
-      } finally {
-        setLoading(false);
-      }
-    };
-    load();
-  }, [id, navigate]);
+    if (!session || form !== null) return;
+    const numPlayers = session.expectedNumberOfPlayers ?? session.numberOfPlayers ?? 0;
+    setForm({
+      spocName: session.spocName || session.spoc || '',
+      spocEmail: session.spocEmail || '',
+      spocPhoneNumber: session.spocPhoneNumber || '',
+      expectedNumberOfPlayers: numPlayers || '',
+      actualNumberOfPlayers: session.actualNumberOfPlayers !== undefined ? String(session.actualNumberOfPlayers) : '',
+      sessionDate: session.sessionDate || '',
+      sessionTime: session.sessionTime || '',
+      typeOfSession: session.typeOfSession || '',
+      caliber: session.caliber || '',
+      status: session.status || 'pending_payment',
+      additionalComments: session.additionalComments || '',
+      monitors: session.monitors || [],
+      // financial
+      packId: session.packId || '',
+      packName: session.packName || '',
+      numPacks: session.numPacks !== undefined ? String(session.numPacks) : defaultNumPacks(session.actualNumberOfPlayers, numPlayers),
+      packPrice: session.packPrice !== undefined ? String(session.packPrice) : '',
+      extras: session.extras || [],
+      others: session.others || [],
+      signal: session.signal !== undefined ? String(session.signal) : String(numPlayers >= 15 ? 80 : 50),
+      paymentTypes: session.paymentTypes || [],
+      cashPaid: session.cashPaid !== undefined ? String(session.cashPaid) : '',
+    });
+  }, [session, form]);
 
   const sortedCatalog = useMemo(() =>
     [...catalogItems].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity)),
@@ -167,10 +149,10 @@ const SessionDetail = () => {
   };
 
 
-  const updateExtra = (idx, field, value) => {
+  const updateExtra = (idx, fields) => {
     setForm((prev) => {
       const extras = [...prev.extras];
-      extras[idx] = { ...extras[idx], [field]: value };
+      extras[idx] = { ...extras[idx], ...fields };
       return { ...prev, extras };
     });
     setDirty(true);
@@ -181,11 +163,10 @@ const SessionDetail = () => {
     setDirty(true);
   };
 
-
-  const updateOther = (idx, field, value) => {
+  const updateOther = (idx, fields) => {
     setForm((prev) => {
       const others = [...prev.others];
-      others[idx] = { ...others[idx], [field]: value };
+      others[idx] = { ...others[idx], ...fields };
       return { ...prev, others };
     });
     setDirty(true);
@@ -245,7 +226,7 @@ const SessionDetail = () => {
         cashPaid: f.paymentTypes.includes('cash') ? (parseFloat(f.cashPaid) || 0) : null,
         total: financials.total,
       });
-      setSession((prev) => ({ ...prev, ...f }));
+      updateSessionCache(f);
       setDirty(false);
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
@@ -462,144 +443,32 @@ const SessionDetail = () => {
           </div>{/* end card 2 */}
 
           {/* ── Card 3: Extras ── */}
-          <div className="session-detail-card">
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-                <thead>
-                  <tr>
-                    <th style={{ fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem 0.2rem 0' }}>Extras</th>
-                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>Qtd</th>
-                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>€/un</th>
-                    <th style={{ width: '28px' }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...form.extras, draftExtra].map((extra, idx) => {
-                    const isNew = idx === form.extras.length;
-                    return (
-                      <tr key={idx}>
-                        <td style={{ padding: '0.25rem 0.4rem 0.25rem 0' }}>
-                          <input
-                            type="text"
-                            list="extra-datalist"
-                            value={extra.name}
-                            placeholder="Escreve ou seleciona..."
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              const match = extraItems.find((i) => i.name === val);
-                              if (isNew) {
-                                setDraftExtra((d) => ({ ...d, name: val, unitPrice: match ? String(match.price) : d.unitPrice, catalogId: match?.id || '' }));
-                              } else {
-                                setForm((prev) => { const arr = [...prev.extras]; arr[idx] = { ...arr[idx], name: val, catalogId: match?.id || arr[idx].catalogId, unitPrice: match ? String(match.price) : arr[idx].unitPrice }; return { ...prev, extras: arr }; });
-                                setDirty(true);
-                              }
-                            }}
-                            onBlur={() => {
-                              if (isNew && draftExtra.name.trim()) {
-                                setForm((prev) => ({ ...prev, extras: [...prev.extras, { catalogId: draftExtra.catalogId || '', name: draftExtra.name.trim(), quantity: draftExtra.quantity, unitPrice: draftExtra.unitPrice }] }));
-                                setDraftExtra({ name: '', quantity: '', unitPrice: '' });
-                                setDirty(true);
-                              }
-                            }}
-                            style={{ width: '100%' }}
-                          />
-                        </td>
-                        <td style={{ padding: '0.25rem 0.4rem' }}>
-                          <input type="number" min="0" step="1" value={extra.quantity}
-                            onChange={(e) => isNew ? setDraftExtra((d) => ({ ...d, quantity: e.target.value })) : updateExtra(idx, 'quantity', e.target.value)}
-                            style={{ width: '100%', textAlign: 'center', borderColor: extra.name && !extra.quantity ? 'var(--error, #dc2626)' : undefined }} />
-                        </td>
-                        <td style={{ padding: '0.25rem 0.4rem' }}>
-                          <input type="number" min="0" step="0.01" value={extra.unitPrice}
-                            onChange={(e) => isNew ? setDraftExtra((d) => ({ ...d, unitPrice: e.target.value })) : updateExtra(idx, 'unitPrice', e.target.value)}
-                            style={{ width: '100%', textAlign: 'center' }} />
-                        </td>
-                        <td style={{ padding: '0.25rem 0', textAlign: 'center' }}>
-                          {!isNew && <button type="button" onClick={() => removeExtra(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}><img src="/trash-squared.png" alt="Eliminar" style={{ width: '28px', height: '28px', display: 'block' }} /></button>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <datalist id="extra-datalist">
-                {extraItems.map((i) => <option key={i.id} value={i.name} />)}
-              </datalist>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem', marginBottom: 0 }}>
-                Subtotal: <strong style={{ color: 'var(--text)' }}>{fmt(financials.extrasTotal)} €</strong>
-              </p>
-            </div>
-          </div>{/* end card 3 */}
+          <LineItemsTable
+            label="Extras"
+            datalistId="extra-datalist"
+            items={form.extras}
+            draft={draftExtra}
+            setDraft={setDraftExtra}
+            catalogItems={extraItems}
+            subtotal={financials.extrasTotal}
+            onUpdate={updateExtra}
+            onRemove={removeExtra}
+            onAddDraft={(item) => { setForm((prev) => ({ ...prev, extras: [...prev.extras, item] })); setDirty(true); }}
+          />
 
           {/* ── Card 4: Outros ── */}
-          <div className="session-detail-card">
-            <div className="form-group" style={{ marginBottom: 0 }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.875rem' }}>
-                <thead>
-                  <tr>
-                    <th style={{ fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem 0.2rem 0' }}>Outros</th>
-                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>Qtd</th>
-                    <th style={{ textAlign: 'center', fontWeight: 600, fontSize: '0.72rem', color: 'var(--text-muted)', padding: '0.2rem 0.4rem', width: '90px' }}>€/un</th>
-                    <th style={{ width: '28px' }} />
-                  </tr>
-                </thead>
-                <tbody>
-                  {[...form.others, draftOther].map((other, idx) => {
-                    const isNew = idx === form.others.length;
-                    return (
-                      <tr key={idx}>
-                        <td style={{ padding: '0.25rem 0.4rem 0.25rem 0' }}>
-                          <input
-                            type="text"
-                            list="other-datalist"
-                            value={other.name}
-                            placeholder="Escreve ou seleciona..."
-                            onChange={(e) => {
-                              const val = e.target.value;
-                              const match = otherItems.find((i) => i.name === val);
-                              if (isNew) {
-                                setDraftOther((d) => ({ ...d, name: val, unitPrice: match ? String(match.price) : d.unitPrice, catalogId: match?.id || '' }));
-                              } else {
-                                setForm((prev) => { const arr = [...prev.others]; arr[idx] = { ...arr[idx], name: val, catalogId: match?.id || arr[idx].catalogId, unitPrice: match ? String(match.price) : arr[idx].unitPrice }; return { ...prev, others: arr }; });
-                                setDirty(true);
-                              }
-                            }}
-                            onBlur={() => {
-                              if (isNew && draftOther.name.trim()) {
-                                setForm((prev) => ({ ...prev, others: [...prev.others, { catalogId: draftOther.catalogId || '', name: draftOther.name.trim(), quantity: draftOther.quantity, unitPrice: draftOther.unitPrice }] }));
-                                setDraftOther({ name: '', quantity: '', unitPrice: '' });
-                                setDirty(true);
-                              }
-                            }}
-                            style={{ width: '100%' }}
-                          />
-                        </td>
-                        <td style={{ padding: '0.25rem 0.4rem' }}>
-                          <input type="number" min="0" step="1" value={other.quantity}
-                            onChange={(e) => isNew ? setDraftOther((d) => ({ ...d, quantity: e.target.value })) : updateOther(idx, 'quantity', e.target.value)}
-                            style={{ width: '100%', textAlign: 'center', borderColor: other.name && !other.quantity ? 'var(--error, #dc2626)' : undefined }} />
-                        </td>
-                        <td style={{ padding: '0.25rem 0.4rem' }}>
-                          <input type="number" min="0" step="0.01" value={other.unitPrice}
-                            onChange={(e) => isNew ? setDraftOther((d) => ({ ...d, unitPrice: e.target.value })) : updateOther(idx, 'unitPrice', e.target.value)}
-                            style={{ width: '100%', textAlign: 'center' }} />
-                        </td>
-                        <td style={{ padding: '0.25rem 0', textAlign: 'center' }}>
-                          {!isNew && <button type="button" onClick={() => removeOther(idx)} style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}><img src="/trash-squared.png" alt="Eliminar" style={{ width: '28px', height: '28px', display: 'block' }} /></button>}
-                        </td>
-                      </tr>
-                    );
-                  })}
-                </tbody>
-              </table>
-              <datalist id="other-datalist">
-                {otherItems.map((i) => <option key={i.id} value={i.name} />)}
-              </datalist>
-              <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)', marginTop: '0.5rem', marginBottom: 0 }}>
-                Subtotal: <strong style={{ color: 'var(--text)' }}>{fmt(financials.othersTotal)} €</strong>
-              </p>
-            </div>
-          </div>{/* end card 4 */}
+          <LineItemsTable
+            label="Outros"
+            datalistId="other-datalist"
+            items={form.others}
+            draft={draftOther}
+            setDraft={setDraftOther}
+            catalogItems={otherItems}
+            subtotal={financials.othersTotal}
+            onUpdate={updateOther}
+            onRemove={removeOther}
+            onAddDraft={(item) => { setForm((prev) => ({ ...prev, others: [...prev.others, item] })); setDirty(true); }}
+          />
 
           {/* ── Card 5: Resumo ── */}
           <div className="session-detail-card">
@@ -650,99 +519,19 @@ const SessionDetail = () => {
 
       {/* ── Payment modal ── */}
       {payModal && (
-        <div className="modal-overlay" onClick={() => setPayModal(false)}>
-          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '560px' }}>
-            <div className="modal-header">
-              <h2 className="modal-title">Pagamento</h2>
-              <button className="modal-close" onClick={() => setPayModal(false)} aria-label="Fechar">✕</button>
-            </div>
-
-            <div className="financial-summary" style={{ marginBottom: '1.25rem' }}>
-              <div className="financial-summary-title">Resumo</div>
-              <div className="financial-row"><span>Packs</span><span>{fmt(financials.packsTotal)} €</span></div>
-              {financials.extrasTotal > 0 && <div className="financial-row"><span>Extras</span><span>{fmt(financials.extrasTotal)} €</span></div>}
-              {financials.othersTotal > 0 && <div className="financial-row"><span>Outros</span><span>{fmt(financials.othersTotal)} €</span></div>}
-              <div className="financial-row financial-row--deduct"><span>Sinal</span><span>− {fmt(financials.signalAmount)} €</span></div>
-              <div className="financial-row financial-row--total"><span>Total</span><span>{fmt(financials.total)} €</span></div>
-            </div>
-
-            <div className="form-group">
-              <label htmlFor="signal">Sinal (€)</label>
-              <input id="signal" name="signal" type="number" min="0" step="0.01" value={form.signal} onChange={handleChange} style={{ maxWidth: '140px' }} />
-            </div>
-
-            <div className="form-group">
-              <label>Tipo de Pagamento</label>
-              <div style={{ display: 'flex', gap: '0.75rem', marginTop: '0.4rem' }}>
-                {/* Icons — left half */}
-                <div style={{ flex: 1, display: 'flex', gap: '0.75rem', alignItems: 'flex-start' }}>
-                  {PAYMENT_TYPES.map((pt) => {
-                    const selected = form.paymentTypes.includes(pt.value);
-                    return (
-                      <button
-                        key={pt.value}
-                        type="button"
-                        onClick={() => togglePaymentType(pt.value)}
-                        style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.35rem', cursor: 'pointer', userSelect: 'none', background: 'none', border: 'none', padding: 0 }}
-                      >
-                        <div style={{
-                          width: '100%', height: '64px', borderRadius: '12px', display: 'flex', alignItems: 'center', justifyContent: 'center',
-                          background: selected ? 'var(--primary-light, #d1fae5)' : 'var(--bg)',
-                          border: `2px solid ${selected ? 'var(--primary)' : 'var(--border)'}`,
-                          transition: 'background 0.15s, border-color 0.15s',
-                        }}>
-                          <img src={pt.icon} alt={pt.label} style={{ width: '40px', height: '40px', objectFit: 'contain' }} />
-                        </div>
-                        <span style={{ fontSize: '0.75rem', fontWeight: 600, color: selected ? 'var(--primary)' : 'var(--text-muted)' }}>{pt.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-                {/* Cash input — right half, mirrors Pagar button width */}
-                <div style={{ flex: 1, display: 'flex', alignItems: 'center' }}>
-                  {form.paymentTypes.includes('cash') && (() => {
-                    const troco = (parseFloat(form.cashPaid) || 0) - financials.total;
-                    return (
-                      <div style={{ width: '100%', marginTop: '-14px' }}>
-                        <label htmlFor="cashPaid" style={{ display: 'block', marginBottom: '0.25rem', fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.04em' }}>Montante Recebido</label>
-                      <div style={{ position: 'relative', width: '100%' }}>
-                        <input
-                          id="cashPaid" name="cashPaid" type="number" min="0" step="0.01"
-                          value={form.cashPaid} onChange={handleChange} placeholder="0.00"
-                          style={{ width: '100%', paddingRight: form.cashPaid !== '' ? '5rem' : undefined }}
-                        />
-                        {form.cashPaid !== '' && (
-                          <span style={{ position: 'absolute', right: '0.5rem', top: '50%', transform: 'translateY(-50%)', fontSize: '0.78rem', whiteSpace: 'nowrap', pointerEvents: 'none' }}>
-                            Troco: <strong style={{ color: troco >= 0 ? 'var(--success, #16a34a)' : 'var(--error, #dc2626)' }}>
-                              {troco >= 0 ? fmt(troco) : `−${fmt(Math.abs(troco))}`} €
-                            </strong>
-                          </span>
-                        )}
-                      </div>
-                      </div>
-                    );
-                  })()}
-                </div>
-              </div>
-            </div>
-
-            <div className="modal-footer">
-              <button type="button" className="btn-secondary" onClick={() => setPayModal(false)}>Fechar</button>
-              <button
-                type="button"
-                className="btn-primary"
-                onClick={async () => {
-                  const updatedForm = { ...form, status: 'done' };
-                  setForm(updatedForm);
-                  setPayModal(false);
-                  await saveForm(updatedForm);
-                }}
-              >
-                Pagar
-              </button>
-            </div>
-          </div>
-        </div>
+        <PaymentModal
+          form={form}
+          financials={financials}
+          onChange={handleChange}
+          onTogglePaymentType={togglePaymentType}
+          onClose={() => setPayModal(false)}
+          onPay={async () => {
+            const updatedForm = { ...form, status: 'done' };
+            setForm(updatedForm);
+            setPayModal(false);
+            await saveForm(updatedForm);
+          }}
+        />
       )}
 
       <div className="session-detail-footer">

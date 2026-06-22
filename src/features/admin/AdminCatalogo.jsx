@@ -1,7 +1,7 @@
 import { useState, useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getCatalogItems, addCatalogItem, updateCatalogItem, deleteCatalogItem } from '../firebase/firestore';
-import useEscapeKey from '../hooks/useEscapeKey';
+import { getCatalogItems, addCatalogItem, updateCatalogItem, deleteCatalogItem } from '../../firebase/firestore';
+import useEscapeKey from '../../hooks/useEscapeKey';
 
 const CATEGORIES = [
   { label: 'Paintball',         color: '#ea580c', bg: '#fff7ed', border: '#fdba74' },

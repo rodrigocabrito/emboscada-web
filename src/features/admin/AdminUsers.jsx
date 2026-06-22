@@ -1,10 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useAuth } from '../context/AuthContext';
-import { createUser } from '../firebase/auth';
-import { getUsers, deleteUserProfile } from '../firebase/firestore';
-import useEscapeKey from '../hooks/useEscapeKey';
-import useScrollLock from '../hooks/useScrollLock';
+import { useAuth } from '../../context/AuthContext';
+import { createUser } from '../../firebase/auth';
+import { getUsers, deleteUserProfile } from '../../firebase/firestore';
+import useEscapeKey from '../../hooks/useEscapeKey';
+import useScrollLock from '../../hooks/useScrollLock';
 
 const ROLES = [
   { label: 'Administrador(a)', value: 'admin' },

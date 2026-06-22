@@ -1,17 +1,27 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
 
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      staleTime: 30_000,
+      retry: 1,
+    },
+  },
+});
+
 import Login from './pages/Login';
 import Dashboard from './pages/Dashboard';
-import Sessions from './pages/Sessions';
-import SessionDetail from './pages/SessionDetail';
+import Sessions from './features/sessions/Sessions';
+import SessionDetail from './features/sessions/SessionDetail';
 import Team from './pages/Team';
-import Admin from './pages/Admin';
-import AdminUsers from './pages/AdminUsers';
-import AdminCatalogo from './pages/AdminCatalogo';
-import AdminSessions from './pages/AdminSessions';
+import Admin from './features/admin/Admin';
+import AdminUsers from './features/admin/AdminUsers';
+import AdminCatalogo from './features/admin/AdminCatalogo';
+import AdminSessions from './features/admin/AdminSessions';
 import Availability from './pages/Availability';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
@@ -25,11 +35,13 @@ const RootRedirect = () => {
 
 function App() {
   return (
-    <BrowserRouter>
-      <AuthProvider>
-        <AppContent />
-      </AuthProvider>
-    </BrowserRouter>
+    <QueryClientProvider client={queryClient}>
+      <BrowserRouter>
+        <AuthProvider>
+          <AppContent />
+        </AuthProvider>
+      </BrowserRouter>
+    </QueryClientProvider>
   );
 }
 
