@@ -173,6 +173,14 @@ const buildSessionConstraints = (filters: SessionFilters = {}): QueryConstraint[
   return c;
 };
 
+export const getSessionsAll = async (filters: SessionFilters = {}): Promise<Session[]> => {
+  const hasEqualityFilter = !!(filters.typeOfSession?.length || filters.status?.length);
+  const constraints = buildSessionConstraints(filters);
+  if (!hasEqualityFilter) constraints.unshift(orderBy('sessionDatetime', 'asc'));
+  const snapshot = await getDocs(query(collection(db, 'sessions'), ...constraints));
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Session);
+};
+
 export const getSessionsCount = async (filters: SessionFilters = {}): Promise<number> => {
   const constraints = buildSessionConstraints(filters);
   const q = constraints.length ? query(collection(db, 'sessions'), ...constraints) : collection(db, 'sessions');
@@ -268,6 +276,7 @@ interface UpdateSessionInput {
   paymentTypes?: PaymentType[];
   cashPaid?: number | null;
   total?: number;
+  bulletsSpent?: number | null;
 }
 
 export const updateSession = async (id: string, data: UpdateSessionInput): Promise<void> => {

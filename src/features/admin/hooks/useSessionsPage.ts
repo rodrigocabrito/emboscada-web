@@ -3,7 +3,7 @@ import { getSessionsPage, getSessionsCount } from '../../../firebase/firestore';
 import type { SessionFilters } from '../../../types';
 import type { DocumentSnapshot } from 'firebase/firestore';
 
-export const useSessionsPage = (serverFilters: SessionFilters, pageSize = 30) => {
+export const useSessionsPage = (serverFilters: SessionFilters, pageSize = 30, enabled = true) => {
   const {
     data,
     fetchNextPage,
@@ -16,11 +16,13 @@ export const useSessionsPage = (serverFilters: SessionFilters, pageSize = 30) =>
       getSessionsPage(pageSize, pageParam, serverFilters),
     getNextPageParam: (lastPage) => lastPage.hasMore ? lastPage.lastDoc : undefined,
     initialPageParam: null as DocumentSnapshot | null,
+    enabled,
   });
 
   const { data: totalCount = null } = useQuery({
     queryKey: ['sessions-count', serverFilters],
     queryFn: () => getSessionsCount(serverFilters),
+    enabled,
   });
 
   const sessions = data?.pages.flatMap((p) => p.sessions) ?? [];

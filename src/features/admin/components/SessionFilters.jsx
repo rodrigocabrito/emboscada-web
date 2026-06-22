@@ -16,9 +16,7 @@ const STATUS_PALETTE = {
   cancelled:       { idle: { bg: '#f3f4f6', color: '#6b7280', border: '#d1d5db' }, sel: { bg: '#6b7280', color: '#fff', border: '#6b7280' } },
 };
 
-const saveFilters = (f) => sessionStorage.setItem('adminSessionsFilters', JSON.stringify(f));
-
-const TextFilter = ({ label, value, onCommit, onClear, outerStyle }) => (
+const TextFilter = ({ label, value, onCommit, onClear, onApply, outerStyle }) => (
   <div className="form-group" style={{ margin: 0, flex: '1 1 160px', ...outerStyle }}>
     <label>{label}</label>
     <div style={{ position: 'relative' }}>
@@ -27,12 +25,11 @@ const TextFilter = ({ label, value, onCommit, onClear, outerStyle }) => (
         placeholder="—"
         value={value.draft}
         onChange={(e) => value.set(e.target.value)}
-        onKeyDown={(e) => { if (e.key === 'Enter') onCommit(value.draft); }}
-        style={{ width: '100%', paddingRight: value.draft ? '6rem' : undefined }}
+        onKeyDown={(e) => { if (e.key === 'Enter') { onCommit(value.draft); onApply(); } }}
+        style={{ width: '100%', paddingRight: value.draft ? '2rem' : undefined }}
       />
       {value.draft && (
-        <div style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)', display: 'flex', alignItems: 'center', gap: '0.9rem' }}>
-          <span style={{ fontSize: '0.7rem', fontWeight: 700, color: 'var(--text-muted)', pointerEvents: 'none', letterSpacing: '0.03em' }}>+ ENTER</span>
+        <div style={{ position: 'absolute', right: '0.6rem', top: '50%', transform: 'translateY(-50%)' }}>
           <button
             type="button"
             onClick={() => { value.set(''); onClear(); }}
@@ -51,80 +48,47 @@ const SessionFilters = ({
   nameDraft, setNameDraft,
   emailDraft, setEmailDraft,
   phoneDraft, setPhoneDraft,
-  hasFilters, onClearAll,
+  hasFilters, onClearAll, onApply,
 }) => {
   const applyText = (field, value, setDraft) => {
     setDraft(value);
-    setFilters((prev) => {
-      const next = { ...prev, [field]: value };
-      saveFilters(next);
-      return next;
-    });
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   const toggleChip = (field, value) => {
     setFilters((prev) => {
       const arr = prev[field];
-      const next = { ...prev, [field]: arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value] };
-      saveFilters(next);
-      return next;
+      return { ...prev, [field]: arr.includes(value) ? arr.filter((v) => v !== value) : [...arr, value] };
     });
   };
 
   const handleDateChange = (field, value) => {
-    setFilters((prev) => {
-      const next = { ...prev, [field]: value };
-      saveFilters(next);
-      return next;
-    });
+    setFilters((prev) => ({ ...prev, [field]: value }));
   };
 
   return (
     <div className="card" style={{ marginBottom: '1.25rem', padding: '1.25rem 1.5rem', display: 'flex', flexDirection: 'column', gap: '1rem' }}>
       <div style={{ display: 'flex', gap: '0.75rem', flexWrap: 'wrap', alignItems: 'flex-start' }}>
-        <div style={{ flex: '1 1 160px', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-          <TextFilter
-            label="Nome"
-            value={{ draft: nameDraft, set: setNameDraft }}
-            onCommit={(v) => applyText('name', v, setNameDraft)}
-            onClear={() => applyText('name', '', setNameDraft)}
-            outerStyle={{ flex: 'none' }}
-          />
-          <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'flex-start' }}>
-            <button
-              type="button"
-              className={showAdvanced ? 'btn-primary' : 'btn-secondary'}
-              style={{ width: 'auto', whiteSpace: 'nowrap', fontSize: '0.875rem', padding: '0.5rem 1rem', position: 'relative', marginTop: 0 }}
-              onClick={() => setShowAdvanced((v) => !v)}
-            >
-              {showAdvanced ? '- Filtros' : '+ Filtros'}
-              {(filters.typeOfSession.length > 0 || filters.status.length > 0) && (
-                <span style={{ marginLeft: '0.4rem', background: 'var(--primary)', color: '#fff', borderRadius: '999px', fontSize: '0.65rem', padding: '0.05rem 0.4rem', fontWeight: 700 }}>
-                  {filters.typeOfSession.length + filters.status.length}
-                </span>
-              )}
-            </button>
-            <button
-              className="btn-secondary"
-              style={{ width: 'auto', whiteSpace: 'nowrap', fontSize: '0.875rem', padding: '0.5rem 1rem' }}
-              onClick={onClearAll}
-              disabled={!hasFilters}
-            >
-              Limpar filtros
-            </button>
-          </div>
-        </div>
+        <TextFilter
+          label="Nome"
+          value={{ draft: nameDraft, set: setNameDraft }}
+          onCommit={(v) => applyText('name', v, setNameDraft)}
+          onClear={() => applyText('name', '', setNameDraft)}
+          onApply={onApply}
+        />
         <TextFilter
           label="Email"
           value={{ draft: emailDraft, set: setEmailDraft }}
           onCommit={(v) => applyText('email', v, setEmailDraft)}
           onClear={() => applyText('email', '', setEmailDraft)}
+          onApply={onApply}
         />
         <TextFilter
           label="Telemóvel"
           value={{ draft: phoneDraft, set: setPhoneDraft }}
           onCommit={(v) => applyText('phoneNumber', v, setPhoneDraft)}
           onClear={() => applyText('phoneNumber', '', setPhoneDraft)}
+          onApply={onApply}
         />
         <div className="form-group" style={{ margin: 0, flex: '1 1 130px' }}>
           <label>De</label>
@@ -134,6 +98,37 @@ const SessionFilters = ({
           <label>Até</label>
           <input type="date" value={filters.dateTo} onChange={(e) => handleDateChange('dateTo', e.target.value)} />
         </div>
+      </div>
+
+      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+        <button
+          type="button"
+          className={showAdvanced ? 'btn-primary' : 'btn-secondary'}
+          style={{ width: 'auto', whiteSpace: 'nowrap', fontSize: '0.875rem', padding: '0.5rem 1rem', position: 'relative', marginTop: 0 }}
+          onClick={() => setShowAdvanced((v) => !v)}
+        >
+          {showAdvanced ? '- Filtros' : '+ Filtros'}
+          {(filters.typeOfSession.length > 0 || filters.status.length > 0) && (
+            <span style={{ marginLeft: '0.4rem', background: 'var(--primary)', color: '#fff', borderRadius: '999px', fontSize: '0.65rem', padding: '0.05rem 0.4rem', fontWeight: 700 }}>
+              {filters.typeOfSession.length + filters.status.length}
+            </span>
+          )}
+        </button>
+        <button
+          className="btn-secondary"
+          style={{ width: 'auto', whiteSpace: 'nowrap', fontSize: '0.875rem', padding: '0.5rem 1rem' }}
+          onClick={onClearAll}
+          disabled={!hasFilters}
+        >
+          Limpar filtros
+        </button>
+        <button
+          className="btn-primary"
+          style={{ width: 'auto', whiteSpace: 'nowrap', fontSize: '0.875rem', padding: '0.5rem 1rem', marginLeft: 'auto', marginTop: 0 }}
+          onClick={onApply}
+        >
+          Aplicar filtros
+        </button>
       </div>
 
       {showAdvanced && (

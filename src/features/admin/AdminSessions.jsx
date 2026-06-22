@@ -1,5 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
+import { getSessionsAll } from '../../firebase/firestore';
 import { useSessionsPage } from './hooks/useSessionsPage';
 import SessionFilters from './components/SessionFilters';
 
@@ -27,7 +29,7 @@ const getStatusBadgeClass = (status) => {
 const fmt = (d) =>
   new Date(d).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
 
-const EMPTY_FILTERS = {
+const emptyFilters = () => ({
   name: '',
   email: '',
   phoneNumber: '',
@@ -35,46 +37,67 @@ const EMPTY_FILTERS = {
   dateTo: '',
   typeOfSession: [],
   status: [],
-};
+});
+
+const defaultFilters = () => ({
+  ...emptyFilters(),
+  dateFrom: new Date().toISOString().slice(0, 10),
+});
 
 const loadSaved = () => {
   try {
     const saved = sessionStorage.getItem('adminSessionsFilters');
-    if (!saved) return EMPTY_FILTERS;
+    if (!saved) return defaultFilters();
     const parsed = JSON.parse(saved);
     return {
-      ...EMPTY_FILTERS,
+      ...defaultFilters(),
       ...parsed,
       typeOfSession: Array.isArray(parsed.typeOfSession) ? parsed.typeOfSession : [],
       status: Array.isArray(parsed.status) ? parsed.status : [],
     };
-  } catch { return EMPTY_FILTERS; }
+  } catch { return defaultFilters(); }
 };
 
 const saveFilters = (f) => sessionStorage.setItem('adminSessionsFilters', JSON.stringify(f));
 
+const normalize = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
 const AdminSessions = () => {
   const navigate = useNavigate();
   const [sort, setSort] = useState({ field: null, dir: null });
-  const [filters, setFilters] = useState(loadSaved);
+  const [textPage, setTextPage] = useState(1);
+  const [pendingFilters, setPendingFilters] = useState(loadSaved);
+  const [appliedFilters, setAppliedFilters] = useState(loadSaved);
   const [showAdvanced, setShowAdvanced] = useState(() => {
     const saved = loadSaved();
     return saved.typeOfSession.length > 0 || saved.status.length > 0;
   });
 
-  // Draft states for text inputs (applied only on Enter)
+  // Draft states for text inputs (flushed into pendingFilters on Enter or on Apply)
   const [nameDraft, setNameDraft] = useState(() => loadSaved().name);
   const [emailDraft, setEmailDraft] = useState(() => loadSaved().email);
   const [phoneDraft, setPhoneDraft] = useState(() => loadSaved().phoneNumber);
 
   const serverFilters = useMemo(() => ({
-    typeOfSession: filters.typeOfSession,
-    status: filters.status,
-    dateFrom: filters.dateFrom,
-    dateTo: filters.dateTo,
-  }), [filters.typeOfSession, filters.status, filters.dateFrom, filters.dateTo]);
+    typeOfSession: appliedFilters.typeOfSession,
+    status: appliedFilters.status,
+    dateFrom: appliedFilters.dateFrom,
+    dateTo: appliedFilters.dateTo,
+  }), [appliedFilters]);
 
-  const { sessions, hasMore, totalCount, loading, loadingMore, loadMore } = useSessionsPage(serverFilters);
+  const hasTextFilter = !!(appliedFilters.name || appliedFilters.email || appliedFilters.phoneNumber);
+
+  const { sessions: pagedSessions, hasMore, totalCount, loading: pagedLoading, loadingMore, loadMore } = useSessionsPage(serverFilters, 30, !hasTextFilter);
+
+  const { data: allSessions = [], isLoading: allLoading } = useQuery({
+    queryKey: ['sessions-all', serverFilters],
+    queryFn: () => getSessionsAll(serverFilters),
+    enabled: hasTextFilter,
+    staleTime: 60_000,
+  });
+
+  const sessions = hasTextFilter ? allSessions : pagedSessions;
+  const loading = hasTextFilter ? allLoading : pagedLoading;
 
   useEffect(() => {
     setSort({ field: null, dir: null });
@@ -89,16 +112,16 @@ const AdminSessions = () => {
     const hasEqualityFilter = !!(serverFilters.typeOfSession?.length || serverFilters.status?.length);
     let result = sessions;
 
-    if (filters.name) {
-      const q = filters.name.toLowerCase();
-      result = result.filter((s) => (s.spocName || s.spoc || '').toLowerCase().includes(q));
+    if (appliedFilters.name) {
+      const q = normalize(appliedFilters.name);
+      result = result.filter((s) => normalize(s.spocName || s.spoc || '').includes(q));
     }
-    if (filters.email) {
-      const q = filters.email.toLowerCase();
+    if (appliedFilters.email) {
+      const q = appliedFilters.email.toLowerCase();
       result = result.filter((s) => (s.spocEmail || '').toLowerCase().includes(q));
     }
-    if (filters.phoneNumber) {
-      const q = filters.phoneNumber.toLowerCase();
+    if (appliedFilters.phoneNumber) {
+      const q = appliedFilters.phoneNumber.toLowerCase();
       result = result.filter((s) => (s.spocPhoneNumber || '').toLowerCase().includes(q));
     }
     // When both typeOfSession and status are selected, Firestore only applies typeOfSession
@@ -115,7 +138,7 @@ const AdminSessions = () => {
       });
     }
     return result;
-  }, [sessions, filters.name, filters.email, filters.phoneNumber, serverFilters]);
+  }, [sessions, appliedFilters, serverFilters]);
 
   const handleSort = (field) => {
     setSort((prev) => {
@@ -162,19 +185,31 @@ const AdminSessions = () => {
     });
   }, [filtered, sort]);
 
+  const TEXT_PAGE_SIZE = 30;
+  const visibleSessions = hasTextFilter ? sortedFiltered.slice(0, textPage * TEXT_PAGE_SIZE) : sortedFiltered;
+  const hasMoreText = hasTextFilter && sortedFiltered.length > textPage * TEXT_PAGE_SIZE;
+
   const hasFilters = !!(
-    filters.name || filters.email || filters.phoneNumber ||
-    filters.dateFrom || filters.dateTo ||
-    filters.typeOfSession.length || filters.status.length
+    appliedFilters.name || appliedFilters.email || appliedFilters.phoneNumber ||
+    appliedFilters.dateFrom || appliedFilters.dateTo ||
+    appliedFilters.typeOfSession.length || appliedFilters.status.length
   );
+
+  const handleApply = () => {
+    const toApply = { ...pendingFilters, name: nameDraft, email: emailDraft, phoneNumber: phoneDraft };
+    setPendingFilters(toApply);
+    setAppliedFilters(toApply);
+    saveFilters(toApply);
+    setSort({ field: null, dir: null });
+    setTextPage(1);
+  };
 
   const clearAll = () => {
     sessionStorage.removeItem('adminSessionsFilters');
-    setFilters(EMPTY_FILTERS);
+    setPendingFilters(emptyFilters());
     setNameDraft('');
     setEmailDraft('');
     setPhoneDraft('');
-    setSort({ field: null, dir: null });
   };
 
   const SortTh = ({ field, children }) => {
@@ -199,8 +234,8 @@ const AdminSessions = () => {
 
       {/* Filters */}
       <SessionFilters
-        filters={filters}
-        setFilters={setFilters}
+        filters={pendingFilters}
+        setFilters={setPendingFilters}
         showAdvanced={showAdvanced}
         setShowAdvanced={setShowAdvanced}
         nameDraft={nameDraft}
@@ -211,6 +246,7 @@ const AdminSessions = () => {
         setPhoneDraft={setPhoneDraft}
         hasFilters={hasFilters}
         onClearAll={clearAll}
+        onApply={handleApply}
       />
 
       {/* Table */}
@@ -234,7 +270,7 @@ const AdminSessions = () => {
               </tr>
             </thead>
             <tbody>
-              {sortedFiltered.map((s) => {
+              {visibleSessions.map((s) => {
                 const date = (s.sessionDatetime || s.sessionDate || '').slice(0, 10);
                 return (
                   <tr key={s.id} onClick={() => navigate(`/sessions/${s.id}`)} style={{ cursor: 'pointer' }}>
@@ -258,14 +294,19 @@ const AdminSessions = () => {
 
       {!loading && (
         <div style={{ marginTop: '0.75rem', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.75rem' }}>
-          {hasMore && (
+          {hasMoreText && (
+            <button className="btn-secondary" style={{ width: 'auto' }} onClick={() => setTextPage((p) => p + 1)}>
+              Carregar Mais
+            </button>
+          )}
+          {!hasTextFilter && hasMore && (
             <button className="btn-secondary" style={{ width: 'auto' }} onClick={handleLoadMore} disabled={loadingMore}>
               {loadingMore ? 'A carregar...' : 'Carregar Mais'}
             </button>
           )}
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-            {hasFilters && sortedFiltered.length !== sessions.length
-              ? `A mostrar ${sortedFiltered.length} de ${sessions.length} carregadas`
+            {hasTextFilter
+              ? `A mostrar ${visibleSessions.length} de ${sortedFiltered.length} resultados`
               : `A mostrar ${sessions.length} de ${totalCount ?? '...'}`}
           </p>
         </div>

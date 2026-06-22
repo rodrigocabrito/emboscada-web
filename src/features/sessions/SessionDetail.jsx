@@ -83,6 +83,7 @@ const SessionDetail = () => {
       signal: session.signal !== undefined ? String(session.signal) : String(numPlayers >= 15 ? 80 : 50),
       paymentTypes: session.paymentTypes || [],
       cashPaid: session.cashPaid !== undefined ? String(session.cashPaid) : '',
+      bulletsSpent: session.bulletsSpent !== undefined && session.bulletsSpent !== null ? String(session.bulletsSpent) : '',
     });
   }, [session, form]);
 
@@ -225,6 +226,7 @@ const SessionDetail = () => {
         paymentTypes: f.paymentTypes,
         cashPaid: f.paymentTypes.includes('cash') ? (parseFloat(f.cashPaid) || 0) : null,
         total: financials.total,
+        bulletsSpent: f.bulletsSpent !== '' ? (parseInt(f.bulletsSpent, 10) || 0) : null,
       });
       updateSessionCache(f);
       setDirty(false);
@@ -263,6 +265,7 @@ const SessionDetail = () => {
       signal: session.signal !== undefined ? String(session.signal) : String(numPlayers >= 15 ? 80 : 50),
       paymentTypes: session.paymentTypes || [],
       cashPaid: session.cashPaid !== undefined ? String(session.cashPaid) : '',
+      bulletsSpent: session.bulletsSpent !== undefined && session.bulletsSpent !== null ? String(session.bulletsSpent) : '',
     });
     setDirty(false);
     setDraftExtra({ name: '', quantity: '', unitPrice: '' });
@@ -351,6 +354,13 @@ const SessionDetail = () => {
                   </button>
                 ))}
               </div>
+            </div>
+          )}
+
+          {['Paintball', 'Paintball Kids', 'Gel Blast'].includes(form.typeOfSession) && (
+            <div className="form-group">
+              <label htmlFor="bulletsSpent">Munições gastas</label>
+              <input id="bulletsSpent" name="bulletsSpent" type="number" min="0" step="1" value={form.bulletsSpent} onChange={handleChange} placeholder="—" />
             </div>
           )}
 

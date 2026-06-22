@@ -187,6 +187,13 @@ const AdminUsers = () => {
                         <img src="/eye.png" alt="Ver detalhes" style={{ width: '22px', height: '22px' }} />
                       </button>
                       <button
+                        className="btn-table-action"
+                        onClick={() => navigate(`/admin/users/${u.uuid}/evaluate`)}
+                        aria-label="Avaliar"
+                      >
+                        <img src="/evaluation.png" alt="Avaliar" style={{ width: '22px', height: '22px' }} />
+                      </button>
+                      <button
                         className="btn-table-delete"
                         onClick={() => { setDeleteError(''); setDeletingId(u.uuid); }}
                         aria-label="Eliminar"

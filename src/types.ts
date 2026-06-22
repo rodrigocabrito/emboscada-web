@@ -47,6 +47,7 @@ export interface Session {
   paymentTypes: PaymentType[];
   cashPaid: number | null;
   total: number;
+  bulletsSpent?: number | null;
   createdAt: Timestamp;
   updatedAt: Timestamp;
   /** @deprecated use spocName */

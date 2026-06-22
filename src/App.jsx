@@ -22,6 +22,7 @@ import Admin from './features/admin/Admin';
 import AdminUsers from './features/admin/AdminUsers';
 import AdminCatalogo from './features/admin/AdminCatalogo';
 import AdminSessions from './features/admin/AdminSessions';
+import UserEvaluation from './features/admin/UserEvaluation';
 import Availability from './pages/Availability';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
@@ -123,6 +124,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute adminOnly={true}>
               <AdminUsers />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users/:id/evaluate"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <UserEvaluation />
             </ProtectedRoute>
           }
         />
