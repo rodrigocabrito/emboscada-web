@@ -793,7 +793,7 @@ const Sessions = () => {
           session={selectedSession}
           users={users}
           onClose={() => setSelectedSession(null)}
-          onEdit={(id) => navigate(`/sessions/${id}`)}
+          onEdit={(id) => navigate(`/sessions/${id}`, { state: { returnDate: currentDate.toISOString().slice(0, 10) } })}
         />
       )}
     </div>

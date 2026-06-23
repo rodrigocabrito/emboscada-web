@@ -1,5 +1,5 @@
 import { useState, useEffect, useMemo } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { updateSession, adjustAmmoStock } from '../../firebase/firestore';
 import { useSession } from './hooks/useSession';
 import LineItemsTable from './components/LineItemsTable';
@@ -44,6 +44,7 @@ const defaultNumPacks = (actual, expected) => {
 const SessionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { state: navState } = useLocation();
 
   const { session, updateSessionCache, users, catalogItems, loading } = useSession(id);
   const [form, setForm] = useState(null);
@@ -296,7 +297,10 @@ const SessionDetail = () => {
   return (
     <div className="page page-session-detail">
       <div className="page-header" style={{ border: 'none', paddingBottom: 0, marginBottom: '1rem' }}>
-        <button className="btn-secondary" style={{ width: 'auto' }} onClick={() => navigate(-1)}>
+        <button className="btn-secondary" style={{ width: 'auto' }} onClick={() => {
+          const returnDate = navState?.returnDate;
+          navigate('/sessions', returnDate ? { state: { returnDate } } : undefined);
+        }}>
           ← Voltar
         </button>
       </div>
