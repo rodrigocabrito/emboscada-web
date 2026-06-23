@@ -31,8 +31,8 @@ const FEATURES = [
     label: 'Stock',
     description: 'Controlo de material e equipamento disponível.',
     icon: '📦',
-    path: null,
-    active: false,
+    path: '/admin/stock',
+    active: true,
   },
   {
     key: 'schedule',

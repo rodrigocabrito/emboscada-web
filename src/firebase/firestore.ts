@@ -15,6 +15,7 @@ import {
   startAfter,
   getCountFromServer,
   serverTimestamp,
+  increment,
   Timestamp,
   DocumentSnapshot,
   type QueryConstraint,
@@ -44,6 +45,132 @@ export const getUsers = async (): Promise<User[]> => {
 
 export const deleteUserProfile = async (uid: string): Promise<void> => {
   await deleteDoc(doc(db, 'users', uid));
+};
+
+// ─── EVALUATIONS ─────────────────────────────────────────────────────────────
+
+export const getEvaluation = async (uid: string): Promise<Record<string, unknown> | null> => {
+  const snap = await getDoc(doc(db, 'evaluations', uid));
+  return snap.exists() ? (snap.data() as Record<string, unknown>) : null;
+};
+
+export const saveEvaluation = async (uid: string, data: Record<string, unknown>): Promise<void> => {
+  const ref = doc(db, 'evaluations', uid);
+  const snap = await getDoc(ref);
+  const saveCount = (snap.exists() ? ((snap.data().saveCount as number) ?? 0) : 0) + 1;
+  await setDoc(ref, { ...data, updatedAt: serverTimestamp(), saveCount });
+};
+
+export const markEvaluationSeen = async (uid: string, saveCount: number): Promise<void> => {
+  await updateDoc(doc(db, 'users', uid), { lastEvalSeenCount: saveCount });
+};
+
+// ─── AMMO STOCK ──────────────────────────────────────────────────────────────
+
+export interface AmmoRestock {
+  id: string;
+  amount: number;
+  date: string;
+  note: string;
+  caliber: string;
+  type?: 'restock' | 'removal' | 'count';
+  previousStock?: number;
+  createdAt: Timestamp;
+}
+
+const ammoStockDocId = (caliber: string) => `stock_${caliber.replace('.', '')}`;
+
+export const getAmmoStock = async (caliber: string): Promise<number> => {
+  const snap = await getDoc(doc(db, 'ammo', ammoStockDocId(caliber)));
+  return snap.exists() ? ((snap.data().currentStock as number) ?? 0) : 0;
+};
+
+export const getAmmoStocks = async (): Promise<Record<string, number>> => {
+  const [snap50, snap68] = await Promise.all([
+    getDoc(doc(db, 'ammo', ammoStockDocId('.50'))),
+    getDoc(doc(db, 'ammo', ammoStockDocId('.68'))),
+  ]);
+  return {
+    '.50': snap50.exists() ? ((snap50.data().currentStock as number) ?? 0) : 0,
+    '.68': snap68.exists() ? ((snap68.data().currentStock as number) ?? 0) : 0,
+  };
+};
+
+export const adjustAmmoStock = async (delta: number, caliber: string): Promise<void> => {
+  if (!caliber) return;
+  const ref = doc(db, 'ammo', ammoStockDocId(caliber));
+  const snap = await getDoc(ref);
+  if (snap.exists()) {
+    await updateDoc(ref, { currentStock: increment(delta), updatedAt: serverTimestamp() });
+  } else {
+    await setDoc(ref, { currentStock: delta, updatedAt: serverTimestamp() });
+  }
+};
+
+export const addAmmoRestock = async (amount: number, date: string, note: string, caliber: string): Promise<void> => {
+  await addDoc(collection(db, 'ammoRestocks'), { amount, date, note, caliber, createdAt: serverTimestamp() });
+  await adjustAmmoStock(amount, caliber);
+};
+
+export const removeAmmoStock = async (amount: number, date: string, note: string, caliber: string): Promise<void> => {
+  await addDoc(collection(db, 'ammoRestocks'), { amount: -amount, date, note, caliber, type: 'removal', createdAt: serverTimestamp() });
+  await adjustAmmoStock(-amount, caliber);
+};
+
+export const setAmmoStockCount = async (amount: number, date: string, note: string, caliber: string): Promise<void> => {
+  const ref = doc(db, 'ammo', ammoStockDocId(caliber));
+  const snap = await getDoc(ref);
+  const previousStock = snap.exists() ? ((snap.data().currentStock as number) ?? 0) : 0;
+  await setDoc(ref, { currentStock: amount, updatedAt: serverTimestamp() }, { merge: true });
+  await addDoc(collection(db, 'ammoRestocks'), { amount, date, note, caliber, type: 'count', previousStock, createdAt: serverTimestamp() });
+};
+
+// Recalculates currentStock from the ammoRestocks history for a given caliber.
+// Base = most recent count entry; adds all restock/removal entries recorded after it.
+const recalcAmmoStock = async (caliber: string): Promise<void> => {
+  const snap = await getDocs(query(collection(db, 'ammoRestocks'), orderBy('createdAt', 'asc')));
+  const entries = snap.docs
+    .map((d) => ({ id: d.id, ...d.data() } as AmmoRestock))
+    .filter((r) => r.caliber === caliber);
+
+  let baseAmount = 0;
+  let baseIdx = -1;
+  for (let i = entries.length - 1; i >= 0; i--) {
+    if (entries[i].type === 'count') {
+      baseAmount = entries[i].amount;
+      baseIdx = i;
+      break;
+    }
+  }
+
+  const delta = entries
+    .slice(baseIdx + 1)
+    .reduce((sum, r) => sum + (r.amount ?? 0), 0);
+
+  const ref = doc(db, 'ammo', ammoStockDocId(caliber));
+  await setDoc(ref, { currentStock: baseAmount + delta, updatedAt: serverTimestamp() }, { merge: true });
+};
+
+export const deleteAmmoRestock = async (id: string, caliber: string): Promise<void> => {
+  await deleteDoc(doc(db, 'ammoRestocks', id));
+  await recalcAmmoStock(caliber);
+};
+
+export const deleteAmmoCount = async (id: string, caliber: string): Promise<void> => {
+  await deleteDoc(doc(db, 'ammoRestocks', id));
+  await recalcAmmoStock(caliber);
+};
+
+export const getAmmoRestocks = async (caliber: string): Promise<AmmoRestock[]> => {
+  const snap = await getDocs(query(collection(db, 'ammoRestocks'), orderBy('date', 'desc')));
+  return snap.docs
+    .map((d) => ({ id: d.id, ...d.data() }) as AmmoRestock)
+    .filter((r) => r.caliber === caliber);
+};
+
+export const getSessionsWithAmmo = async (): Promise<Session[]> => {
+  const snap = await getDocs(query(collection(db, 'sessions'), where('bulletsSpent', '>', 0)));
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Session);
 };
 
 // ─── CUSTOMERS ───────────────────────────────────────────────────────────────

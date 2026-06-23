@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { updateSession } from '../../firebase/firestore';
+import { updateSession, adjustAmmoStock } from '../../firebase/firestore';
 import { useSession } from './hooks/useSession';
 import LineItemsTable from './components/LineItemsTable';
 import PaymentModal from './components/PaymentModal';
@@ -201,6 +201,8 @@ const SessionDetail = () => {
   const saveForm = async (f) => {
     setError('');
     setSaving(true);
+    const oldBullets = session?.bulletsSpent ?? 0;
+    const oldCaliber = session?.caliber || '';
     try {
       await updateSession(id, {
         spocName: f.spocName,
@@ -228,6 +230,15 @@ const SessionDetail = () => {
         total: financials.total,
         bulletsSpent: f.bulletsSpent !== '' ? (parseInt(f.bulletsSpent, 10) || 0) : null,
       });
+      const newCaliber = (f.typeOfSession === 'Paintball' || f.typeOfSession === 'Paintball Kids') ? f.caliber : '';
+      const newBullets = f.bulletsSpent !== '' ? (parseInt(f.bulletsSpent, 10) || 0) : 0;
+      if (newCaliber === oldCaliber) {
+        const bulletsDelta = newBullets - oldBullets;
+        if (newCaliber && bulletsDelta !== 0) await adjustAmmoStock(-bulletsDelta, newCaliber);
+      } else {
+        if (oldCaliber && oldBullets !== 0) await adjustAmmoStock(oldBullets, oldCaliber);
+        if (newCaliber && newBullets !== 0) await adjustAmmoStock(-newBullets, newCaliber);
+      }
       updateSessionCache(f);
       setDirty(false);
       setSaved(true);
@@ -349,7 +360,7 @@ const SessionDetail = () => {
               <div className="caliber-toggle">
                 {['.50', '.68'].map((c) => (
                   <button key={c} type="button" className={`caliber-btn${form.caliber === c ? ' active' : ''}`}
-                    onClick={() => { setForm((prev) => ({ ...prev, caliber: c })); setDirty(true); }}>
+                    onClick={() => { if (form.caliber === c) return; setForm((prev) => ({ ...prev, caliber: c })); setDirty(true); }}>
                     {c}
                   </button>
                 ))}
@@ -360,7 +371,22 @@ const SessionDetail = () => {
           {['Paintball', 'Paintball Kids', 'Gel Blast'].includes(form.typeOfSession) && (
             <div className="form-group">
               <label htmlFor="bulletsSpent">Munições gastas</label>
-              <input id="bulletsSpent" name="bulletsSpent" type="number" min="0" step="1" value={form.bulletsSpent} onChange={handleChange} placeholder="—" />
+              <input
+                id="bulletsSpent"
+                name="bulletsSpent"
+                type="number"
+                min="0"
+                step="1"
+                value={form.bulletsSpent}
+                onChange={handleChange}
+                placeholder="—"
+                disabled={['Paintball', 'Paintball Kids'].includes(form.typeOfSession) && !form.caliber}
+              />
+              {['Paintball', 'Paintball Kids'].includes(form.typeOfSession) && !form.caliber && (
+                <p style={{ fontSize: '0.78rem', color: '#dc2626', marginTop: '0.3rem', marginBottom: 0 }}>
+                  Seleciona o calibre antes de preencher as munições gastas.
+                </p>
+              )}
             </div>
           )}
 

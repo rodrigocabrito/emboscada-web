@@ -1,9 +1,28 @@
 import { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { updateUserProfile, changePassword, logoutUser } from '../firebase/auth';
-import { getSessions } from '../firebase/firestore';
+import { getSessions, getEvaluation } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
+
+const SCALE = [
+  { value: 0, selBg: '#e5e7eb', selColor: '#374151' },
+  { value: 1, selBg: '#dc2626', selColor: '#fff' },
+  { value: 2, selBg: '#ea580c', selColor: '#fff' },
+  { value: 3, selBg: '#fde047', selColor: '#713f12' },
+  { value: 4, selBg: '#86efac', selColor: '#14532d' },
+  { value: 5, selBg: '#15803d', selColor: '#fff' },
+];
+
+const calcOverallAvg = (evaluation) => {
+  if (!evaluation) return null;
+  const vals = [
+    ...Object.values(evaluation.activities ?? {}),
+    ...Object.values(evaluation.tasks ?? {}),
+  ].filter((v) => v !== null && v !== undefined && v > 0);
+  return vals.length ? vals.reduce((a, b) => a + b, 0) / vals.length : null;
+};
 
 const getAchievements = (startedAt) => {
   if (!startedAt) return [];
@@ -36,6 +55,15 @@ const Profile = () => {
 
   const initials = `${profile?.firstName?.[0] ?? ''}${profile?.lastName?.[0] ?? ''}`.toUpperCase();
   const [sessionCount, setSessionCount] = useState(0);
+
+  const { data: evaluation } = useQuery({
+    queryKey: ['evaluation', user.uid],
+    queryFn: () => getEvaluation(user.uid),
+    staleTime: 5 * 60_000,
+  });
+  const overallAvg = calcOverallAvg(evaluation);
+  const avgScale = overallAvg !== null ? SCALE.find((s) => s.value === Math.round(overallAvg)) : null;
+  const unseenUpdates = Math.max(0, (evaluation?.saveCount ?? 0) - (profile?.lastEvalSeenCount ?? 0));
 
   const [infoForm, setInfoForm] = useState({
     firstName: profile?.firstName ?? '',
@@ -152,6 +180,44 @@ const Profile = () => {
             <p className="profile-name">{profile?.firstName} {profile?.lastName}</p>
             {profile?.nickname && <p className="profile-nickname">{profile.nickname}</p>}
             <p className="profile-role">{profile?.role === 'admin' ? 'Administrador(a)' : 'Monitor(a)'}</p>
+          </div>
+
+          <div className="card" style={{ marginTop: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+            {avgScale && (
+              <div style={{ marginBottom: '0.75rem' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                  Avaliação geral
+                </div>
+                <span style={{
+                  background: avgScale.selBg, color: avgScale.selColor,
+                  padding: '0.35rem 0.85rem', borderRadius: '0.4rem',
+                  fontWeight: 700, fontSize: '1.2rem',
+                }}>
+                  {overallAvg.toFixed(1)}
+                </span>
+              </div>
+            )}
+            <div style={{ position: 'relative', display: 'inline-block', width: '100%' }}>
+              <button
+                className="btn-secondary"
+                style={{ width: '100%', marginTop: 0 }}
+                onClick={() => navigate('/my-evaluation')}
+              >
+                Ver a minha avaliação
+              </button>
+              {unseenUpdates > 0 && (
+                <span style={{
+                  position: 'absolute', top: '-0.45rem', right: '-0.45rem',
+                  background: '#dc2626', color: '#fff',
+                  borderRadius: '999px', fontSize: '0.7rem', fontWeight: 700,
+                  minWidth: '1.2rem', height: '1.2rem',
+                  display: 'flex', alignItems: 'center', justifyContent: 'center',
+                  padding: '0 0.25rem', pointerEvents: 'none',
+                }}>
+                  {unseenUpdates}
+                </span>
+              )}
+            </div>
           </div>
 
           <div className="card" style={{ marginTop: '1rem', padding: '1.5rem', textAlign: 'center' }}>
