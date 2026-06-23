@@ -421,7 +421,7 @@ const CatalogCard = ({ item, onEdit, onDelete, isDragOver, onDragStart, onDragOv
         {Number(item.price).toFixed(2)} € <span className="catalog-card-unit">{item.unit}</span>
       </span>
       <div style={{ display: 'flex', gap: '0.5rem' }}>
-        <button className="btn-table-action" onClick={onEdit}>Editar</button>
+        <button className="btn-secondary" style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem', marginTop: 0 }} onClick={onEdit}>Editar</button>
         <button className="btn-danger" style={{ padding: '0.3rem 0.8rem', fontSize: '0.8rem', marginTop: 0 }} onClick={onDelete}>Eliminar</button>
       </div>
     </div>

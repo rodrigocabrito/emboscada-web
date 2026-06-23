@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import { getUserColor } from '../utils/avatarColors';
@@ -7,6 +7,12 @@ const Navbar = () => {
   const { user, profile, isAdmin } = useAuth();
   const location = useLocation();
   const [menuOpen, setMenuOpen] = useState(false);
+  const [dark, setDark] = useState(() => localStorage.getItem('theme') === 'dark');
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', dark ? 'dark' : 'light');
+    localStorage.setItem('theme', dark ? 'dark' : 'light');
+  }, [dark]);
 
   const close = () => setMenuOpen(false);
   const isActive = (path) => location.pathname === path ? 'active' : '';
@@ -33,8 +39,15 @@ const Navbar = () => {
         </ul>
       </div>
 
-      {/* Right side: avatar + hamburger */}
+      {/* Right side: theme toggle + avatar + hamburger */}
       <div className="navbar-right">
+        <button
+          onClick={() => setDark((d) => !d)}
+          aria-label="Alternar tema"
+          style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'rgba(255,255,255,0.75)', fontSize: '1.1rem', padding: '0.3rem', lineHeight: 1, display: 'flex', alignItems: 'center' }}
+        >
+          {dark ? '☀️' : '🌙'}
+        </button>
         <Link
           to="/profile"
           className={`nav-avatar ${isActive('/profile')}`}

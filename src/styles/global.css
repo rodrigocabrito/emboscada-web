@@ -34,6 +34,9 @@ input[type="number"] {
   --text:      #111c17;
   --text-muted:#5a7566;
 
+  /* Heading color (large titles) */
+  --heading:   var(--green-900);
+
   /* Accent & status */
   --accent:    #52b788;
   --error:     #c0392b;
@@ -51,6 +54,21 @@ input[type="number"] {
   --transition:   0.2s ease;
   --max-width:    1200px;
   --navbar-h:     64px;
+}
+
+/* ─── Dark mode ─────────────────────────────────────────────────────────────── */
+[data-theme="dark"] {
+  --bg:        #0e1a12;
+  --surface:   #162214;
+  --border:    #243d2c;
+  --text:      #e2ede6;
+  --text-muted:#7aaa8a;
+  --heading:   #a8d9be;
+  --error:     #e06060;
+  --error-bg:  #2d1212;
+  --green-50:  #111f16;
+  --green-100: #1a2e1f;
+  --green-200: #223d2a;
 }
 
 html {
@@ -245,7 +263,7 @@ body {
 .login-form-wrap h2 {
   font-size: 1.5rem;
   font-weight: 700;
-  color: var(--green-900);
+  color: var(--heading);
   margin-bottom: 0.4rem;
 }
 
@@ -567,6 +585,55 @@ body {
   max-width: 100%;
 }
 
+/* ─── Availability — dark mode overrides ───────────────────────────────────── */
+/* Order matters: weekend/holiday first, then available/unavailable override them */
+[data-theme="dark"] .avail-cell--weekend {
+  background: #1a2332;
+  border-color: #1e2d3d;
+}
+
+[data-theme="dark"] .avail-cell--weekend .avail-day-num {
+  color: #6b7280;
+}
+
+[data-theme="dark"] .avail-cell--holiday {
+  background: #422006;
+  border-color: #78350f;
+}
+
+[data-theme="dark"] .avail-cell--holiday .avail-day-num {
+  color: #fbbf24;
+}
+
+[data-theme="dark"] .avail-cell--today {
+  background: #1e1b4b;
+  border-color: #4338ca;
+}
+
+[data-theme="dark"] .avail-cell--available {
+  background: #14532d;
+  border-color: #4ade80;
+}
+
+[data-theme="dark"] .avail-cell--unavailable {
+  background: #7f1d1d;
+  border-color: #ef4444;
+}
+
+[data-theme="dark"] .avail-cell--unavailable .avail-day-num {
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .avail-cell--today.avail-cell--available {
+  border-color: #4338ca;
+  background: #14532d;
+}
+
+[data-theme="dark"] .avail-cell--today.avail-cell--unavailable {
+  border-color: #4338ca;
+  background: #7f1d1d;
+}
+
 /* ─── Admin ─────────────────────────────────────────────────────────────────── */
 .admin-section {
   margin-bottom: 2.5rem;
@@ -808,7 +875,7 @@ body {
 .section-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--green-900);
+  color: var(--heading);
   margin-bottom: 1.25rem;
 }
 
@@ -1051,7 +1118,7 @@ body {
 .page-header h1 {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--green-900);
+  color: var(--heading);
   margin-bottom: 0.25rem;
 }
 
@@ -1261,7 +1328,7 @@ body {
 .not-found-title {
   font-size: 1.75rem;
   font-weight: 700;
-  color: var(--green-900);
+  color: var(--heading);
   margin: 0 0 1rem;
 }
 
@@ -1542,7 +1609,7 @@ body {
 .modal-title {
   font-size: 1.15rem;
   font-weight: 700;
-  color: var(--green-900);
+  color: var(--heading);
 }
 
 .modal-close {
@@ -1701,6 +1768,42 @@ body {
   color: #6b7280;
 }
 
+/* ─── Date input — dark mode ────────────────────────────────────────────────── */
+[data-theme="dark"] input[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(1) brightness(0.75);
+  cursor: pointer;
+}
+
+/* ─── Badges — dark mode ────────────────────────────────────────────────────── */
+[data-theme="dark"] .badge-success {
+  background: #14532d;
+  color: #4ade80;
+}
+
+[data-theme="dark"] .badge-pending {
+  background: #78350f;
+  color: #fcd34d;
+}
+
+[data-theme="dark"] .badge-active {
+  background: #1e3a8a;
+  color: #93c5fd;
+}
+
+[data-theme="dark"] .badge-danger {
+  background: #7f1d1d;
+  color: #fca5a5;
+}
+
+[data-theme="dark"] .badge-default {
+  background: #374151;
+  color: #d1d5db;
+}
+
+[data-theme="dark"] .catalog-card-price {
+  color: #4ade80;
+}
+
 /* ─── Form extras ───────────────────────────────────────────────────────────── */
 .form-textarea {
   padding: 0.75rem 1rem;
@@ -1819,7 +1922,7 @@ body {
 .card-section-title {
   font-size: 0.95rem;
   font-weight: 700;
-  color: var(--green-900);
+  color: var(--heading);
   margin-bottom: 1.25rem;
 }
 
@@ -1940,6 +2043,14 @@ body {
 }
 
 .btn-table-action:hover {
+  opacity: 1;
+}
+
+[data-theme="dark"] .btn-table-action {
+  opacity: 0.85;
+}
+
+[data-theme="dark"] .btn-table-action:hover {
   opacity: 1;
 }
 

@@ -195,6 +195,12 @@ const AdminSessions = () => {
     appliedFilters.typeOfSession.length || appliedFilters.status.length
   );
 
+  const hasPendingFilters = !!(
+    nameDraft || emailDraft || phoneDraft ||
+    pendingFilters.dateFrom || pendingFilters.dateTo ||
+    pendingFilters.typeOfSession.length || pendingFilters.status.length
+  );
+
   const handleApply = () => {
     const toApply = { ...pendingFilters, name: nameDraft, email: emailDraft, phoneNumber: phoneDraft };
     setPendingFilters(toApply);
@@ -244,7 +250,7 @@ const AdminSessions = () => {
         setEmailDraft={setEmailDraft}
         phoneDraft={phoneDraft}
         setPhoneDraft={setPhoneDraft}
-        hasFilters={hasFilters}
+        hasFilters={hasPendingFilters}
         onClearAll={clearAll}
         onApply={handleApply}
       />
