@@ -228,7 +228,7 @@ const EvaluationView = () => {
           {/* Open evaluations */}
           {openEvals.length > 0 && (
             <div className="session-detail-card">
-              <CardHeader title="Avaliações em texto livre" />
+              <CardHeader title="Avaliações" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {openEvals.map((entry) => (
                   <div key={entry.id} style={{ padding: '0.85rem 1rem', background: 'var(--surface-alt, var(--surface))', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>

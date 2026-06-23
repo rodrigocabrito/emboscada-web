@@ -182,16 +182,16 @@ const Profile = () => {
             <p className="profile-role">{profile?.role === 'admin' ? 'Administrador(a)' : 'Monitor(a)'}</p>
           </div>
 
-          <div className="card" style={{ marginTop: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+          <div className="card" style={{ marginTop: '1rem', padding: '2rem', textAlign: 'center' }}>
             {avgScale && (
-              <div style={{ marginBottom: '0.75rem' }}>
-                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '0.6rem' }}>
                   Avaliação geral
                 </div>
                 <span style={{
                   background: avgScale.selBg, color: avgScale.selColor,
-                  padding: '0.35rem 0.85rem', borderRadius: '0.4rem',
-                  fontWeight: 700, fontSize: '1.2rem',
+                  padding: '0.4rem 0.7rem', borderRadius: '0.3rem',
+                  fontWeight: 800, fontSize: '1.3rem',
                 }}>
                   {overallAvg.toFixed(1)}
                 </span>
@@ -203,7 +203,7 @@ const Profile = () => {
                 style={{ width: '100%', marginTop: 0 }}
                 onClick={() => navigate('/my-evaluation')}
               >
-                Ver a minha avaliação
+                 Ver Avaliação
               </button>
               {unseenUpdates > 0 && (
                 <span style={{
