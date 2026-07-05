@@ -8,7 +8,6 @@ export const escapeHtml = (s) =>
 // Public base URL for email assets/links. Set VITE_PUBLIC_URL in Vercel to your
 // production domain so emails don't point at localhost/preview URLs.
 export const APP_URL = (import.meta.env.VITE_PUBLIC_URL || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '');
-export const LOGO_URL = `${APP_URL}/emboscada_logo.jpg`;
 
 // Wraps inner body HTML in the branded Emboscada shell (header + footer).
 export const emailShell = (innerHtml) => `
@@ -18,10 +17,9 @@ export const emailShell = (innerHtml) => `
       <td align="center">
         <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;font-family:Arial,Helvetica,sans-serif;">
           <tr>
-            <td style="background:#0d2b1f;padding:24px;text-align:center;">
-              <img src="${LOGO_URL}" alt="Emboscada" width="120" style="display:inline-block;max-width:120px;height:auto;border:0;" />
-              <div style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.06em;margin-top:10px;">EMBOSCADA</div>
-              <div style="color:#95d5b2;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;margin-top:2px;">Parque Aventura</div>
+            <td style="background:#0d2b1f;padding:28px 24px;text-align:center;">
+              <div style="color:#ffffff;font-size:22px;font-weight:bold;letter-spacing:0.08em;">EMBOSCADA</div>
+              <div style="color:#95d5b2;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;margin-top:4px;">Parque Aventura</div>
             </td>
           </tr>
           <tr><td style="height:4px;background:#2d6a4f;line-height:4px;font-size:0;">&nbsp;</td></tr>
