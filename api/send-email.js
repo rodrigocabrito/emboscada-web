@@ -23,7 +23,7 @@ function ensureApp() {
   initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
 }
 
-export default async function handler(req, res) {
+async function run(req, res) {
   if (req.method !== 'POST') {
     return res.status(405).json({ error: 'Method not allowed' });
   }
@@ -65,7 +65,11 @@ export default async function handler(req, res) {
   }
 
   // ── Send the email ──────────────────────────────────────────────────────
-  const { to, bcc, subject, html, text } = req.body || {};
+  let body = req.body;
+  if (typeof body === 'string') {
+    try { body = JSON.parse(body); } catch { body = {}; }
+  }
+  const { to, bcc, subject, html, text } = body || {};
   const recipients = to ?? bcc;
   if (!recipients || (Array.isArray(recipients) && recipients.length === 0) || !subject) {
     return res.status(400).json({ error: 'Missing recipients or subject' });
@@ -88,5 +92,14 @@ export default async function handler(req, res) {
     return res.status(200).json({ ok: true });
   } catch (err) {
     return res.status(500).json({ error: 'Failed to send email', detail: String(err?.message || err) });
+  }
+}
+
+export default async function handler(req, res) {
+  try {
+    return await run(req, res);
+  } catch (err) {
+    // Catch-all so nothing bubbles up as an opaque 500
+    return res.status(500).json({ error: 'Unhandled error', detail: String(err?.stack || err?.message || err) });
   }
 }
