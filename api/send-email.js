@@ -1,9 +1,11 @@
-import admin from 'firebase-admin';
+import { initializeApp, getApps, cert } from 'firebase-admin/app';
+import { getAuth } from 'firebase-admin/auth';
+import { getFirestore } from 'firebase-admin/firestore';
 import nodemailer from 'nodemailer';
 
 // Lazily initialise firebase-admin, returning a clear error instead of crashing.
-function getAdmin() {
-  if (admin.apps.length) return admin;
+function ensureApp() {
+  if (getApps().length) return;
   const projectId = process.env.FIREBASE_PROJECT_ID;
   const clientEmail = process.env.FIREBASE_CLIENT_EMAIL;
   let privateKey = process.env.FIREBASE_PRIVATE_KEY || '';
@@ -18,10 +20,7 @@ function getAdmin() {
   if (!privateKey) missing.push('FIREBASE_PRIVATE_KEY');
   if (missing.length) throw new Error(`Missing env vars: ${missing.join(', ')}`);
 
-  admin.initializeApp({
-    credential: admin.credential.cert({ projectId, clientEmail, privateKey }),
-  });
-  return admin;
+  initializeApp({ credential: cert({ projectId, clientEmail, privateKey }) });
 }
 
 export default async function handler(req, res) {
@@ -30,9 +29,8 @@ export default async function handler(req, res) {
   }
 
   // ── Init admin SDK ──────────────────────────────────────────────────────
-  let sdk;
   try {
-    sdk = getAdmin();
+    ensureApp();
   } catch (err) {
     return res.status(500).json({ error: 'Firebase admin init failed', detail: String(err?.message || err) });
   }
@@ -46,14 +44,14 @@ export default async function handler(req, res) {
 
   let uid;
   try {
-    const decoded = await sdk.auth().verifyIdToken(idToken);
+    const decoded = await getAuth().verifyIdToken(idToken);
     uid = decoded.uid;
   } catch (err) {
     return res.status(401).json({ error: 'Invalid auth token', detail: String(err?.message || err) });
   }
 
   try {
-    const snap = await sdk.firestore().collection('users').doc(uid).get();
+    const snap = await getFirestore().collection('users').doc(uid).get();
     if (!snap.exists || snap.data().role !== 'admin') {
       return res.status(403).json({ error: 'Not allowed' });
     }
