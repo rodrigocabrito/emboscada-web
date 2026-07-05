@@ -18,7 +18,8 @@ export const sendEmail = async ({ to, bcc, subject, html, text }) => {
 
   if (!res.ok) {
     const data = await res.json().catch(() => ({}));
-    throw new Error(data.error || `Email failed (${res.status})`);
+    const msg = data.error || `Email failed (${res.status})`;
+    throw new Error(data.detail ? `${msg} — ${data.detail}` : msg);
   }
   return res.json();
 };
