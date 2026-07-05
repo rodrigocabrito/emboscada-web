@@ -19,6 +19,10 @@ const REACTIONS = [
   { key: 'sad', emoji: '😢', label: 'Triste' },
 ];
 
+// Public base URL for email assets/links. Set VITE_PUBLIC_URL in Vercel to your
+// production domain so emails don't point at localhost/preview URLs.
+const APP_URL = (import.meta.env.VITE_PUBLIC_URL || (typeof window !== 'undefined' ? window.location.origin : '')).replace(/\/$/, '');
+
 const fmtDate = (ts) => {
   const d = ts?.toDate?.() ?? (ts ? new Date(ts) : null);
   if (!d) return '';
@@ -172,8 +176,8 @@ const Announcements = () => {
               author: profile?.nickname || author,
               title: t,
               body: b,
-              url: `${window.location.origin}/announcements`,
-              logoUrl: `${window.location.origin}/emboscada_logo.jpg`,
+              url: `${APP_URL}/announcements`,
+              logoUrl: `${APP_URL}/emboscada_logo.jpg`,
             }),
           });
         } catch (err) {
