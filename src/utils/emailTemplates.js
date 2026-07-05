@@ -62,6 +62,16 @@ export const announcementEmail = ({ author, title, body, url }) => emailShell(`
   <p style="margin:20px 0 0;font-size:13px;color:#6b7280;">Publicado por <strong style="color:#374151;">${escapeHtml(author)}</strong></p>
 `);
 
+// ── Evaluation updated ─────────────────────────────────────────────────────
+export const evaluationEmail = ({ firstName, url }) => emailShell(`
+  <div style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.08em;color:#2d6a4f;margin-bottom:10px;">Avaliação</div>
+  <h1 style="margin:0 0 14px;font-size:22px;line-height:1.3;color:#0d2b1f;">A tua avaliação foi atualizada</h1>
+  <p style="margin:0 0 18px;font-size:15px;line-height:1.6;color:#374151;">
+    Olá${firstName ? ` <strong>${escapeHtml(firstName)}</strong>` : ''}, a tua avaliação foi atualizada. Podes consultar os detalhes na plataforma.
+  </p>
+  ${button('Ver a minha avaliação', url)}
+`);
+
 // ── Welcome / account created ──────────────────────────────────────────────
 export const welcomeEmail = ({ firstName, email, password, loginUrl, profileUrl }) => emailShell(`
   <div style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.08em;color:#2d6a4f;margin-bottom:10px;">Bem-vindo(a)</div>

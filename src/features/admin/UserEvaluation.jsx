@@ -2,6 +2,8 @@ import { useState, useEffect } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUsers, getEvaluation, saveEvaluation } from '../../firebase/firestore';
+import { sendEmail } from '../../utils/email';
+import { evaluationEmail, APP_URL } from '../../utils/emailTemplates';
 
 const SCALE = [
   { value: 0, label: 'Não fez',    selBg: '#e5e7eb', selColor: '#374151' },
@@ -221,6 +223,19 @@ const UserEvaluation = () => {
       queryClient.invalidateQueries({ queryKey: ['evaluation', id] });
       setSaved(true);
       setTimeout(() => setSaved(false), 3000);
+
+      // Notify the evaluated user by email (only on real changes; best-effort)
+      if (changes.length && user?.email) {
+        try {
+          await sendEmail({
+            to: user.email,
+            subject: 'A tua avaliação foi atualizada — Emboscada',
+            html: evaluationEmail({ firstName: user.firstName, url: `${APP_URL}/my-evaluation` }),
+          });
+        } catch (err) {
+          console.error('Falha ao enviar email de avaliação:', err);
+        }
+      }
     } finally {
       setSaving(false);
     }
