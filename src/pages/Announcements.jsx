@@ -27,6 +27,20 @@ const fmtDate = (ts) => {
 
 const initialsOf = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
 
+const escapeHtml = (s) =>
+  String(s ?? '')
+    .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
+
+const buildAnnouncementEmail = ({ author, title, body, url }) => `
+  <div style="font-family: Arial, Helvetica, sans-serif; color: #1f2937; max-width: 560px;">
+    <p style="margin: 0 0 0.75rem;"><strong>${escapeHtml(author)}</strong> publicou um novo comunicado:</p>
+    ${title ? `<h2 style="margin: 0 0 0.5rem; font-size: 1.15rem;">${escapeHtml(title)}</h2>` : ''}
+    <p style="margin: 0 0 1rem; white-space: pre-wrap; line-height: 1.5;">${escapeHtml(body)}</p>
+    <p style="margin: 0;"><a href="${url}" style="color: #15803d; font-weight: bold;">Ver na plataforma →</a></p>
+  </div>
+`;
+
 const ReactionBar = ({ announcement, uid, onToggle, busy }) => (
   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
     {REACTIONS.map((r) => {
@@ -94,19 +108,39 @@ const Announcements = () => {
 
   const handlePublish = async (e) => {
     e.preventDefault();
-    if (!body.trim()) return;
+    const t = title.trim();
+    const b = body.trim();
+    if (!b) return;
+    const author = `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Admin';
     setPublishing(true);
     try {
-      await addAnnouncement({
-        title: title.trim(),
-        body: body.trim(),
-        authorId: user.uid,
-        authorName: `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Admin',
-      });
+      await addAnnouncement({ title: t, body: b, authorId: user.uid, authorName: author });
       setTitle('');
       setBody('');
       setShowCreate(false);
       invalidate();
+
+      // Notify every other user by email (BCC keeps addresses private)
+      const recipients = users
+        .filter((u) => u.uuid !== user.uid && u.email)
+        .map((u) => u.email);
+      if (recipients.length) {
+        try {
+          await sendEmail({
+            bcc: recipients,
+            subject: `Novo comunicado${t ? `: ${t}` : ''} — Emboscada`,
+            html: buildAnnouncementEmail({
+              author: profile?.nickname || author,
+              title: t,
+              body: b,
+              url: `${window.location.origin}/announcements`,
+            }),
+          });
+        } catch (err) {
+          // Publishing already succeeded — surface but don't block
+          console.error('Falha ao notificar por email:', err);
+        }
+      }
     } finally {
       setPublishing(false);
     }
@@ -116,22 +150,6 @@ const Announcements = () => {
     setTitle('');
     setBody('');
     setShowCreate(true);
-  };
-
-  // TEMPORARY — remove once email delivery is confirmed
-  const [testMsg, setTestMsg] = useState('');
-  const sendTestEmail = async () => {
-    setTestMsg('A enviar...');
-    try {
-      await sendEmail({
-        to: user.email,
-        subject: 'Teste de email — Emboscada',
-        html: '<p>Se estás a ler isto, o envio de emails está a funcionar. 🎉</p>',
-      });
-      setTestMsg(`Email de teste enviado para ${user.email}.`);
-    } catch (err) {
-      setTestMsg(`Erro: ${err.message}`);
-    }
   };
 
   const handleToggle = async (announcement, key, active) => {
@@ -187,18 +205,9 @@ const Announcements = () => {
           <p>Novidades e comunicados da equipa.</p>
         </div>
         {isAdmin && (
-          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
-            <div style={{ display: 'flex', gap: '0.5rem' }}>
-              {/* TEMPORARY test button — remove after confirming email works */}
-              <button type="button" className="btn-secondary" style={{ marginTop: 0, width: 'auto' }} onClick={sendTestEmail}>
-                Enviar email de teste
-              </button>
-              <button type="button" className="btn-primary" style={{ marginTop: 0, width: 'auto' }} onClick={openCreate}>
-                + Novo comunicado
-              </button>
-            </div>
-            {testMsg && <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{testMsg}</span>}
-          </div>
+          <button type="button" className="btn-primary" style={{ marginTop: 0, width: 'auto' }} onClick={openCreate}>
+            + Novo comunicado
+          </button>
         )}
       </div>
 
