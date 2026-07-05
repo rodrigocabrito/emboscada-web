@@ -1,0 +1,337 @@
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useAuth } from '../context/AuthContext';
+import { getUserColor } from '../utils/avatarColors';
+import { sendEmail } from '../utils/email';
+import {
+  getAnnouncements,
+  addAnnouncement,
+  updateAnnouncement,
+  deleteAnnouncement,
+  toggleAnnouncementReaction,
+  getUsers,
+} from '../firebase/firestore';
+
+const REACTIONS = [
+  { key: 'like', emoji: '👍', label: 'Gosto' },
+  { key: 'love', emoji: '❤️', label: 'Adoro' },
+  { key: 'clap', emoji: '👏', label: 'Aplausos' },
+  { key: 'sad', emoji: '😢', label: 'Triste' },
+];
+
+const fmtDate = (ts) => {
+  const d = ts?.toDate?.() ?? (ts ? new Date(ts) : null);
+  if (!d) return '';
+  return d.toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+};
+
+const initialsOf = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
+
+const ReactionBar = ({ announcement, uid, onToggle, busy }) => (
+  <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
+    {REACTIONS.map((r) => {
+      const users = announcement.reactions?.[r.key] ?? [];
+      const active = users.includes(uid);
+      const count = users.length;
+      return (
+        <button
+          key={r.key}
+          type="button"
+          disabled={busy}
+          onClick={() => onToggle(announcement, r.key, active)}
+          title={r.label}
+          style={{
+            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
+            padding: '0.25rem 0.6rem', borderRadius: '999px', cursor: 'pointer',
+            fontSize: '0.85rem', fontFamily: 'var(--font-body)',
+            border: `1.5px solid ${active ? 'var(--green-500, #22c55e)' : 'var(--border)'}`,
+            background: active ? 'var(--green-100, #dcfce7)' : 'var(--surface)',
+            color: active ? 'var(--green-700, #15803d)' : 'var(--text-muted)',
+            fontWeight: active ? 700 : 500,
+          }}
+        >
+          <span style={{ fontSize: '1rem', lineHeight: 1 }}>{r.emoji}</span>
+          {count > 0 && <span>{count}</span>}
+        </button>
+      );
+    })}
+  </div>
+);
+
+const Announcements = () => {
+  const { user, profile, isAdmin } = useAuth();
+  const queryClient = useQueryClient();
+
+  const [showCreate, setShowCreate] = useState(false);
+  const [title, setTitle] = useState('');
+  const [body, setBody] = useState('');
+  const [publishing, setPublishing] = useState(false);
+  const [reacting, setReacting] = useState(false);
+  const [deleteTarget, setDeleteTarget] = useState(null);
+  const [deleting, setDeleting] = useState(false);
+  const [editingId, setEditingId] = useState(null);
+  const [editTitle, setEditTitle] = useState('');
+  const [editBody, setEditBody] = useState('');
+  const [savingEdit, setSavingEdit] = useState(false);
+
+  const { data: announcements = [], isLoading } = useQuery({
+    queryKey: ['announcements'],
+    queryFn: getAnnouncements,
+    staleTime: 30_000,
+  });
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    staleTime: 5 * 60_000,
+  });
+
+  const authorLabel = (a) => {
+    const author = users.find((u) => u.uuid === a.authorId);
+    return author?.nickname || a.authorName || 'Admin';
+  };
+
+  const invalidate = () => queryClient.invalidateQueries({ queryKey: ['announcements'] });
+
+  const handlePublish = async (e) => {
+    e.preventDefault();
+    if (!body.trim()) return;
+    setPublishing(true);
+    try {
+      await addAnnouncement({
+        title: title.trim(),
+        body: body.trim(),
+        authorId: user.uid,
+        authorName: `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Admin',
+      });
+      setTitle('');
+      setBody('');
+      setShowCreate(false);
+      invalidate();
+    } finally {
+      setPublishing(false);
+    }
+  };
+
+  const openCreate = () => {
+    setTitle('');
+    setBody('');
+    setShowCreate(true);
+  };
+
+  // TEMPORARY — remove once email delivery is confirmed
+  const [testMsg, setTestMsg] = useState('');
+  const sendTestEmail = async () => {
+    setTestMsg('A enviar...');
+    try {
+      await sendEmail({
+        to: user.email,
+        subject: 'Teste de email — Emboscada',
+        html: '<p>Se estás a ler isto, o envio de emails está a funcionar. 🎉</p>',
+      });
+      setTestMsg(`Email de teste enviado para ${user.email}.`);
+    } catch (err) {
+      setTestMsg(`Erro: ${err.message}`);
+    }
+  };
+
+  const handleToggle = async (announcement, key, active) => {
+    setReacting(true);
+    try {
+      await toggleAnnouncementReaction(announcement.id, key, user.uid, active);
+      invalidate();
+    } finally {
+      setReacting(false);
+    }
+  };
+
+  const startEdit = (a) => {
+    setEditingId(a.id);
+    setEditTitle(a.title || '');
+    setEditBody(a.body || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingId(null);
+    setEditTitle('');
+    setEditBody('');
+  };
+
+  const saveEdit = async (id) => {
+    if (!editBody.trim()) return;
+    setSavingEdit(true);
+    try {
+      await updateAnnouncement(id, { title: editTitle.trim(), body: editBody.trim() });
+      cancelEdit();
+      invalidate();
+    } finally {
+      setSavingEdit(false);
+    }
+  };
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteAnnouncement(deleteTarget.id);
+      setDeleteTarget(null);
+      invalidate();
+    } finally {
+      setDeleting(false);
+    }
+  };
+
+  return (
+    <div className="page">
+      <div className="page-header" style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+        <div>
+          <h1>Comunicados</h1>
+          <p>Novidades e comunicados da equipa.</p>
+        </div>
+        {isAdmin && (
+          <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-end', gap: '0.4rem' }}>
+            <div style={{ display: 'flex', gap: '0.5rem' }}>
+              {/* TEMPORARY test button — remove after confirming email works */}
+              <button type="button" className="btn-secondary" style={{ marginTop: 0, width: 'auto' }} onClick={sendTestEmail}>
+                Enviar email de teste
+              </button>
+              <button type="button" className="btn-primary" style={{ marginTop: 0, width: 'auto' }} onClick={openCreate}>
+                + Novo comunicado
+              </button>
+            </div>
+            {testMsg && <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{testMsg}</span>}
+          </div>
+        )}
+      </div>
+
+      {isLoading ? (
+        <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>A carregar…</div>
+      ) : announcements.length === 0 ? (
+        <div className="card" style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2.5rem 1rem' }}>
+          Ainda não há comunicados.
+        </div>
+      ) : (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          {announcements.map((a) => (
+            <div key={a.id} className="card">
+              <div style={{ display: 'flex', alignItems: 'flex-start', gap: '0.75rem' }}>
+                <span style={{
+                  width: 38, height: 38, borderRadius: '50%', flexShrink: 0,
+                  background: getUserColor(a.authorId || a.id), color: '#fff',
+                  display: 'inline-flex', alignItems: 'center', justifyContent: 'center',
+                  fontSize: '0.85rem', fontWeight: 700,
+                }}>
+                  {initialsOf(a.authorName || '?')}
+                </span>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                  <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{authorLabel(a)}</span>
+                    <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
+                      {fmtDate(a.createdAt)}{a.updatedAt ? ' · editado' : ''}
+                    </span>
+                  </div>
+
+                  {editingId === a.id ? (
+                    <div style={{ marginTop: '0.75rem' }}>
+                      <div className="form-group">
+                        <label htmlFor={`edit-title-${a.id}`}>Título (opcional)</label>
+                        <input id={`edit-title-${a.id}`} type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} placeholder="Ex: Reunião de equipa" />
+                      </div>
+                      <div className="form-group">
+                        <label htmlFor={`edit-body-${a.id}`}>Mensagem</label>
+                        <textarea id={`edit-body-${a.id}`} className="form-textarea" rows={4} value={editBody} onChange={(e) => setEditBody(e.target.value)} required />
+                      </div>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <button type="button" className="btn-secondary" style={{ marginTop: 0, width: 'auto' }} onClick={cancelEdit} disabled={savingEdit}>Cancelar</button>
+                        <button type="button" className="btn-primary" style={{ marginTop: 0, width: 'auto' }} onClick={() => saveEdit(a.id)} disabled={savingEdit || !editBody.trim()}>
+                          {savingEdit ? 'A guardar...' : 'Guardar'}
+                        </button>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      {a.title && <h3 style={{ margin: '0.5rem 0 0.25rem', fontSize: '1.05rem' }}>{a.title}</h3>}
+                      <p style={{ margin: '0.4rem 0 0', fontSize: '0.92rem', color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                        {a.body}
+                      </p>
+                      <ReactionBar announcement={a} uid={user.uid} onToggle={handleToggle} busy={reacting} />
+                    </>
+                  )}
+                </div>
+                {isAdmin && editingId !== a.id && (
+                  <div style={{ display: 'flex', gap: '0.25rem', flexShrink: 0 }}>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(a)}
+                      aria-label="Editar comunicado"
+                      title="Editar"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '0.15rem 0.35rem' }}
+                    >
+                      ✎
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setDeleteTarget(a)}
+                      aria-label="Eliminar comunicado"
+                      title="Eliminar"
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '0.15rem 0.35rem' }}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
+
+      {showCreate && (
+        <div className="modal-overlay" onClick={() => !publishing && setShowCreate(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '720px', width: '100%' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Novo comunicado</h2>
+              <button className="modal-close" onClick={() => setShowCreate(false)} disabled={publishing} aria-label="Fechar">✕</button>
+            </div>
+            <form onSubmit={handlePublish}>
+              <div className="form-group">
+                <label htmlFor="annTitle">Título (opcional)</label>
+                <input id="annTitle" type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Ex: Reunião de equipa" />
+              </div>
+              <div className="form-group">
+                <label htmlFor="annBody">Mensagem</label>
+                <textarea id="annBody" className="form-textarea" rows={9} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Escreve o comunicado..." required />
+              </div>
+              <div className="modal-footer">
+                <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)} disabled={publishing}>Cancelar</button>
+                <button type="submit" className="btn-primary" style={{ marginTop: 0 }} disabled={publishing || !body.trim()}>
+                  {publishing ? 'A publicar...' : 'Publicar'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {deleteTarget && (
+        <div className="modal-overlay" onClick={() => !deleting && setDeleteTarget(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '400px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Eliminar comunicado</h2>
+              <button className="modal-close" onClick={() => setDeleteTarget(null)} disabled={deleting} aria-label="Fechar">✕</button>
+            </div>
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: '0.5rem 0 1.5rem' }}>
+              Tens a certeza que queres eliminar este comunicado? Esta ação não pode ser revertida.
+            </p>
+            <div className="modal-footer">
+              <button type="button" className="btn-secondary" onClick={() => setDeleteTarget(null)} disabled={deleting}>Cancelar</button>
+              <button type="button" className="btn-primary" style={{ background: '#dc2626' }} onClick={handleDelete} disabled={deleting}>
+                {deleting ? 'A eliminar...' : 'Eliminar'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+export default Announcements;

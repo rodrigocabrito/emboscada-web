@@ -313,6 +313,7 @@ const Availability = () => {
               onClick={() => setSelectedDay(day)}
               disabled={loading}
             >
+              {isToday && <span className="avail-today-badge">Hoje</span>}
               <span className="avail-day-num">{day}</span>
               {holidayName && <span className="avail-holiday-name">{holidayName}</span>}
               {hasData && (

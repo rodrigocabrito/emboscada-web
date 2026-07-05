@@ -16,6 +16,8 @@ import {
   getCountFromServer,
   serverTimestamp,
   increment,
+  arrayUnion,
+  arrayRemove,
   Timestamp,
   DocumentSnapshot,
   type QueryConstraint,
@@ -171,6 +173,52 @@ export const getAmmoRestocks = async (caliber: string): Promise<AmmoRestock[]> =
 export const getSessionsWithAmmo = async (): Promise<Session[]> => {
   const snap = await getDocs(query(collection(db, 'sessions'), where('bulletsSpent', '>', 0)));
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Session);
+};
+
+// ─── ANNOUNCEMENTS ───────────────────────────────────────────────────────────
+
+export interface Announcement {
+  id: string;
+  title: string;
+  body: string;
+  authorId: string;
+  authorName: string;
+  reactions: Record<string, string[]>;
+  createdAt: Timestamp;
+}
+
+export const getAnnouncements = async (): Promise<Announcement[]> => {
+  const snap = await getDocs(query(collection(db, 'announcements'), orderBy('createdAt', 'desc')));
+  return snap.docs.map((d) => ({ id: d.id, reactions: {}, ...d.data() }) as Announcement);
+};
+
+export const addAnnouncement = async (
+  data: { title: string; body: string; authorId: string; authorName: string }
+): Promise<void> => {
+  await addDoc(collection(db, 'announcements'), { ...data, reactions: {}, createdAt: serverTimestamp() });
+};
+
+export const updateAnnouncement = async (
+  id: string,
+  data: { title: string; body: string }
+): Promise<void> => {
+  await updateDoc(doc(db, 'announcements', id), { ...data, updatedAt: serverTimestamp() });
+};
+
+export const deleteAnnouncement = async (id: string): Promise<void> => {
+  await deleteDoc(doc(db, 'announcements', id));
+};
+
+// Toggle a user's reaction. `active` = the user has already reacted with this key.
+export const toggleAnnouncementReaction = async (
+  id: string,
+  key: string,
+  uid: string,
+  active: boolean
+): Promise<void> => {
+  await updateDoc(doc(db, 'announcements', id), {
+    [`reactions.${key}`]: active ? arrayRemove(uid) : arrayUnion(uid),
+  });
 };
 
 // ─── CUSTOMERS ───────────────────────────────────────────────────────────────

@@ -490,6 +490,7 @@ body {
 }
 
 .avail-cell--day {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: flex-start;
@@ -501,6 +502,21 @@ body {
   font-family: var(--font-body);
   overflow: hidden;
   transition: border-color var(--transition), box-shadow var(--transition), transform var(--transition);
+}
+
+.avail-today-badge {
+  position: absolute;
+  top: 0.3rem;
+  right: 0.3rem;
+  font-size: 0.6rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: #fff;
+  background: #818cf8;
+  border-radius: 999px;
+  padding: 0.1rem 0.4rem;
+  line-height: 1.2;
 }
 
 .avail-cell--day:hover {

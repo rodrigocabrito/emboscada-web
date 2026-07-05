@@ -12,7 +12,7 @@ const SESSION_TYPES = ['Paintball', 'Paintball Kids', 'Laser Tag', 'Laser Tag Ki
 const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => [
   `${String(i).padStart(2, '0')}:00`,
   `${String(i).padStart(2, '0')}:30`,
-]).flat().filter((t) => t >= '08:00' && t <= '19:30');
+]).flat().filter((t) => t >= '06:00' && t <= '23:30');
 
 const STATUS_OPTIONS = [
   { value: 'done', label: 'Feita' },
@@ -124,8 +124,10 @@ const SessionDetail = () => {
 
   const handleChange = (e) => {
     const { name, value } = e.target;
+    // Phone: only digits, "+" and whitespace
+    const cleaned = name === 'spocPhoneNumber' ? value.replace(/[^0-9+\s]/g, '') : value;
     setForm((prev) => {
-      const next = { ...prev, [name]: value };
+      const next = { ...prev, [name]: cleaned };
       if (name === 'typeOfSession' && value !== 'Paintball' && value !== 'Paintball Kids') next.caliber = '';
       if (name === 'typeOfSession') { next.packId = ''; next.packName = ''; next.packPrice = ''; }
       if (name === 'expectedNumberOfPlayers' && prev.signal === String((prev.expectedNumberOfPlayers || 0) >= 15 ? 80 : 50)) {
@@ -298,6 +300,10 @@ const SessionDetail = () => {
     <div className="page page-session-detail">
       <div className="page-header" style={{ border: 'none', paddingBottom: 0, marginBottom: '1rem' }}>
         <button className="btn-secondary" style={{ width: 'auto' }} onClick={() => {
+          if (navState?.from) {
+            navigate(navState.from);
+            return;
+          }
           const returnDate = navState?.returnDate;
           navigate('/sessions', returnDate ? { state: { returnDate } } : undefined);
         }}>
@@ -321,7 +327,7 @@ const SessionDetail = () => {
             </div>
             <div className="form-group">
               <label htmlFor="spocPhoneNumber">Telemóvel</label>
-              <input id="spocPhoneNumber" name="spocPhoneNumber" type="tel" value={form.spocPhoneNumber} onChange={handleChange} placeholder="9XX XXX XXX" />
+              <input id="spocPhoneNumber" name="spocPhoneNumber" type="tel" value={form.spocPhoneNumber} onChange={handleChange} placeholder="+351 9XX XXX XXX" />
             </div>
           </div>
 
@@ -428,7 +434,7 @@ const SessionDetail = () => {
                   {visible.map((u) => (
                     <div key={u.uuid} className="form-checkbox-item">
                       <input id={`monitor-${u.uuid}`} type="checkbox" checked={form.monitors.includes(u.uuid)} onChange={() => toggleMonitor(u.uuid)} />
-                      <label htmlFor={`monitor-${u.uuid}`}>{u.firstName} {u.lastName}{u.nickname ? ` (${u.nickname})` : ''}</label>
+                      <label htmlFor={`monitor-${u.uuid}`}>{u.nickname || `${u.firstName} ${u.lastName}`}{u.nickname ? ` (${u.firstName} ${u.lastName})` : ''}</label>
                     </div>
                   ))}
                 </div>

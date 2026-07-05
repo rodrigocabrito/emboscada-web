@@ -283,7 +283,7 @@ const Profile = () => {
                   type="text"
                   value={infoForm.nickname}
                   onChange={handleInfoChange}
-                  placeholder="Ex: João da Silva"
+                  placeholder="Ex: Johnny"
                 />
               </div>
 

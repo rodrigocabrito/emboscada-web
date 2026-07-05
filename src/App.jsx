@@ -24,9 +24,11 @@ import AdminCatalogo from './features/admin/AdminCatalogo';
 import AdminStock from './features/admin/AdminStock';
 import AdminStockBullets from './features/admin/AdminStockBullets';
 import AdminSessions from './features/admin/AdminSessions';
+import AdminSchedule from './features/admin/AdminSchedule';
 import UserEvaluation from './features/admin/UserEvaluation';
 import EvaluationView from './features/evaluation/EvaluationView';
 import Availability from './pages/Availability';
+import Announcements from './pages/Announcements';
 import Profile from './pages/Profile';
 import NotFound from './pages/NotFound';
 
@@ -115,6 +117,14 @@ const AppContent = () => {
           }
         />
         <Route
+          path="/announcements"
+          element={
+            <ProtectedRoute>
+              <Announcements />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/admin"
           element={
             <ProtectedRoute adminOnly={true}>
@@ -151,6 +161,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute adminOnly={true}>
               <AdminCatalogo />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/schedule"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <AdminSchedule />
             </ProtectedRoute>
           }
         />

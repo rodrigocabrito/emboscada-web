@@ -549,6 +549,9 @@ const Sessions = () => {
           ? [...prev.monitors, value]
           : prev.monitors.filter((uid) => uid !== value),
       }));
+    } else if (name === 'spocPhoneNumber') {
+      // Only digits, "+" and whitespace
+      setForm((prev) => ({ ...prev, spocPhoneNumber: value.replace(/[^0-9+\s]/g, '') }));
     } else {
       setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
     }
@@ -690,7 +693,7 @@ const Sessions = () => {
                     type="tel"
                     value={form.spocPhoneNumber}
                     onChange={handleChange}
-                    placeholder="9XX XXX XXX"
+                    placeholder="+351 9XX XXX XXX"
                   />
                 </div>
               </div>

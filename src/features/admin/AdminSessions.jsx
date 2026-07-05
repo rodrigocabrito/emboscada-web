@@ -279,7 +279,7 @@ const AdminSessions = () => {
               {visibleSessions.map((s) => {
                 const date = (s.sessionDatetime || s.sessionDate || '').slice(0, 10);
                 return (
-                  <tr key={s.id} onClick={() => navigate(`/sessions/${s.id}`)} style={{ cursor: 'pointer' }}>
+                  <tr key={s.id} onClick={() => navigate(`/sessions/${s.id}`, { state: { from: '/admin/sessions' } })} style={{ cursor: 'pointer' }}>
                     <td>{date ? fmt(date) : '—'}</td>
                     <td className="td-name">{s.spocName || s.spoc || '—'}</td>
                     <td className="td-muted">{s.spocEmail || '—'}</td>

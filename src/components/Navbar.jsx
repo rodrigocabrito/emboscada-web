@@ -33,6 +33,7 @@ const Navbar = () => {
           <li><Link to="/sessions" className={isActive('/sessions')} onClick={close}>Sessões</Link></li>
           <li><Link to="/availability" className={isActive('/availability')} onClick={close}>Disponibilidades</Link></li>
           <li><Link to="/team" className={isActive('/team')} onClick={close}>Equipa</Link></li>
+          <li><Link to="/announcements" className={isActive('/announcements')} onClick={close}>Comunicados</Link></li>
           {isAdmin && (
             <li><Link to="/admin" className={isActive('/admin')} onClick={close}>Admin</Link></li>
           )}
