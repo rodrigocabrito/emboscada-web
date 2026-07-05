@@ -16,7 +16,7 @@ import {
   serverTimestamp,
 } from 'firebase/firestore';
 
-const DEFAULT_PASSWORD = 'Emboscada1234#';
+export const DEFAULT_PASSWORD = 'Emboscada1234#';
 
 // Create a new user (logs out current admin as a Firebase side effect)
 export const createUser = async (email, firstName, lastName, role, additionalData = {}) => {

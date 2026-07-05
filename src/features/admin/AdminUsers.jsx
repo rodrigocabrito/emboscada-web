@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { createUser } from '../../firebase/auth';
+import { createUser, DEFAULT_PASSWORD } from '../../firebase/auth';
 import { getUsers, deleteUserProfile } from '../../firebase/firestore';
+import { sendEmail } from '../../utils/email';
+import { welcomeEmail, APP_URL } from '../../utils/emailTemplates';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useScrollLock from '../../hooks/useScrollLock';
 
@@ -72,12 +74,42 @@ const AdminUsers = () => {
     setCreateError('');
     setCreateSuccess('');
     setCreating(true);
+    // Capture the admin's token before createUser signs us out (Firebase side effect)
+    let adminToken = null;
+    try { adminToken = await user.getIdToken(); } catch { /* proceed without email */ }
+    const newUser = { email: form.email, firstName: form.firstName };
     try {
       await createUser(form.email, form.firstName, form.lastName, form.role, {
         nickname: form.nickname,
         birthday: form.birthday || null,
         startedAt: form.startedAt || null,
       });
+
+      // Welcome email with the default credentials (best-effort — never blocks creation)
+      if (adminToken) {
+        // CC all admins (except the new user themselves, if they were created as admin)
+        const adminEmails = users
+          .filter((u) => u.role === 'admin' && u.email && u.email !== newUser.email)
+          .map((u) => u.email);
+        try {
+          await sendEmail({
+            token: adminToken,
+            to: newUser.email,
+            cc: adminEmails.length ? adminEmails : undefined,
+            subject: 'A tua conta na plataforma Emboscada',
+            html: welcomeEmail({
+              firstName: newUser.firstName,
+              email: newUser.email,
+              password: DEFAULT_PASSWORD,
+              loginUrl: `${APP_URL}/login`,
+              profileUrl: `${APP_URL}/profile`,
+            }),
+          });
+        } catch (err) {
+          console.error('Falha ao enviar email de boas-vindas:', err);
+        }
+      }
+
       setCreateSuccess(`Utilizador ${form.firstName} ${form.lastName} criado com sucesso. A sessão foi terminada — por favor volta a entrar.`);
       setForm(EMPTY_FORM);
     } catch (err) {

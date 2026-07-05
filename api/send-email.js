@@ -73,7 +73,7 @@ async function run(req, res) {
   if (typeof body === 'string') {
     try { body = JSON.parse(body); } catch { body = {}; }
   }
-  const { to, bcc, subject, html, text } = body || {};
+  const { to, cc, bcc, subject, html, text } = body || {};
   const recipients = to ?? bcc;
   if (!recipients || (Array.isArray(recipients) && recipients.length === 0) || !subject) {
     return res.status(400).json({ error: 'Missing recipients or subject' });
@@ -89,6 +89,7 @@ async function run(req, res) {
       from: `"Emboscada" <${process.env.GMAIL_USER}>`,
       // When emailing many people, use BCC so addresses stay private
       ...(bcc ? { to: process.env.GMAIL_USER, bcc } : { to }),
+      ...(cc ? { cc } : {}),
       subject,
       text: text || undefined,
       html: html || undefined,
