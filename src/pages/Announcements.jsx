@@ -32,13 +32,52 @@ const escapeHtml = (s) =>
     .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
     .replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
-const buildAnnouncementEmail = ({ author, title, body, url }) => `
-  <div style="font-family: Arial, Helvetica, sans-serif; color: #1f2937; max-width: 560px;">
-    <p style="margin: 0 0 0.75rem;"><strong>${escapeHtml(author)}</strong> publicou um novo comunicado:</p>
-    ${title ? `<h2 style="margin: 0 0 0.5rem; font-size: 1.15rem;">${escapeHtml(title)}</h2>` : ''}
-    <p style="margin: 0 0 1rem; white-space: pre-wrap; line-height: 1.5;">${escapeHtml(body)}</p>
-    <p style="margin: 0;"><a href="${url}" style="color: #15803d; font-weight: bold;">Ver na plataforma →</a></p>
-  </div>
+const buildAnnouncementEmail = ({ author, title, body, url, logoUrl }) => `
+<!-- Emboscada — novo comunicado -->
+<div style="margin:0;padding:0;background:#f3f4f6;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f3f4f6;padding:24px 12px;">
+    <tr>
+      <td align="center">
+        <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="max-width:600px;width:100%;background:#ffffff;border-radius:12px;overflow:hidden;border:1px solid #e5e7eb;font-family:Arial,Helvetica,sans-serif;">
+          <!-- Header -->
+          <tr>
+            <td style="background:#0d2b1f;padding:24px;text-align:center;">
+              <img src="${logoUrl}" alt="Emboscada" width="120" style="display:inline-block;max-width:120px;height:auto;border:0;" />
+              <div style="color:#ffffff;font-size:20px;font-weight:bold;letter-spacing:0.06em;margin-top:10px;">EMBOSCADA</div>
+              <div style="color:#95d5b2;font-size:12px;letter-spacing:0.14em;text-transform:uppercase;margin-top:2px;">Parque Aventura</div>
+            </td>
+          </tr>
+          <!-- Accent bar -->
+          <tr><td style="height:4px;background:#2d6a4f;line-height:4px;font-size:0;">&nbsp;</td></tr>
+          <!-- Body -->
+          <tr>
+            <td style="padding:28px 32px;color:#1f2937;">
+              <div style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.08em;color:#2d6a4f;margin-bottom:10px;">Novo comunicado</div>
+              ${title ? `<h1 style="margin:0 0 14px;font-size:22px;line-height:1.3;color:#0d2b1f;">${escapeHtml(title)}</h1>` : ''}
+              <p style="margin:0 0 18px;font-size:15px;line-height:1.6;white-space:pre-wrap;color:#374151;">${escapeHtml(body)}</p>
+              <table role="presentation" cellpadding="0" cellspacing="0" style="margin:8px 0 4px;">
+                <tr>
+                  <td style="border-radius:8px;background:#2d6a4f;">
+                    <a href="${url}" style="display:inline-block;padding:12px 26px;color:#ffffff;text-decoration:none;font-size:14px;font-weight:bold;border-radius:8px;">Ver na plataforma</a>
+                  </td>
+                </tr>
+              </table>
+              <p style="margin:20px 0 0;font-size:13px;color:#6b7280;">Publicado por <strong style="color:#374151;">${escapeHtml(author)}</strong></p>
+            </td>
+          </tr>
+          <!-- Footer -->
+          <tr>
+            <td style="background:#f9fafb;border-top:1px solid #e5e7eb;padding:16px 32px;text-align:center;">
+              <p style="margin:0;font-size:12px;color:#9ca3af;line-height:1.5;">
+                Recebeste este email porque fazes parte da equipa Emboscada.
+              </p>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
+  </table>
+</div>
 `;
 
 const ReactionBar = ({ announcement, uid, onToggle, busy }) => (
@@ -134,6 +173,7 @@ const Announcements = () => {
               title: t,
               body: b,
               url: `${window.location.origin}/announcements`,
+              logoUrl: `${window.location.origin}/emboscada_logo.jpg`,
             }),
           });
         } catch (err) {
