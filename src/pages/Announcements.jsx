@@ -2,11 +2,9 @@ import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { getUserColor } from '../utils/avatarColors';
-import { sendEmail } from '../utils/email';
-import { announcementEmail, APP_URL } from '../utils/emailTemplates';
+import { publishAnnouncement } from '../utils/adminApi';
 import {
   getAnnouncements,
-  addAnnouncement,
   updateAnnouncement,
   deleteAnnouncement,
   toggleAnnouncementReaction,
@@ -60,13 +58,14 @@ const ReactionBar = ({ announcement, uid, onToggle, busy }) => (
 );
 
 const Announcements = () => {
-  const { user, profile, isAdmin } = useAuth();
+  const { user, isAdmin } = useAuth();
   const queryClient = useQueryClient();
 
   const [showCreate, setShowCreate] = useState(false);
   const [title, setTitle] = useState('');
   const [body, setBody] = useState('');
   const [publishing, setPublishing] = useState(false);
+  const [publishError, setPublishError] = useState('');
   const [reacting, setReacting] = useState(false);
   const [deleteTarget, setDeleteTarget] = useState(null);
   const [deleting, setDeleting] = useState(false);
@@ -98,36 +97,18 @@ const Announcements = () => {
     const t = title.trim();
     const b = body.trim();
     if (!b) return;
-    const author = `${profile?.firstName ?? ''} ${profile?.lastName ?? ''}`.trim() || 'Admin';
+    setPublishError('');
     setPublishing(true);
     try {
-      await addAnnouncement({ title: t, body: b, authorId: user.uid, authorName: author });
+      // Server-side: creates the announcement AND emails the team in one call,
+      // so closing the tab can't lose the notification.
+      await publishAnnouncement({ title: t, body: b });
       setTitle('');
       setBody('');
       setShowCreate(false);
       invalidate();
-
-      // Notify every other user by email (BCC keeps addresses private)
-      const recipients = users
-        .filter((u) => u.uuid !== user.uid && u.email)
-        .map((u) => u.email);
-      if (recipients.length) {
-        try {
-          await sendEmail({
-            bcc: recipients,
-            subject: `Novo comunicado${t ? `: ${t}` : ''} — Emboscada`,
-            html: announcementEmail({
-              author: profile?.nickname || author,
-              title: t,
-              body: b,
-              url: `${APP_URL}/announcements`,
-            }),
-          });
-        } catch (err) {
-          // Publishing already succeeded — surface but don't block
-          console.error('Falha ao notificar por email:', err);
-        }
-      }
+    } catch (err) {
+      setPublishError(`Erro ao publicar: ${err.message}`);
     } finally {
       setPublishing(false);
     }
@@ -136,6 +117,7 @@ const Announcements = () => {
   const openCreate = () => {
     setTitle('');
     setBody('');
+    setPublishError('');
     setShowCreate(true);
   };
 
@@ -296,6 +278,7 @@ const Announcements = () => {
                 <label htmlFor="annBody">Mensagem</label>
                 <textarea id="annBody" className="form-textarea" rows={9} value={body} onChange={(e) => setBody(e.target.value)} placeholder="Escreve o comunicado..." required />
               </div>
+              {publishError && <div className="error-msg"><span>⚠</span> {publishError}</div>}
               <div className="modal-footer">
                 <button type="button" className="btn-secondary" onClick={() => setShowCreate(false)} disabled={publishing}>Cancelar</button>
                 <button type="submit" className="btn-primary" style={{ marginTop: 0 }} disabled={publishing || !body.trim()}>

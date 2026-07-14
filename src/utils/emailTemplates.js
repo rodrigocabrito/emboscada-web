@@ -51,14 +51,8 @@ const button = (label, url) => `
     </tr>
   </table>`;
 
-// ── Announcement notification ──────────────────────────────────────────────
-export const announcementEmail = ({ author, title, body, url }) => emailShell(`
-  <div style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.08em;color:#2d6a4f;margin-bottom:10px;">Novo comunicado</div>
-  ${title ? `<h1 style="margin:0 0 14px;font-size:22px;line-height:1.3;color:#0d2b1f;">${escapeHtml(title)}</h1>` : ''}
-  <p style="margin:0 0 18px;font-size:15px;line-height:1.6;white-space:pre-wrap;color:#374151;">${escapeHtml(body)}</p>
-  ${button('Ver na plataforma', url)}
-  <p style="margin:20px 0 0;font-size:13px;color:#6b7280;">Publicado por <strong style="color:#374151;">${escapeHtml(author)}</strong></p>
-`);
+// Announcement and welcome emails are built server-side (api/_shared.js and
+// friends) so they can be sent atomically with the actions that trigger them.
 
 // ── Evaluation updated ─────────────────────────────────────────────────────
 export const evaluationEmail = ({ firstName, url }) => emailShell(`
@@ -70,25 +64,3 @@ export const evaluationEmail = ({ firstName, url }) => emailShell(`
   ${button('Ver a minha avaliação', url)}
 `);
 
-// ── Welcome / account created ──────────────────────────────────────────────
-export const welcomeEmail = ({ firstName, email, password, loginUrl, profileUrl }) => emailShell(`
-  <div style="font-size:11px;font-weight:bold;text-transform:uppercase;letter-spacing:0.08em;color:#2d6a4f;margin-bottom:10px;">Bem-vindo(a)</div>
-  <h1 style="margin:0 0 14px;font-size:22px;line-height:1.3;color:#0d2b1f;">A tua conta foi criada</h1>
-  <p style="margin:0 0 16px;font-size:15px;line-height:1.6;color:#374151;">
-    Olá${firstName ? ` <strong>${escapeHtml(firstName)}</strong>` : ''}, o teu email foi registado na plataforma da Emboscada.
-    Podes entrar com as credenciais abaixo:
-  </p>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f9fafb;border:1px solid #e5e7eb;border-radius:8px;margin:0 0 18px;">
-    <tr>
-      <td style="padding:14px 18px;font-size:14px;color:#374151;">
-        <div style="margin-bottom:8px;"><span style="color:#6b7280;">Email:</span> <strong>${escapeHtml(email)}</strong></div>
-        <div><span style="color:#6b7280;">Password:</span> <strong style="font-family:'Courier New',monospace;">${escapeHtml(password)}</strong></div>
-      </td>
-    </tr>
-  </table>
-  <p style="margin:0 0 18px;font-size:14px;line-height:1.6;color:#b45309;background:#fffbeb;border:1px solid #fde68a;border-radius:8px;padding:12px 14px;">
-    <strong>Importante:</strong> por segurança, deves alterar a tua password na página de <strong>Perfil</strong> assim que entrares.
-  </p>
-  ${button('Entrar na plataforma', loginUrl)}
-  <p style="margin:20px 0 0;font-size:13px;color:#6b7280;">Depois de entrares, vai a <a href="${profileUrl}" style="color:#15803d;">Perfil</a> para definir uma nova password.</p>
-`);

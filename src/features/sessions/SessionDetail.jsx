@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
-import { updateSession, adjustAmmoStock } from '../../firebase/firestore';
+import { saveSessionWithAmmo } from '../../firebase/firestore';
 import { useAuth } from '../../context/AuthContext';
 import { isAssignableMonitor } from '../../utils/roles';
 import { useSession } from './hooks/useSession';
@@ -214,44 +214,45 @@ const SessionDetail = () => {
   const saveForm = async (f) => {
     setError('');
     setSaving(true);
-    const oldBullets = session?.bulletsSpent ?? 0;
-    const oldCaliber = session?.caliber || '';
     try {
-      await updateSession(id, {
-        spocName: f.spocName,
-        spocEmail: f.spocEmail,
-        spocPhoneNumber: f.spocPhoneNumber,
-        expectedNumberOfPlayers: parseInt(f.expectedNumberOfPlayers, 10),
-        actualNumberOfPlayers: f.actualNumberOfPlayers !== '' ? parseInt(f.actualNumberOfPlayers, 10) : null,
-        sessionDate: f.sessionDate,
-        sessionTime: f.sessionTime,
-        sessionDatetime: `${f.sessionDate}T${f.sessionTime}`,
-        typeOfSession: f.typeOfSession,
-        caliber: (f.typeOfSession === 'Paintball' || f.typeOfSession === 'Paintball Kids') ? f.caliber : '',
-        status: f.status,
-        additionalComments: f.additionalComments,
-        monitors: f.monitors,
+      // Role-scoped payload: only send the fields this role may change, so
+      // Firestore rules can enforce the same permissions server-side.
+      const payload = {
         packId: f.packId,
         packName: f.packName,
         numPacks: parseFloat(f.numPacks) || 0,
         packPrice: parseFloat(f.packPrice) || 0,
         extras: f.extras.map((e) => ({ ...e, quantity: parseFloat(e.quantity) || 0, unitPrice: parseFloat(e.unitPrice) || 0 })),
         others: f.others.map((o) => ({ ...o, quantity: parseFloat(o.quantity) || 0, unitPrice: parseFloat(o.unitPrice) || 0 })),
-        signal: parseFloat(f.signal) || 0,
-        paymentTypes: f.paymentTypes,
-        cashPaid: f.paymentTypes.includes('cash') ? (parseFloat(f.cashPaid) || 0) : null,
         total: financials.total,
-        bulletsSpent: f.bulletsSpent !== '' ? (parseInt(f.bulletsSpent, 10) || 0) : null,
-      });
-      const newCaliber = (f.typeOfSession === 'Paintball' || f.typeOfSession === 'Paintball Kids') ? f.caliber : '';
-      const newBullets = f.bulletsSpent !== '' ? (parseInt(f.bulletsSpent, 10) || 0) : 0;
-      if (newCaliber === oldCaliber) {
-        const bulletsDelta = newBullets - oldBullets;
-        if (newCaliber && bulletsDelta !== 0) await adjustAmmoStock(-bulletsDelta, newCaliber);
-      } else {
-        if (oldCaliber && oldBullets !== 0) await adjustAmmoStock(oldBullets, oldCaliber);
-        if (newCaliber && newBullets !== 0) await adjustAmmoStock(-newBullets, newCaliber);
+      };
+      if (canPay) {
+        Object.assign(payload, {
+          signal: parseFloat(f.signal) || 0,
+          status: f.status,
+          paymentTypes: f.paymentTypes,
+          cashPaid: f.paymentTypes.includes('cash') ? (parseFloat(f.cashPaid) || 0) : null,
+        });
       }
+      if (canEditSessionData) {
+        Object.assign(payload, {
+          spocName: f.spocName,
+          spocEmail: f.spocEmail,
+          spocPhoneNumber: f.spocPhoneNumber,
+          expectedNumberOfPlayers: parseInt(f.expectedNumberOfPlayers, 10),
+          actualNumberOfPlayers: f.actualNumberOfPlayers !== '' ? parseInt(f.actualNumberOfPlayers, 10) : null,
+          sessionDate: f.sessionDate,
+          sessionTime: f.sessionTime,
+          typeOfSession: f.typeOfSession,
+          caliber: (f.typeOfSession === 'Paintball' || f.typeOfSession === 'Paintball Kids') ? f.caliber : '',
+          additionalComments: f.additionalComments,
+          monitors: f.monitors,
+          bulletsSpent: f.bulletsSpent !== '' ? (parseInt(f.bulletsSpent, 10) || 0) : null,
+        });
+      }
+      // Session update + ammo-stock adjustment happen in a single transaction;
+      // old bullets/caliber are read from the DB inside it (no stale state).
+      await saveSessionWithAmmo(id, payload);
       updateSessionCache(f);
       setDirty(false);
       setSaved(true);

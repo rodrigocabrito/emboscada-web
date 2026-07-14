@@ -1,10 +1,9 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { createUser, updateUserProfile, DEFAULT_PASSWORD } from '../../firebase/auth';
-import { getUsers, deleteUserProfile } from '../../firebase/firestore';
-import { sendEmail } from '../../utils/email';
-import { welcomeEmail, APP_URL } from '../../utils/emailTemplates';
+import { updateUserProfile } from '../../firebase/auth';
+import { getUsers } from '../../firebase/firestore';
+import { adminUsersApi } from '../../utils/adminApi';
 import { ROLE_OPTIONS, roleLabel } from '../../utils/roles';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useScrollLock from '../../hooks/useScrollLock';
@@ -68,49 +67,31 @@ const AdminUsers = () => {
     setCreateError('');
     setCreateSuccess('');
     setCreating(true);
-    // Capture the admin's token before createUser signs us out (Firebase side effect)
-    let adminToken = null;
-    try { adminToken = await user.getIdToken(); } catch { /* proceed without email */ }
-    const newUser = { email: form.email, firstName: form.firstName };
     try {
-      await createUser(form.email, form.firstName, form.lastName, form.role, {
+      // Server-side creation: random password generated and emailed by the
+      // server itself (with admins in CC) — the password never reaches the client.
+      const { emailSent } = await adminUsersApi('create', {
+        email: form.email,
+        firstName: form.firstName,
+        lastName: form.lastName,
+        role: form.role,
         nickname: form.nickname,
         birthday: form.birthday || null,
         startedAt: form.startedAt || null,
       });
 
-      // Welcome email with the default credentials (best-effort — never blocks creation)
-      if (adminToken) {
-        // CC all admins (except the new user themselves, if they were created as admin)
-        const adminEmails = users
-          .filter((u) => u.role === 'admin' && u.email && u.email !== newUser.email)
-          .map((u) => u.email);
-        try {
-          await sendEmail({
-            token: adminToken,
-            to: newUser.email,
-            cc: adminEmails.length ? adminEmails : undefined,
-            subject: 'A tua conta na plataforma Emboscada',
-            html: welcomeEmail({
-              firstName: newUser.firstName,
-              email: newUser.email,
-              password: DEFAULT_PASSWORD,
-              loginUrl: `${APP_URL}/login`,
-              profileUrl: `${APP_URL}/profile`,
-            }),
-          });
-        } catch (err) {
-          console.error('Falha ao enviar email de boas-vindas:', err);
-        }
-      }
-
-      setCreateSuccess(`Utilizador ${form.firstName} ${form.lastName} criado com sucesso. A sessão foi terminada — por favor volta a entrar.`);
+      setCreateSuccess(
+        emailSent
+          ? `Utilizador ${form.firstName} ${form.lastName} criado com sucesso. A password temporária foi enviada por email.`
+          : `Utilizador ${form.firstName} ${form.lastName} criado, mas o email de boas-vindas falhou — contacta o utilizador manualmente.`
+      );
       setForm(EMPTY_FORM);
+      fetchUsers();
     } catch (err) {
-      if (err.code === 'auth/email-already-in-use') {
+      if (err.status === 409) {
         setCreateError('Já existe um utilizador com este email.');
       } else {
-        setCreateError('Erro ao criar utilizador. Tenta novamente.');
+        setCreateError(`Erro ao criar utilizador. ${err.detail || 'Tenta novamente.'}`);
       }
     } finally {
       setCreating(false);
@@ -134,7 +115,8 @@ const AdminUsers = () => {
   const handleDeleteConfirm = async (uid) => {
     setDeleteError('');
     try {
-      await deleteUserProfile(uid);
+      // Server-side deletion removes both the profile and the Auth account
+      await adminUsersApi('delete', { uid });
       setUsers((prev) => prev.filter((u) => u.uuid !== uid));
       setDeletingId(null);
     } catch {

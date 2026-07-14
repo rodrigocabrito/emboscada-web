@@ -18,6 +18,11 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
     return <Navigate to="/home" replace />;
   }
 
+  // First login with a temporary password: force a password change in Profile
+  if (profile.mustChangePassword && location.pathname !== '/profile') {
+    return <Navigate to="/profile" replace />;
+  }
+
   return children;
 };
 

@@ -146,6 +146,7 @@ const Profile = () => {
     setPwLoading(true);
     try {
       await changePassword(pwForm.current, pwForm.next);
+      await refreshProfile(); // clears the mustChangePassword flag from context
       setPwSuccess('Password alterada com sucesso.');
       setPwForm({ current: '', next: '', confirm: '' });
     } catch (err) {
@@ -170,6 +171,12 @@ const Profile = () => {
         <h1>Perfil</h1>
         <p>Gere as tuas informações pessoais e credenciais de acesso.</p>
       </div>
+
+      {profile?.mustChangePassword && (
+        <div style={{ background: '#fffbeb', border: '1px solid #fde68a', borderRadius: '0.5rem', padding: '0.85rem 1.1rem', marginBottom: '1.5rem', fontSize: '0.9rem', color: '#b45309' }}>
+          <strong>⚠ Altera a tua password.</strong> Estás a usar a password temporária enviada por email — define uma nova em «Alterar Password» para continuares a usar a plataforma.
+        </div>
+      )}
 
       <div className="profile-grid">
         {/* Avatar and Stats column */}

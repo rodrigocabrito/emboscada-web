@@ -1,6 +1,5 @@
 import { auth, db } from './config';
 import {
-  createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
   signOut,
   onAuthStateChanged,
@@ -10,37 +9,14 @@ import {
 } from 'firebase/auth';
 import {
   doc,
-  setDoc,
   getDoc,
   updateDoc,
   serverTimestamp,
 } from 'firebase/firestore';
 
-export const DEFAULT_PASSWORD = 'Emboscada1234#';
-
-// Create a new user (logs out current admin as a Firebase side effect)
-export const createUser = async (email, firstName, lastName, role, additionalData = {}) => {
-  // Create Firebase Auth user
-  const userCredential = await createUserWithEmailAndPassword(auth, email, DEFAULT_PASSWORD);
-  const user = userCredential.user;
-
-  // Save profile to Firestore
-  await setDoc(doc(db, 'users', user.uid), {
-    uuid: user.uid,
-    email,
-    firstName,
-    lastName,
-    role,
-    ...additionalData,
-    createdAt: serverTimestamp(),
-    updatedAt: serverTimestamp(),
-  });
-
-  // Log out the newly created user so admin can re-login
-  await signOut(auth);
-
-  return user;
-};
+// User creation/deletion is handled server-side via /api/admin-users
+// (see src/utils/adminApi.js) so the admin never gets signed out and
+// account credentials never live in the client bundle.
 
 // Login
 export const loginUser = async (email, password) => {
@@ -79,4 +55,8 @@ export const changePassword = async (currentPassword, newPassword) => {
   const credential = EmailAuthProvider.credential(user.email, currentPassword);
   await reauthenticateWithCredential(user, credential);
   await updatePassword(user, newPassword);
+  // Clear the first-login flag (best-effort — the password change already succeeded)
+  try {
+    await updateDoc(doc(db, 'users', user.uid), { mustChangePassword: false, updatedAt: serverTimestamp() });
+  } catch { /* non-blocking */ }
 };

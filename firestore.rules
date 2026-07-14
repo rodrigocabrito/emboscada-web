@@ -24,13 +24,21 @@ service cloud.firestore {
         && userDoc().role == 'admin';
     }
 
+    function hasRole(r) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().role == r;
+    }
+
     // ── Users ────────────────────────────────────────────────────────────────
     // Everyone signed in can read the roster (team page, monitor pickers, name
-    // lookups). A user may create/update their OWN doc, but may NOT change their
-    // own role (prevents privilege escalation). Admins can do anything.
+    // lookups). User docs are CREATED server-side only (/api/admin-users, via
+    // service account — bypasses these rules), so clients never create them.
+    // A user may update their OWN doc but may NOT change their own role
+    // (prevents privilege escalation). Admins can do anything.
     match /users/{userId} {
       allow read: if signedIn();
-      allow create: if request.auth.uid == userId || isAdmin();
+      allow create: if false;
       allow update: if isAdmin()
         || (request.auth.uid == userId
             && request.resource.data.role == resource.data.role);
@@ -58,9 +66,23 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // ── Sessions — staff read & write (monitors edit their sessions) ───────────
+    // ── Sessions ───────────────────────────────────────────────────────────────
+    // Staff read/create. Updates are field-scoped by role:
+    //  - admin: everything
+    //  - monitor_leader: line items (packs/extras/others) + payment fields
+    //  - monitor: line items only
     match /sessions/{docId} {
-      allow read, write: if signedIn();
+      allow read, create: if signedIn();
+      allow delete: if isAdmin();
+      allow update: if isAdmin()
+        || (hasRole('monitor_leader')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                 ['packId', 'packName', 'numPacks', 'packPrice', 'extras', 'others', 'total',
+                  'signal', 'status', 'paymentTypes', 'cashPaid', 'updatedAt']))
+        || (hasRole('monitor')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                 ['packId', 'packName', 'numPacks', 'packPrice', 'extras', 'others', 'total',
+                  'updatedAt']));
     }
 
     // ── Availability — a user manages only their own entries; staff can read ───
@@ -71,11 +93,14 @@ service cloud.firestore {
     }
 
     // ── Announcements ──────────────────────────────────────────────────────────
-    // Everyone reads; admins create/edit/delete. Any signed-in user may update
+    // Everyone reads; publishing happens server-side only (/api/publish-announcement,
+    // via service account — bypasses these rules) so the notification email is sent
+    // atomically with the write. Admins edit/delete. Any signed-in user may update
     // ONLY the reactions map (to add/remove their own reaction).
     match /announcements/{docId} {
       allow read: if signedIn();
-      allow create, delete: if isAdmin();
+      allow create: if false;
+      allow delete: if isAdmin();
       allow update: if isAdmin()
         || (signedIn()
             && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));

@@ -15,7 +15,7 @@ import {
   startAfter,
   getCountFromServer,
   serverTimestamp,
-  increment,
+  runTransaction,
   arrayUnion,
   arrayRemove,
   Timestamp,
@@ -45,9 +45,8 @@ export const getUsers = async (): Promise<User[]> => {
   return snapshot.docs.map((d) => ({ uuid: d.id, ...d.data() }) as User);
 };
 
-export const deleteUserProfile = async (uid: string): Promise<void> => {
-  await deleteDoc(doc(db, 'users', uid));
-};
+// User deletion is handled server-side via /api/admin-users so the
+// Auth account is removed together with the profile.
 
 // ─── EVALUATIONS ─────────────────────────────────────────────────────────────
 
@@ -101,12 +100,12 @@ export const getAmmoStocks = async (): Promise<Record<string, number>> => {
 export const adjustAmmoStock = async (delta: number, caliber: string): Promise<void> => {
   if (!caliber) return;
   const ref = doc(db, 'ammo', ammoStockDocId(caliber));
-  const snap = await getDoc(ref);
-  if (snap.exists()) {
-    await updateDoc(ref, { currentStock: increment(delta), updatedAt: serverTimestamp() });
-  } else {
-    await setDoc(ref, { currentStock: delta, updatedAt: serverTimestamp() });
-  }
+  // Transaction: atomic read-modify-write, safe under concurrent adjustments
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(ref);
+    const current = snap.exists() ? ((snap.data().currentStock as number) ?? 0) : 0;
+    tx.set(ref, { currentStock: current + delta, updatedAt: serverTimestamp() }, { merge: true });
+  });
 };
 
 export const addAmmoRestock = async (amount: number, date: string, note: string, caliber: string): Promise<void> => {
@@ -192,11 +191,8 @@ export const getAnnouncements = async (): Promise<Announcement[]> => {
   return snap.docs.map((d) => ({ id: d.id, reactions: {}, ...d.data() }) as Announcement);
 };
 
-export const addAnnouncement = async (
-  data: { title: string; body: string; authorId: string; authorName: string }
-): Promise<void> => {
-  await addDoc(collection(db, 'announcements'), { ...data, reactions: {}, createdAt: serverTimestamp() });
-};
+// Announcement creation happens server-side (/api/publish-announcement) so the
+// team notification email is sent atomically with the write.
 
 export const updateAnnouncement = async (
   id: string,
@@ -461,6 +457,52 @@ export const updateSession = async (id: string, data: UpdateSessionInput): Promi
     updateData.sessionDatetime = `${data.sessionDate}T${data.sessionTime}`;
   }
   await updateDoc(doc(db, 'sessions', id), updateData);
+};
+
+// Saves a session AND applies the resulting ammo-stock deltas in a single
+// transaction. Old bullets/caliber are read from the database inside the
+// transaction (not from client state), so concurrent edits and live-listener
+// staleness can't corrupt the stock.
+export const saveSessionWithAmmo = async (id: string, data: UpdateSessionInput): Promise<void> => {
+  const sessionRef = doc(db, 'sessions', id);
+  await runTransaction(db, async (tx) => {
+    const snap = await tx.get(sessionRef);
+    if (!snap.exists()) throw new Error('Session not found');
+    const old = snap.data() as Session;
+
+    const oldCaliber = old.caliber || '';
+    const oldBullets = old.bulletsSpent ?? 0;
+    // Fields absent from the payload (e.g. non-admin saves) mean "unchanged"
+    const newCaliber = data.caliber !== undefined ? (data.caliber || '') : oldCaliber;
+    const newBullets = data.bulletsSpent !== undefined ? (data.bulletsSpent ?? 0) : oldBullets;
+
+    // Per-caliber stock deltas (positive = bullets returned to stock)
+    const deltas: Record<string, number> = {};
+    if (newCaliber === oldCaliber) {
+      if (newCaliber && newBullets !== oldBullets) deltas[newCaliber] = -(newBullets - oldBullets);
+    } else {
+      if (oldCaliber && oldBullets !== 0) deltas[oldCaliber] = (deltas[oldCaliber] ?? 0) + oldBullets;
+      if (newCaliber && newBullets !== 0) deltas[newCaliber] = (deltas[newCaliber] ?? 0) - newBullets;
+    }
+
+    // All reads must happen before writes in a Firestore transaction
+    const entries = Object.entries(deltas).filter(([, d]) => d !== 0);
+    const stockSnaps = [];
+    for (const [cal] of entries) {
+      stockSnaps.push(await tx.get(doc(db, 'ammo', ammoStockDocId(cal))));
+    }
+
+    const updateData: Record<string, unknown> = { ...data, updatedAt: serverTimestamp() };
+    if (data.sessionDate || data.sessionTime) {
+      updateData.sessionDatetime = `${data.sessionDate}T${data.sessionTime}`;
+    }
+    tx.update(sessionRef, updateData);
+
+    entries.forEach(([cal, delta], i) => {
+      const current = stockSnaps[i].exists() ? ((stockSnaps[i].data()!.currentStock as number) ?? 0) : 0;
+      tx.set(doc(db, 'ammo', ammoStockDocId(cal)), { currentStock: current + delta, updatedAt: serverTimestamp() }, { merge: true });
+    });
+  });
 };
 
 export const deleteSession = async (id: string): Promise<void> => {

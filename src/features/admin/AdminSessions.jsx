@@ -86,18 +86,22 @@ const AdminSessions = () => {
   }), [appliedFilters]);
 
   const hasTextFilter = !!(appliedFilters.name || appliedFilters.email || appliedFilters.phoneNumber);
+  // Firestore only applies one 'in' filter server-side, so combining type+status
+  // needs the fetch-all path — otherwise server pages get truncated client-side.
+  const hasCombinedFilter = !!(appliedFilters.typeOfSession.length && appliedFilters.status.length);
+  const fetchAll = hasTextFilter || hasCombinedFilter;
 
-  const { sessions: pagedSessions, hasMore, totalCount, loading: pagedLoading, loadingMore, loadMore } = useSessionsPage(serverFilters, 30, !hasTextFilter);
+  const { sessions: pagedSessions, hasMore, totalCount, loading: pagedLoading, loadingMore, loadMore } = useSessionsPage(serverFilters, 30, !fetchAll);
 
   const { data: allSessions = [], isLoading: allLoading } = useQuery({
     queryKey: ['sessions-all', serverFilters],
     queryFn: () => getSessionsAll(serverFilters),
-    enabled: hasTextFilter,
+    enabled: fetchAll,
     staleTime: 60_000,
   });
 
-  const sessions = hasTextFilter ? allSessions : pagedSessions;
-  const loading = hasTextFilter ? allLoading : pagedLoading;
+  const sessions = fetchAll ? allSessions : pagedSessions;
+  const loading = fetchAll ? allLoading : pagedLoading;
 
   useEffect(() => {
     setSort({ field: null, dir: null });
@@ -186,8 +190,8 @@ const AdminSessions = () => {
   }, [filtered, sort]);
 
   const TEXT_PAGE_SIZE = 30;
-  const visibleSessions = hasTextFilter ? sortedFiltered.slice(0, textPage * TEXT_PAGE_SIZE) : sortedFiltered;
-  const hasMoreText = hasTextFilter && sortedFiltered.length > textPage * TEXT_PAGE_SIZE;
+  const visibleSessions = fetchAll ? sortedFiltered.slice(0, textPage * TEXT_PAGE_SIZE) : sortedFiltered;
+  const hasMoreText = fetchAll && sortedFiltered.length > textPage * TEXT_PAGE_SIZE;
 
   const hasFilters = !!(
     appliedFilters.name || appliedFilters.email || appliedFilters.phoneNumber ||
@@ -305,13 +309,13 @@ const AdminSessions = () => {
               Carregar Mais
             </button>
           )}
-          {!hasTextFilter && hasMore && (
+          {!fetchAll && hasMore && (
             <button className="btn-secondary" style={{ width: 'auto' }} onClick={handleLoadMore} disabled={loadingMore}>
               {loadingMore ? 'A carregar...' : 'Carregar Mais'}
             </button>
           )}
           <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', margin: 0 }}>
-            {hasTextFilter
+            {fetchAll
               ? `A mostrar ${visibleSessions.length} de ${sortedFiltered.length} resultados`
               : `A mostrar ${sessions.length} de ${totalCount ?? '...'}`}
           </p>
