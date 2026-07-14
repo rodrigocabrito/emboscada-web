@@ -12,7 +12,7 @@ export type SessionStatus = 'pending_payment' | 'active' | 'done' | 'cancelled' 
 
 export type PaymentType = 'card' | 'mbway' | 'cash';
 
-export type UserRole = 'admin' | 'monitor' | 'customer';
+export type UserRole = 'admin' | 'monitor_leader' | 'monitor' | 'customer';
 
 export interface LineItem {
   catalogId: string;

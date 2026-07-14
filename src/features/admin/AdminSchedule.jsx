@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getSessionsAll, getAvailabilityForDate, getUsers, updateSession } from '../../firebase/firestore';
 import { getUserColor } from '../../utils/avatarColors';
+import { isAssignableMonitor } from '../../utils/roles';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
 const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
@@ -418,7 +419,7 @@ const AdminSchedule = () => {
   });
 
   const monitors = useMemo(
-    () => users.filter((u) => u.role === 'monitor' || u.role === 'admin'),
+    () => users.filter((u) => isAssignableMonitor(u.role)),
     [users]
   );
   const usersById = useMemo(() => Object.fromEntries(users.map((u) => [u.uuid, u])), [users]);

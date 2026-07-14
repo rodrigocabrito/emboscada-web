@@ -1,19 +1,13 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../../context/AuthContext';
-import { createUser, DEFAULT_PASSWORD } from '../../firebase/auth';
+import { createUser, updateUserProfile, DEFAULT_PASSWORD } from '../../firebase/auth';
 import { getUsers, deleteUserProfile } from '../../firebase/firestore';
 import { sendEmail } from '../../utils/email';
 import { welcomeEmail, APP_URL } from '../../utils/emailTemplates';
+import { ROLE_OPTIONS, roleLabel } from '../../utils/roles';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useScrollLock from '../../hooks/useScrollLock';
-
-const ROLES = [
-  { label: 'Administrador(a)', value: 'admin' },
-  { label: 'Monitor(a)', value: 'monitor' },
-];
-
-const ROLE_LABEL = { admin: 'Administrador(a)', monitor: 'Monitor(a)' };
 
 const EMPTY_FORM = { email: '', firstName: '', lastName: '', nickname: '', birthday: '', startedAt: '', role: 'monitor' };
 
@@ -123,6 +117,20 @@ const AdminUsers = () => {
     }
   };
 
+  const [roleChanging, setRoleChanging] = useState(false);
+  const changeRole = async (u, newRole) => {
+    setRoleChanging(true);
+    try {
+      await updateUserProfile(u.uuid, { role: newRole });
+      setUsers((prev) => prev.map((x) => (x.uuid === u.uuid ? { ...x, role: newRole } : x)));
+      setViewingUser((prev) => (prev && prev.uuid === u.uuid ? { ...prev, role: newRole } : prev));
+    } catch {
+      // silently fail
+    } finally {
+      setRoleChanging(false);
+    }
+  };
+
   const handleDeleteConfirm = async (uid) => {
     setDeleteError('');
     try {
@@ -207,7 +215,7 @@ const AdminUsers = () => {
                     <td className="td-muted">{u.email}</td>
                     <td>
                       <span className={`role-badge role-${u.role}`}>
-                        {ROLE_LABEL[u.role] ?? u.role}
+                        {roleLabel(u.role)}
                       </span>
                     </td>
                     <td className="td-actions">
@@ -282,7 +290,7 @@ const AdminUsers = () => {
                 { label: 'Alcunha', value: viewingUser.nickname || '—' },
                 { label: 'Email', value: viewingUser.email },
                 { label: 'Telemóvel', value: viewingUser.phone || '—' },
-                { label: 'Função', value: viewingUser.role === 'admin' ? 'Administrador(a)' : 'Monitor(a)' },
+                { label: 'Função', value: roleLabel(viewingUser.role) },
                 { label: 'Data de Nascimento', value: viewingUser.birthday ? new Date(viewingUser.birthday).toLocaleDateString('pt-PT') : '—' },
                 { label: 'Membro desde', value: viewingUser.startedAt ? new Date(viewingUser.startedAt).toLocaleDateString('pt-PT') : '—' },
               ].map(({ label, value }) => (
@@ -293,6 +301,16 @@ const AdminUsers = () => {
               ))}
             </div>
             <div className="modal-footer">
+              {viewingUser.role === 'monitor' && (
+                <button className="btn-primary" style={{ marginTop: 0 }} disabled={roleChanging} onClick={() => changeRole(viewingUser, 'monitor_leader')}>
+                  {roleChanging ? 'A atualizar...' : 'Promover a Líder'}
+                </button>
+              )}
+              {viewingUser.role === 'monitor_leader' && (
+                <button className="btn-secondary" style={{ marginTop: 0 }} disabled={roleChanging} onClick={() => changeRole(viewingUser, 'monitor')}>
+                  {roleChanging ? 'A atualizar...' : 'Despromover a Monitor'}
+                </button>
+              )}
               <button className="btn-secondary" onClick={() => setViewingUser(null)}>Fechar</button>
             </div>
           </div>
@@ -393,7 +411,7 @@ const AdminUsers = () => {
                   className="form-select"
                   required
                 >
-                  {ROLES.map((r) => (
+                  {ROLE_OPTIONS.map((r) => (
                     <option key={r.value} value={r.value}>{r.label}</option>
                   ))}
                 </select>

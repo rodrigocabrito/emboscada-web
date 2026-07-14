@@ -2042,6 +2042,11 @@ body {
   color: #3730a3;
 }
 
+.role-monitor_leader {
+  background: #fef3c7;
+  color: #92400e;
+}
+
 .role-monitor {
   background: var(--green-100);
   color: var(--green-700);

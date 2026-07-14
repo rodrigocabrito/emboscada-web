@@ -1,6 +1,7 @@
 import { useState, useEffect, useMemo } from 'react';
 import { getUsers, getSessions } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
+import { roleLabel } from '../utils/roles';
 import useEscapeKey from '../hooks/useEscapeKey';
 
 const getAchievements = (startedAt) => {
@@ -49,7 +50,7 @@ const UserCard = ({ user, onSelect, sessionCount }) => {
         <div className="team-user-name">{user.firstName} {user.lastName}</div>
         {user.nickname && <div className="team-user-nickname">{user.nickname}</div>}
         <div className="team-user-role">
-          {user.role === 'admin' ? 'Administrador' : 'Monitor'}
+          {roleLabel(user.role)}
         </div>
 
         <div style={{ display: 'flex', gap: '1rem', justifyContent: 'space-between', marginTop: '0.75rem', paddingTop: '0.75rem', borderTop: '1px solid var(--border)' }}>
@@ -97,7 +98,7 @@ const UserModal = ({ user, onClose, sessionCount }) => {
           </div>
 
           {user.nickname && <p className="profile-nickname">{user.nickname}</p>}
-          <p className="profile-role">{user.role === 'admin' ? 'Administrador' : 'Monitor'}</p>
+          <p className="profile-role">{roleLabel(user.role)}</p>
 
           <div style={{ display: 'flex', gap: '2rem', justifyContent: 'center', width: '100%' }}>
             <div style={{ textAlign: 'center' }}>
@@ -188,6 +189,7 @@ const Team = () => {
   }, [sessions]);
 
   const admins = users.filter((u) => u.role === 'admin');
+  const leaders = users.filter((u) => u.role === 'monitor_leader');
   const monitors = users.filter((u) => u.role === 'monitor');
 
   return (
@@ -208,6 +210,17 @@ const Team = () => {
               <h2 className="section-title">Administradores</h2>
               <div className="team-grid">
                 {admins.map((user) => (
+                  <UserCard key={user.uuid} user={user} onSelect={setSelectedUser} sessionCount={sessionCountMap[user.uuid] || 0} />
+                ))}
+              </div>
+            </div>
+          )}
+
+          {leaders.length > 0 && (
+            <div className="team-section">
+              <h2 className="section-title">Monitores Líder</h2>
+              <div className="team-grid">
+                {leaders.map((user) => (
                   <UserCard key={user.uuid} user={user} onSelect={setSelectedUser} sessionCount={sessionCountMap[user.uuid] || 0} />
                 ))}
               </div>

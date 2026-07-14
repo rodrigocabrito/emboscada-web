@@ -1,6 +1,8 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { updateSession, adjustAmmoStock } from '../../firebase/firestore';
+import { useAuth } from '../../context/AuthContext';
+import { isAssignableMonitor } from '../../utils/roles';
 import { useSession } from './hooks/useSession';
 import LineItemsTable from './components/LineItemsTable';
 import PaymentModal from './components/PaymentModal';
@@ -45,6 +47,14 @@ const SessionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { state: navState } = useLocation();
+  const { profile } = useAuth();
+
+  // Permissions:
+  //  - admin           → edit everything + pay
+  //  - monitor_leader  → edit packs/extras/others + pay (session data view-only)
+  //  - monitor         → edit packs/extras/others (session data view-only, no pay)
+  const canEditSessionData = profile?.role === 'admin';
+  const canPay = profile?.role === 'admin' || profile?.role === 'monitor_leader';
 
   const { session, updateSessionCache, users, catalogItems, loading } = useSession(id);
   const [form, setForm] = useState(null);
@@ -294,7 +304,7 @@ const SessionDetail = () => {
   if (loading) return <div className="page"><p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '3rem' }}>A carregar…</p></div>;
   if (!form) return <div className="page"><p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '3rem' }}>Sessão não encontrada.</p></div>;
 
-  const monitorUsers = users.filter((u) => u.role === 'monitor' || u.role === 'admin');
+  const monitorUsers = users.filter((u) => isAssignableMonitor(u.role));
 
   return (
     <div className="page page-session-detail">
@@ -315,41 +325,46 @@ const SessionDetail = () => {
 
         {/* ── Card 1: Sessão ── */}
         <div className="session-detail-card">
+          {!canEditSessionData && (
+            <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', background: 'var(--surface-alt, #f3f4f6)', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.6rem 0.8rem', margin: '0 0 1rem' }}>
+              🔒 Apenas administradores podem editar os dados da sessão.
+            </p>
+          )}
           <div className="form-group">
             <label htmlFor="spocName">Responsável (Cliente)</label>
-            <input id="spocName" name="spocName" type="text" value={form.spocName} onChange={handleChange} placeholder="Nome do responsável" required />
+            <input id="spocName" name="spocName" type="text" value={form.spocName} onChange={handleChange} placeholder="Nome do responsável" required disabled={!canEditSessionData} />
           </div>
 
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="spocEmail">Email</label>
-              <input id="spocEmail" name="spocEmail" type="email" value={form.spocEmail} onChange={handleChange} placeholder="email@exemplo.com" />
+              <input id="spocEmail" name="spocEmail" type="email" value={form.spocEmail} onChange={handleChange} placeholder="email@exemplo.com" disabled={!canEditSessionData} />
             </div>
             <div className="form-group">
               <label htmlFor="spocPhoneNumber">Telemóvel</label>
-              <input id="spocPhoneNumber" name="spocPhoneNumber" type="tel" value={form.spocPhoneNumber} onChange={handleChange} placeholder="+351 9XX XXX XXX" />
+              <input id="spocPhoneNumber" name="spocPhoneNumber" type="tel" value={form.spocPhoneNumber} onChange={handleChange} placeholder="+351 9XX XXX XXX" disabled={!canEditSessionData} />
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="expectedNumberOfPlayers">Nº de Jogadores (Esperado)</label>
-              <input id="expectedNumberOfPlayers" name="expectedNumberOfPlayers" type="number" min="1" value={form.expectedNumberOfPlayers} onChange={handleChange} required />
+              <input id="expectedNumberOfPlayers" name="expectedNumberOfPlayers" type="number" min="1" value={form.expectedNumberOfPlayers} onChange={handleChange} required disabled={!canEditSessionData} />
             </div>
             <div className="form-group">
               <label htmlFor="actualNumberOfPlayers">Nº de Jogadores (Real)</label>
-              <input id="actualNumberOfPlayers" name="actualNumberOfPlayers" type="number" min="0" value={form.actualNumberOfPlayers} onChange={handleChange} placeholder="—" />
+              <input id="actualNumberOfPlayers" name="actualNumberOfPlayers" type="number" min="0" value={form.actualNumberOfPlayers} onChange={handleChange} placeholder="—" disabled={!canEditSessionData} />
             </div>
           </div>
 
           <div className="form-row">
             <div className="form-group">
               <label htmlFor="sessionDate">Data</label>
-              <input id="sessionDate" name="sessionDate" type="date" value={form.sessionDate} onChange={handleChange} required />
+              <input id="sessionDate" name="sessionDate" type="date" value={form.sessionDate} onChange={handleChange} required disabled={!canEditSessionData} />
             </div>
             <div className="form-group">
               <label htmlFor="sessionTime">Hora</label>
-              <select id="sessionTime" name="sessionTime" value={form.sessionTime} onChange={handleChange} className="form-select" required>
+              <select id="sessionTime" name="sessionTime" value={form.sessionTime} onChange={handleChange} className="form-select" required disabled={!canEditSessionData}>
                 <option value="">-- Selecionar hora --</option>
                 {TIME_SLOTS.map((t) => <option key={t} value={t}>{t}</option>)}
               </select>
@@ -358,7 +373,7 @@ const SessionDetail = () => {
 
           <div className="form-group">
             <label htmlFor="typeOfSession">Tipo de Sessão</label>
-            <select id="typeOfSession" name="typeOfSession" value={form.typeOfSession} onChange={handleChange} className="form-select" required>
+            <select id="typeOfSession" name="typeOfSession" value={form.typeOfSession} onChange={handleChange} className="form-select" required disabled={!canEditSessionData}>
               <option value="">-- Selecionar tipo --</option>
               {SESSION_TYPES.map((t) => <option key={t} value={t}>{t}</option>)}
             </select>
@@ -369,7 +384,7 @@ const SessionDetail = () => {
               <label>Calibre</label>
               <div className="caliber-toggle">
                 {['.50', '.68'].map((c) => (
-                  <button key={c} type="button" className={`caliber-btn${form.caliber === c ? ' active' : ''}`}
+                  <button key={c} type="button" className={`caliber-btn${form.caliber === c ? ' active' : ''}`} disabled={!canEditSessionData}
                     onClick={() => { if (form.caliber === c) return; setForm((prev) => ({ ...prev, caliber: c })); setDirty(true); }}>
                     {c}
                   </button>
@@ -390,7 +405,7 @@ const SessionDetail = () => {
                 value={form.bulletsSpent}
                 onChange={handleChange}
                 placeholder="—"
-                disabled={['Paintball', 'Paintball Kids'].includes(form.typeOfSession) && !form.caliber}
+                disabled={!canEditSessionData || (['Paintball', 'Paintball Kids'].includes(form.typeOfSession) && !form.caliber)}
               />
               {['Paintball', 'Paintball Kids'].includes(form.typeOfSession) && !form.caliber && (
                 <p style={{ fontSize: '0.78rem', color: '#dc2626', marginTop: '0.3rem', marginBottom: 0 }}>
@@ -404,9 +419,9 @@ const SessionDetail = () => {
             <label>Estado da Sessão</label>
             <div style={{ display: 'flex', gap: '0.4rem', flexWrap: 'wrap', marginTop: '0.5rem' }}>
               {STATUS_OPTIONS.map((s) => (
-                <button key={s.value} type="button" onClick={() => { setForm((prev) => ({ ...prev, status: s.value })); setDirty(true); }}
+                <button key={s.value} type="button" disabled={!canEditSessionData} onClick={() => { setForm((prev) => ({ ...prev, status: s.value })); setDirty(true); }}
                   className={`badge ${getStatusBadgeClass(s.value)}`}
-                  style={{ cursor: 'pointer', border: 'none', fontSize: '0.78rem', padding: '0.25rem 0.6rem', opacity: form.status === s.value ? 1 : 0.5, boxShadow: form.status === s.value ? '0 0 0 2px rgba(0,0,0,0.2)' : 'none', transform: form.status === s.value ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.15s ease' }}>
+                  style={{ cursor: canEditSessionData ? 'pointer' : 'default', border: 'none', fontSize: '0.78rem', padding: '0.25rem 0.6rem', opacity: form.status === s.value ? 1 : 0.5, boxShadow: form.status === s.value ? '0 0 0 2px rgba(0,0,0,0.2)' : 'none', transform: form.status === s.value ? 'scale(1.05)' : 'scale(1)', transition: 'all 0.15s ease' }}>
                   {form.status === s.value ? '✓ ' : ''}{s.label}
                 </button>
               ))}
@@ -415,12 +430,12 @@ const SessionDetail = () => {
 
           <div className="form-group">
             <label htmlFor="additionalComments">Comentários adicionais</label>
-            <textarea id="additionalComments" name="additionalComments" value={form.additionalComments} onChange={handleChange} className="form-textarea" placeholder="Notas, requisitos especiais..." rows={3} />
+            <textarea id="additionalComments" name="additionalComments" value={form.additionalComments} onChange={handleChange} className="form-textarea" placeholder="Notas, requisitos especiais..." rows={3} disabled={!canEditSessionData} />
           </div>
 
           <div className="form-group">
             <label>Monitores</label>
-            <input type="text" value={monitorSearch} onChange={(e) => setMonitorSearch(e.target.value)} placeholder="Pesquisa por nome ou alcunha..." style={{ marginBottom: '0.5rem' }} />
+            <input type="text" value={monitorSearch} onChange={(e) => setMonitorSearch(e.target.value)} placeholder="Pesquisa por nome ou alcunha..." style={{ marginBottom: '0.5rem' }} disabled={!canEditSessionData} />
             {(() => {
               const visible = monitorUsers.filter((u) => {
                 if (form.monitors.includes(u.uuid)) return true;
@@ -433,7 +448,7 @@ const SessionDetail = () => {
                 <div className="monitors-checklist">
                   {visible.map((u) => (
                     <div key={u.uuid} className="form-checkbox-item">
-                      <input id={`monitor-${u.uuid}`} type="checkbox" checked={form.monitors.includes(u.uuid)} onChange={() => toggleMonitor(u.uuid)} />
+                      <input id={`monitor-${u.uuid}`} type="checkbox" checked={form.monitors.includes(u.uuid)} onChange={() => toggleMonitor(u.uuid)} disabled={!canEditSessionData} />
                       <label htmlFor={`monitor-${u.uuid}`}>{u.nickname || `${u.firstName} ${u.lastName}`}{u.nickname ? ` (${u.firstName} ${u.lastName})` : ''}</label>
                     </div>
                   ))}
@@ -526,15 +541,17 @@ const SessionDetail = () => {
               <div className="financial-row financial-row--deduct"><span>Sinal</span><span>− {fmt(financials.signalAmount)} €</span></div>
               <div className="financial-row financial-row--total"><span>Total</span><span>{fmt(financials.total)} €</span></div>
             </div>
-            <button
-              type="button"
-              className="btn-primary"
-              style={{ width: '100%', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
-              onClick={() => session.status === 'done' ? setConfirmPayModal(true) : setPayModal(true)}
-            >
-              {session.status === 'done' && <img src="/green-check.png" alt="" style={{ width: '18px', height: '18px' }} />}
-              {session.status === 'done' ? 'Pago' : 'Pagar'}
-            </button>
+            {canPay && (
+              <button
+                type="button"
+                className="btn-primary"
+                style={{ width: '100%', marginTop: '1rem', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem' }}
+                onClick={() => session.status === 'done' ? setConfirmPayModal(true) : setPayModal(true)}
+              >
+                {session.status === 'done' && <img src="/green-check.png" alt="" style={{ width: '18px', height: '18px' }} />}
+                {session.status === 'done' ? 'Pago' : 'Pagar'}
+              </button>
+            )}
           </div>{/* end card 5 */}
 
           </div>{/* end financial items col */}

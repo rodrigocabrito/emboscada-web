@@ -32,10 +32,11 @@ export const AuthProvider = ({ children }) => {
   };
 
   const isAdmin = profile?.role === 'admin';
+  const isMonitorLeader = profile?.role === 'monitor_leader';
   const isCustomer = profile?.role === 'customer';
 
   return (
-    <AuthContext.Provider value={{ user, profile, loading, isAdmin, isCustomer, refreshProfile }}>
+    <AuthContext.Provider value={{ user, profile, loading, isAdmin, isMonitorLeader, isCustomer, refreshProfile }}>
       {!loading && children}
     </AuthContext.Provider>
   );

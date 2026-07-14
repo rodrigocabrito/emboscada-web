@@ -5,6 +5,7 @@ import { useAuth } from '../context/AuthContext';
 import { updateUserProfile, changePassword, logoutUser } from '../firebase/auth';
 import { getSessions, getEvaluation } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
+import { roleLabel } from '../utils/roles';
 
 const SCALE = [
   { value: 0, selBg: '#e5e7eb', selColor: '#374151' },
@@ -179,7 +180,7 @@ const Profile = () => {
             </div>
             <p className="profile-name">{profile?.firstName} {profile?.lastName}</p>
             {profile?.nickname && <p className="profile-nickname">{profile.nickname}</p>}
-            <p className="profile-role">{profile?.role === 'admin' ? 'Administrador(a)' : 'Monitor(a)'}</p>
+            <p className="profile-role">{roleLabel(profile?.role)}</p>
           </div>
 
           <div className="card" style={{ marginTop: '1rem', padding: '2rem', textAlign: 'center' }}>
