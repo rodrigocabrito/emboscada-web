@@ -1,4 +1,4 @@
-import { useState, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import { addSession } from '../../firebase/firestore';
 import { useSessions } from './hooks/useSessions';
@@ -507,13 +507,11 @@ const Sessions = () => {
   const navigate = useNavigate();
   const location = useLocation();
   const [view, setView] = useState('day');
-  const { sessions, users, refetchSessions } = useSessions();
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
-  const [monitorSearch, setMonitorSearch] = useState('');
   const [selectedSession, setSelectedSession] = useState(null);
   const [currentDate, setCurrentDate] = useState(() => {
     const ret = location.state?.returnDate;
@@ -522,11 +520,28 @@ const Sessions = () => {
   });
   const [hideCancelled, setHideCancelled] = useState(false);
 
+  // Months ("YYYY-MM") covering the visible range — a week view can span two
+  const months = useMemo(() => {
+    const fmt = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+    const set = new Set([fmt(currentDate)]);
+    if (view === 'week') {
+      const weekStart = new Date(currentDate);
+      const day = weekStart.getDay();
+      weekStart.setDate(weekStart.getDate() - day + (day === 0 ? -6 : 1)); // Monday
+      const weekEnd = new Date(weekStart);
+      weekEnd.setDate(weekEnd.getDate() + 6);
+      set.add(fmt(weekStart));
+      set.add(fmt(weekEnd));
+    }
+    return [...set].sort();
+  }, [view, currentDate]);
+
+  const { sessions, users, loading: sessionsLoading, refetchSessions } = useSessions(months);
+
   const openModal = () => {
     setForm(EMPTY_FORM);
     setError('');
     setSuccess('');
-    setMonitorSearch('');
     setModalOpen(true);
   };
 
@@ -618,9 +633,9 @@ const Sessions = () => {
         </div>
       </div>
 
-      {sessions.length === 0 ? (
+      {sessionsLoading && sessions.length === 0 ? (
         <p style={{ color: 'var(--text-muted)', textAlign: 'center', paddingTop: '2rem' }}>
-          Nenhuma sessão criada ainda.
+          A carregar…
         </p>
       ) : (
         <GridView

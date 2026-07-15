@@ -335,6 +335,19 @@ export const getSessions = async (): Promise<Session[]> => {
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Session);
 };
 
+// One calendar month of sessions (yearMonth = "YYYY-MM") — bounded read for
+// the calendar. Single-field range on sessionDatetime, no composite index.
+export const getSessionsForMonth = async (yearMonth: string): Promise<Session[]> => {
+  const q = query(
+    collection(db, 'sessions'),
+    where('sessionDatetime', '>=', `${yearMonth}-01T00:00`),
+    where('sessionDatetime', '<=', `${yearMonth}-31T23:59`),
+    orderBy('sessionDatetime', 'asc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Session);
+};
+
 // Sessions from the start of today onward — bounded read for the dashboard
 export const getUpcomingSessions = async (): Promise<Session[]> => {
   const d = new Date();
