@@ -2,6 +2,7 @@ import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import { useToast } from '../../context/ToastContext';
 import { updateUserProfile } from '../../firebase/auth';
 import { getUsers } from '../../firebase/firestore';
 import { adminUsersApi } from '../../utils/adminApi';
@@ -13,6 +14,7 @@ const EMPTY_FORM = { email: '', firstName: '', lastName: '', nickname: '', birth
 
 const AdminUsers = () => {
   const { user } = useAuth();
+  const showToast = useToast();
   const navigate = useNavigate();
   const queryClient = useQueryClient();
 
@@ -101,7 +103,7 @@ const AdminUsers = () => {
       invalidateUsers();
       setViewingUser((prev) => (prev && prev.uuid === u.uuid ? { ...prev, role: newRole } : prev));
     } catch {
-      // silently fail
+      showToast('Não foi possível alterar a função do utilizador.');
     } finally {
       setRoleChanging(false);
     }

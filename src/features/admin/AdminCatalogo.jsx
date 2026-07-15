@@ -1,5 +1,6 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCatalogItems, addCatalogItem, updateCatalogItem, deleteCatalogItem } from '../../firebase/firestore';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
@@ -211,8 +212,7 @@ const DeleteModal = ({ item, onClose, onConfirm }) => {
 
 const AdminCatalogo = () => {
   const navigate = useNavigate();
-  const [items, setItems] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const queryClient = useQueryClient();
   const [editingItem, setEditingItem] = useState(null);
   const [deletingItem, setDeletingItem] = useState(null);
   const [showCreate, setShowCreate] = useState(false);
@@ -220,15 +220,20 @@ const AdminCatalogo = () => {
   const [dragOverId, setDragOverId] = useState(null);
   const draggedId = useRef(null);
 
-  const load = async () => {
-    setLoading(true);
-    try {
+  const { data: items = [], isLoading: loading } = useQuery({
+    queryKey: ['catalog'],
+    queryFn: async () => {
       const data = await getCatalogItems();
-      setItems(data.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity)));
-    } finally {
-      setLoading(false);
-    }
-  };
+      return data.sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity));
+    },
+    staleTime: 60_000,
+  });
+
+  // Keeps the existing optimistic-update call sites working against the query cache
+  const setItems = (updater) =>
+    queryClient.setQueryData(['catalog'], (old = []) =>
+      typeof updater === 'function' ? updater(old) : updater
+    );
 
   const handleReorder = async (categoryLabel, fromId, toId) => {
     if (fromId === toId) return;
@@ -248,8 +253,6 @@ const AdminCatalogo = () => {
 
     await Promise.all(reordered.map((item, idx) => updateCatalogItem(item.id, { order: idx })));
   };
-
-  useEffect(() => { load(); }, []);
 
   const handleSave = async (form) => {
     if (editingItem?.id) {

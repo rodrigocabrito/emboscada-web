@@ -1,5 +1,7 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState } from 'react';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { setAvailability, getAvailabilityForMonth, deleteAvailability } from '../firebase/firestore';
 import useEscapeKey from '../hooks/useEscapeKey';
 
@@ -201,49 +203,53 @@ const DayModal = ({ date, existing, onClose, onSaved, onErased }) => {
 
 const Availability = () => {
   const { user } = useAuth();
+  const showToast = useToast();
+  const queryClient = useQueryClient();
   const today = new Date();
 
   const [year, setYear] = useState(today.getFullYear());
   const [month, setMonth] = useState(today.getMonth());
   const [selectedDay, setSelectedDay] = useState(null);
-  const [monthData, setMonthData] = useState({});
-  const [loading, setLoading] = useState(true);
-  const [holidays, setHolidays] = useState({});
 
   const yearMonth = `${year}-${pad2(month + 1)}`;
 
-  const loadMonth = useCallback(async () => {
-    setLoading(true);
-    try {
-      const data = await getAvailabilityForMonth(user.uid, yearMonth);
-      setMonthData(data);
-    } catch {
-      // silently fail
-    } finally {
-      setLoading(false);
-    }
-  }, [user.uid, yearMonth]);
+  const { data: monthData = {}, isLoading: loading } = useQuery({
+    queryKey: ['availability', user.uid, yearMonth],
+    queryFn: async () => {
+      try {
+        return await getAvailabilityForMonth(user.uid, yearMonth);
+      } catch {
+        showToast('Não foi possível carregar as disponibilidades.');
+        return {};
+      }
+    },
+    staleTime: 60_000,
+  });
 
-  useEffect(() => { loadMonth(); }, [loadMonth]);
+  const { data: holidays = {} } = useQuery({
+    queryKey: ['holidays', year],
+    queryFn: () => fetchHolidays(year).catch(() => ({})),
+    staleTime: Infinity,
+  });
 
-  useEffect(() => {
-    fetchHolidays(year).then(setHolidays).catch(() => {});
-  }, [year]);
+  const setMonthData = (updater) =>
+    queryClient.setQueryData(['availability', user.uid, yearMonth], (old = {}) => updater(old));
 
-  const prevMonth = useCallback(() => {
+  const prevMonth = () => {
     if (month === 0) { setYear((y) => y - 1); setMonth(11); }
     else setMonth((m) => m - 1);
-  }, [month]);
+  };
 
-  const nextMonth = useCallback(() => {
+  const nextMonth = () => {
     if (month === 11) { setYear((y) => y + 1); setMonth(0); }
     else setMonth((m) => m + 1);
-  }, [month]);
+  };
 
-  const goToday = useCallback(() => {
-    setYear(today.getFullYear());
-    setMonth(today.getMonth());
-  }, []);
+  const goToday = () => {
+    const now = new Date();
+    setYear(now.getFullYear());
+    setMonth(now.getMonth());
+  };
 
   const handleSaved = async (date, form) => {
     const dateStr = `${date.getFullYear()}-${pad2(date.getMonth() + 1)}-${pad2(date.getDate())}`;

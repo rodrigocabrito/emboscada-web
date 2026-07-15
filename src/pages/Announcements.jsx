@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { getUserColor } from '../utils/avatarColors';
 import { publishAnnouncement } from '../utils/adminApi';
 import {
@@ -59,6 +60,7 @@ const ReactionBar = ({ announcement, uid, onToggle, busy }) => (
 
 const Announcements = () => {
   const { user, isAdmin } = useAuth();
+  const showToast = useToast();
   const queryClient = useQueryClient();
 
   const [showCreate, setShowCreate] = useState(false);
@@ -126,6 +128,8 @@ const Announcements = () => {
     try {
       await toggleAnnouncementReaction(announcement.id, key, user.uid, active);
       invalidate();
+    } catch {
+      showToast('Não foi possível registar a reação.');
     } finally {
       setReacting(false);
     }

@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUsers, getEvaluation, saveEvaluation } from '../../firebase/firestore';
@@ -182,8 +182,11 @@ const UserEvaluation = () => {
   const [openEvals, setOpenEvals] = useState([]);
   const [openEvalDraft, setOpenEvalDraft] = useState({ date: new Date().toISOString().slice(0, 10), text: '' });
 
-  useEffect(() => {
-    if (!existing) return;
+  // Sync form state when the loaded evaluation changes — done during render
+  // (the React-recommended pattern) instead of an effect, avoiding an extra pass.
+  const [loadedFrom, setLoadedFrom] = useState(null);
+  if (existing && existing !== loadedFrom) {
+    setLoadedFrom(existing);
     setForm({
       positivePoints:    existing.positivePoints    ?? '',
       negativePoints:    existing.negativePoints    ?? '',
@@ -192,9 +195,8 @@ const UserEvaluation = () => {
       activities: { ...emptyRatings(ACTIVITIES), ...(existing.activities ?? {}) },
       tasks:      { ...emptyRatings(TASKS),      ...(existing.tasks ?? {}) },
     });
-    const evals = (existing.openEvals ?? []).slice().sort((a, b) => b.date.localeCompare(a.date));
-    setOpenEvals(evals);
-  }, [existing]);
+    setOpenEvals((existing.openEvals ?? []).slice().sort((a, b) => b.date.localeCompare(a.date)));
+  }
 
   const set = (name, value) => {
     setForm((prev) => ({ ...prev, [name]: value }));

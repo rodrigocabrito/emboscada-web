@@ -1,12 +1,4 @@
-const SESSION_TYPES = ['Paintball', 'Paintball Kids', 'Laser Tag', 'Laser Tag Kids', 'Gel Blast', 'Bubble Football'];
-
-const STATUS_OPTIONS = [
-  { value: 'done', label: 'Feita' },
-  { value: 'active', label: 'Ativa' },
-  { value: 'pending_payment', label: 'Pendente' },
-  { value: 'no_show', label: 'Não compareceu' },
-  { value: 'cancelled', label: 'Cancelada' },
-];
+import { SESSION_TYPES, STATUS_OPTIONS } from '../../../constants/sessions';
 
 const STATUS_PALETTE = {
   done:            { idle: { bg: 'var(--green-100)', color: 'var(--green-700)', border: 'var(--green-200)' }, sel: { bg: 'var(--green-500)', color: '#fff', border: 'var(--green-500)' } },

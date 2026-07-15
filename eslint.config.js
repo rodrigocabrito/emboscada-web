@@ -25,4 +25,13 @@ export default defineConfig([
       globals: globals.node,
     },
   },
+  {
+    // Context files intentionally co-locate the provider component with its
+    // hook (useAuth/useToast) — the standard React context pattern. The only
+    // cost is a full page refresh instead of HMR when editing these files.
+    files: ['src/context/*.jsx'],
+    rules: {
+      'react-refresh/only-export-components': 'off',
+    },
+  },
 ])

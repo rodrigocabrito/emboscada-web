@@ -2,8 +2,7 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getAmmoStocks } from '../../firebase/firestore';
-
-const CALIBERS = ['.50', '.68'];
+import { CALIBERS } from '../../constants/sessions';
 
 const STOCK_TYPES = [
   {

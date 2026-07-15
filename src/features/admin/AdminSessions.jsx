@@ -1,30 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { getSessionsAll } from '../../firebase/firestore';
 import { useSessionsPage } from './hooks/useSessionsPage';
 import SessionFilters from './components/SessionFilters';
-
-const STATUS_OPTIONS = [
-  { value: 'done', label: 'Feita' },
-  { value: 'active', label: 'Ativa' },
-  { value: 'pending_payment', label: 'Pendente' },
-  { value: 'no_show', label: 'Não compareceu' },
-  { value: 'cancelled', label: 'Cancelada' },
-];
-
-const getStatusLabel = (status) => STATUS_OPTIONS.find((s) => s.value === status)?.label ?? status;
-
-const getStatusBadgeClass = (status) => {
-  switch (status) {
-    case 'cancelled': return 'badge-default';
-    case 'no_show': return 'badge-danger';
-    case 'pending_payment': return 'badge-pending';
-    case 'done': return 'badge-success';
-    case 'active': return 'badge-active';
-    default: return 'badge-default';
-  }
-};
+import { getStatusLabel, getStatusBadgeClass } from '../../constants/sessions';
 
 const fmt = (d) =>
   new Date(d).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -61,6 +41,17 @@ const loadSaved = () => {
 const saveFilters = (f) => sessionStorage.setItem('adminSessionsFilters', JSON.stringify(f));
 
 const normalize = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
+
+// Sortable table header — module-scoped so its identity is stable across renders
+const SortTh = ({ field, children, sort, onSort }) => {
+  const active = sort.field === field;
+  const icon = active && sort.dir === 'asc' ? ' ↑' : active && sort.dir === 'desc' ? ' ↓' : '';
+  return (
+    <th onClick={() => onSort(field)} style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', color: active ? 'var(--primary)' : undefined }}>
+      {children}{icon}
+    </th>
+  );
+};
 
 const AdminSessions = () => {
   const navigate = useNavigate();
@@ -103,10 +94,7 @@ const AdminSessions = () => {
   const sessions = fetchAll ? allSessions : pagedSessions;
   const loading = fetchAll ? allLoading : pagedLoading;
 
-  useEffect(() => {
-    setSort({ field: null, dir: null });
-  }, [serverFilters]);
-
+  // Sort is reset in handleApply (the only place filters change) and handleLoadMore.
   const handleLoadMore = () => {
     setSort({ field: null, dir: null });
     loadMore();
@@ -222,16 +210,6 @@ const AdminSessions = () => {
     setPhoneDraft('');
   };
 
-  const SortTh = ({ field, children }) => {
-    const active = sort.field === field;
-    const icon = active && sort.dir === 'asc' ? ' ↑' : active && sort.dir === 'desc' ? ' ↓' : '';
-    return (
-      <th onClick={() => handleSort(field)} style={{ cursor: 'pointer', userSelect: 'none', whiteSpace: 'nowrap', color: active ? 'var(--primary)' : undefined }}>
-        {children}{icon}
-      </th>
-    );
-  };
-
   return (
     <div className="page">
       <div className="page-header">
@@ -271,12 +249,12 @@ const AdminSessions = () => {
           <table className="data-table">
             <thead>
               <tr>
-                <SortTh field="date">Data</SortTh>
-                <SortTh field="name">Nome</SortTh>
+                <SortTh field="date" sort={sort} onSort={handleSort}>Data</SortTh>
+                <SortTh field="name" sort={sort} onSort={handleSort}>Nome</SortTh>
                 <th>Email</th>
                 <th>Telefone</th>
-                <SortTh field="type">Tipo</SortTh>
-                <SortTh field="status">Estado</SortTh>
+                <SortTh field="type" sort={sort} onSort={handleSort}>Tipo</SortTh>
+                <SortTh field="status" sort={sort} onSort={handleSort}>Estado</SortTh>
               </tr>
             </thead>
             <tbody>

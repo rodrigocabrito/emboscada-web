@@ -1,40 +1,15 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useMemo } from 'react';
 import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { saveSessionWithAmmo } from '../../firebase/firestore';
-import { useAuth } from '../../context/AuthContext';
 import { isAssignableMonitor } from '../../utils/roles';
+import { usePermissions } from '../../hooks/usePermissions';
+import { computeFinancials } from '../../utils/financials';
+import { SESSION_TYPES, TIME_SLOTS, CALIBERS, STATUS_OPTIONS, getStatusBadgeClass } from '../../constants/sessions';
 import { useSession } from './hooks/useSession';
 import LineItemsTable from './components/LineItemsTable';
 import PaymentModal from './components/PaymentModal';
 import useScrollLock from '../../hooks/useScrollLock';
 import useEscapeKey from '../../hooks/useEscapeKey';
-
-const SESSION_TYPES = ['Paintball', 'Paintball Kids', 'Laser Tag', 'Laser Tag Kids', 'Gel Blast', 'Bubble Football'];
-
-const TIME_SLOTS = Array.from({ length: 24 }, (_, i) => [
-  `${String(i).padStart(2, '0')}:00`,
-  `${String(i).padStart(2, '0')}:30`,
-]).flat().filter((t) => t >= '06:00' && t <= '23:30');
-
-const STATUS_OPTIONS = [
-  { value: 'done', label: 'Feita' },
-  { value: 'active', label: 'Ativa' },
-  { value: 'pending_payment', label: 'Pendente' },
-  { value: 'no_show', label: 'Não compareceu' },
-  { value: 'cancelled', label: 'Cancelada' },
-];
-
-
-const getStatusBadgeClass = (status) => {
-  switch (status) {
-    case 'done': return 'badge-success';
-    case 'active': return 'badge-active';
-    case 'pending_payment': return 'badge-pending';
-    case 'no_show': return 'badge-danger';
-    case 'cancelled': return 'badge-default';
-    default: return 'badge-default';
-  }
-};
 
 const fmt = (n) => Number(n || 0).toFixed(2);
 
@@ -43,18 +18,42 @@ const defaultNumPacks = (actual, expected) => {
   return String(Math.max(n > 0 ? n : 0, n > 0 ? 10 : 0));
 };
 
+// Initial/reset form state derived from the session document — used both on
+// first load and when discarding changes, so the two can't drift apart.
+const buildFormFromSession = (session) => {
+  const numPlayers = session.expectedNumberOfPlayers ?? session.numberOfPlayers ?? 0;
+  return {
+    spocName: session.spocName || session.spoc || '',
+    spocEmail: session.spocEmail || '',
+    spocPhoneNumber: session.spocPhoneNumber || '',
+    expectedNumberOfPlayers: numPlayers || '',
+    actualNumberOfPlayers: session.actualNumberOfPlayers !== undefined ? String(session.actualNumberOfPlayers) : '',
+    sessionDate: session.sessionDate || '',
+    sessionTime: session.sessionTime || '',
+    typeOfSession: session.typeOfSession || '',
+    caliber: session.caliber || '',
+    status: session.status || 'pending_payment',
+    additionalComments: session.additionalComments || '',
+    monitors: session.monitors || [],
+    // financial
+    packId: session.packId || '',
+    packName: session.packName || '',
+    numPacks: session.numPacks !== undefined ? String(session.numPacks) : defaultNumPacks(session.actualNumberOfPlayers, numPlayers),
+    packPrice: session.packPrice !== undefined ? String(session.packPrice) : '',
+    extras: session.extras || [],
+    others: session.others || [],
+    signal: session.signal !== undefined ? String(session.signal) : String(numPlayers >= 15 ? 80 : 50),
+    paymentTypes: session.paymentTypes || [],
+    cashPaid: session.cashPaid !== undefined ? String(session.cashPaid) : '',
+    bulletsSpent: session.bulletsSpent !== undefined && session.bulletsSpent !== null ? String(session.bulletsSpent) : '',
+  };
+};
+
 const SessionDetail = () => {
   const { id } = useParams();
   const navigate = useNavigate();
   const { state: navState } = useLocation();
-  const { profile } = useAuth();
-
-  // Permissions:
-  //  - admin           → edit everything + pay
-  //  - monitor_leader  → edit packs/extras/others + pay (session data view-only)
-  //  - monitor         → edit packs/extras/others (session data view-only, no pay)
-  const canEditSessionData = profile?.role === 'admin';
-  const canPay = profile?.role === 'admin' || profile?.role === 'monitor_leader';
+  const { canEditSessionData, canPay } = usePermissions();
 
   const { session, updateSessionCache, users, catalogItems, loading } = useSession(id);
   const [form, setForm] = useState(null);
@@ -68,35 +67,11 @@ const SessionDetail = () => {
   const [payModal, setPayModal] = useState(false);
   const [confirmPayModal, setConfirmPayModal] = useState(false);
 
-  useEffect(() => {
-    if (!session || form !== null) return;
-    const numPlayers = session.expectedNumberOfPlayers ?? session.numberOfPlayers ?? 0;
-    setForm({
-      spocName: session.spocName || session.spoc || '',
-      spocEmail: session.spocEmail || '',
-      spocPhoneNumber: session.spocPhoneNumber || '',
-      expectedNumberOfPlayers: numPlayers || '',
-      actualNumberOfPlayers: session.actualNumberOfPlayers !== undefined ? String(session.actualNumberOfPlayers) : '',
-      sessionDate: session.sessionDate || '',
-      sessionTime: session.sessionTime || '',
-      typeOfSession: session.typeOfSession || '',
-      caliber: session.caliber || '',
-      status: session.status || 'pending_payment',
-      additionalComments: session.additionalComments || '',
-      monitors: session.monitors || [],
-      // financial
-      packId: session.packId || '',
-      packName: session.packName || '',
-      numPacks: session.numPacks !== undefined ? String(session.numPacks) : defaultNumPacks(session.actualNumberOfPlayers, numPlayers),
-      packPrice: session.packPrice !== undefined ? String(session.packPrice) : '',
-      extras: session.extras || [],
-      others: session.others || [],
-      signal: session.signal !== undefined ? String(session.signal) : String(numPlayers >= 15 ? 80 : 50),
-      paymentTypes: session.paymentTypes || [],
-      cashPaid: session.cashPaid !== undefined ? String(session.cashPaid) : '',
-      bulletsSpent: session.bulletsSpent !== undefined && session.bulletsSpent !== null ? String(session.bulletsSpent) : '',
-    });
-  }, [session, form]);
+  // Initialize the form once the session loads — during render (React's
+  // recommended pattern for derived initial state) instead of an effect.
+  if (session && form === null) {
+    setForm(buildFormFromSession(session));
+  }
 
   const sortedCatalog = useMemo(() =>
     [...catalogItems].sort((a, b) => (a.order ?? Infinity) - (b.order ?? Infinity)),
@@ -118,19 +93,7 @@ const SessionDetail = () => {
     [sortedCatalog]
   );
 
-  const financials = useMemo(() => {
-    if (!form) return {};
-    const packsTotal = (parseFloat(form.numPacks) || 0) * (parseFloat(form.packPrice) || 0);
-    const extrasTotal = (form.extras || []).reduce(
-      (sum, e) => sum + (parseFloat(e.quantity) || 0) * (parseFloat(e.unitPrice) || 0), 0
-    );
-    const othersTotal = (form.others || []).reduce(
-      (sum, o) => sum + (parseFloat(o.quantity) || 0) * (parseFloat(o.unitPrice) || 0), 0
-    );
-    const signalAmount = parseFloat(form.signal) || 0;
-    const total = packsTotal + extrasTotal + othersTotal - signalAmount;
-    return { packsTotal, extrasTotal, othersTotal, signalAmount, total };
-  }, [form]);
+  const financials = useMemo(() => computeFinancials(form), [form]);
 
   const handleChange = (e) => {
     const { name, value } = e.target;
@@ -267,31 +230,7 @@ const SessionDetail = () => {
   const handleSave = () => saveForm(form);
 
   const handleDiscard = () => {
-    const numPlayers = session.expectedNumberOfPlayers ?? session.numberOfPlayers ?? 0;
-    setForm({
-      spocName: session.spocName || session.spoc || '',
-      spocEmail: session.spocEmail || '',
-      spocPhoneNumber: session.spocPhoneNumber || '',
-      expectedNumberOfPlayers: numPlayers || '',
-      actualNumberOfPlayers: session.actualNumberOfPlayers !== undefined ? String(session.actualNumberOfPlayers) : '',
-      sessionDate: session.sessionDate || '',
-      sessionTime: session.sessionTime || '',
-      typeOfSession: session.typeOfSession || '',
-      caliber: session.caliber || '',
-      status: session.status || 'pending_payment',
-      additionalComments: session.additionalComments || '',
-      monitors: session.monitors || [],
-      packId: session.packId || '',
-      packName: session.packName || '',
-      numPacks: session.numPacks !== undefined ? String(session.numPacks) : defaultNumPacks(session.actualNumberOfPlayers, numPlayers),
-      packPrice: session.packPrice !== undefined ? String(session.packPrice) : '',
-      extras: session.extras || [],
-      others: session.others || [],
-      signal: session.signal !== undefined ? String(session.signal) : String(numPlayers >= 15 ? 80 : 50),
-      paymentTypes: session.paymentTypes || [],
-      cashPaid: session.cashPaid !== undefined ? String(session.cashPaid) : '',
-      bulletsSpent: session.bulletsSpent !== undefined && session.bulletsSpent !== null ? String(session.bulletsSpent) : '',
-    });
+    setForm(buildFormFromSession(session));
     setDirty(false);
     setDraftExtra({ name: '', quantity: '', unitPrice: '' });
     setDraftOther({ name: '', quantity: '', unitPrice: '' });
@@ -384,7 +323,7 @@ const SessionDetail = () => {
             <div className="form-group">
               <label>Calibre</label>
               <div className="caliber-toggle">
-                {['.50', '.68'].map((c) => (
+                {CALIBERS.map((c) => (
                   <button key={c} type="button" className={`caliber-btn${form.caliber === c ? ' active' : ''}`} disabled={!canEditSessionData}
                     onClick={() => { if (form.caliber === c) return; setForm((prev) => ({ ...prev, caliber: c })); setDirty(true); }}>
                     {c}

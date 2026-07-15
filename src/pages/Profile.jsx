@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
@@ -72,27 +72,24 @@ const Profile = () => {
   const avgScale = overallAvg !== null ? SCALE.find((s) => s.value === Math.round(overallAvg)) : null;
   const unseenUpdates = Math.max(0, (evaluation?.saveCount ?? 0) - (profile?.lastEvalSeenCount ?? 0));
 
-  const [infoForm, setInfoForm] = useState({
-    firstName: profile?.firstName ?? '',
-    lastName: profile?.lastName ?? '',
-    nickname: profile?.nickname ?? '',
-    birthday: profile?.birthday ?? '',
-    startedAt: profile?.startedAt ?? '',
-    phone: profile?.phone ?? '',
+  const profileToForm = (p) => ({
+    firstName: p?.firstName ?? '',
+    lastName: p?.lastName ?? '',
+    nickname: p?.nickname ?? '',
+    birthday: p?.birthday ?? '',
+    startedAt: p?.startedAt ?? '',
+    phone: p?.phone ?? '',
   });
 
-  useEffect(() => {
-    if (profile) {
-      setInfoForm({
-        firstName: profile.firstName ?? '',
-        lastName: profile.lastName ?? '',
-        nickname: profile.nickname ?? '',
-        birthday: profile.birthday ?? '',
-        startedAt: profile.startedAt ?? '',
-        phone: profile.phone ?? '',
-      });
-    }
-  }, [profile]);
+  const [infoForm, setInfoForm] = useState(() => profileToForm(profile));
+
+  // Resync the form when the live profile changes — during render (React's
+  // recommended pattern for adjusting state to prop changes) instead of an effect.
+  const [syncedProfile, setSyncedProfile] = useState(profile);
+  if (profile !== syncedProfile) {
+    setSyncedProfile(profile);
+    if (profile) setInfoForm(profileToForm(profile));
+  }
 
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoSuccess, setInfoSuccess] = useState('');

@@ -1,6 +1,6 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { getEvaluation, markEvaluationSeen } from '../../firebase/firestore';
 
@@ -147,8 +147,7 @@ const ChangeRow = ({ change }) => {
 
 const EvaluationView = () => {
   const navigate = useNavigate();
-  const { user, refreshProfile } = useAuth();
-  const queryClient = useQueryClient();
+  const { user } = useAuth();
 
   const { data: evaluation, isLoading } = useQuery({
     queryKey: ['evaluation', user.uid],
@@ -156,14 +155,17 @@ const EvaluationView = () => {
     staleTime: 5 * 60_000,
   });
 
+  // Mark the evaluation as seen (clears the "unseen updates" badge). The ref
+  // guards against re-marking the same saveCount when the query refetches.
+  const markedCountRef = useRef(null);
   useEffect(() => {
     if (!evaluation) return;
     const count = evaluation.saveCount ?? 0;
-    markEvaluationSeen(user.uid, count).then(() => {
-      refreshProfile();
-      queryClient.invalidateQueries({ queryKey: ['evaluation', user.uid] });
-    });
-  }, [evaluation?.saveCount]);
+    if (markedCountRef.current === count) return;
+    markedCountRef.current = count;
+    // The live profile subscription picks up lastEvalSeenCount automatically
+    markEvaluationSeen(user.uid, count).catch(() => {});
+  }, [evaluation, user.uid]);
 
   const activities = evaluation?.activities ?? {};
   const tasks = evaluation?.tasks ?? {};

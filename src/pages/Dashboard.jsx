@@ -4,15 +4,7 @@ import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { getUpcomingSessions, getUsers } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
-
-const TYPE_BADGE = {
-  'Paintball': { bg: '#dcfce7', color: '#166534' },
-  'Paintball Kids': { bg: '#dcfce7', color: '#166534' },
-  'Laser Tag': { bg: '#dbeafe', color: '#1d4ed8' },
-  'Laser Tag Kids': { bg: '#dbeafe', color: '#1d4ed8' },
-  'Gel Blast': { bg: '#fef3c7', color: '#92400e' },
-  'Bubble Football': { bg: '#f3e8ff', color: '#7e22ce' },
-};
+import { TYPE_BADGE, CALIBER_TYPES } from '../constants/sessions';
 
 // Day (YYYY-MM-DD) of a session — falls back to sessionDatetime when sessionDate is missing
 const dateOf = (s) => {
@@ -62,7 +54,7 @@ const monitorName = (u) => u.nickname || `${u.firstName ?? ''} ${u.lastName ?? '
 const SessionRow = ({ session, usersById, highlight, onClick }) => {
   const badge = TYPE_BADGE[session.typeOfSession] ?? { bg: '#f3f4f6', color: '#6b7280' };
   const players = session.actualNumberOfPlayers || session.expectedNumberOfPlayers || session.numberOfPlayers;
-  const hasCaliber = ['Paintball', 'Paintball Kids'].includes(session.typeOfSession) && session.caliber;
+  const hasCaliber = CALIBER_TYPES.includes(session.typeOfSession) && session.caliber;
   const monitors = (session.monitors ?? [])
     .map((uid) => usersById[uid])
     .filter(Boolean);

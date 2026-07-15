@@ -26,7 +26,7 @@ const Login = () => {
 
       const from = location.state?.from || '/home';
       navigate(from, { replace: true });
-    } catch (err) {
+    } catch {
       setError('Email ou password incorretos. Contacte o administrador.');
     } finally {
       setLoading(false);
