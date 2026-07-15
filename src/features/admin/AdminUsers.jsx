@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
 import { updateUserProfile } from '../../firebase/auth';
 import { getUsers } from '../../firebase/firestore';
@@ -13,9 +14,16 @@ const EMPTY_FORM = { email: '', firstName: '', lastName: '', nickname: '', birth
 const AdminUsers = () => {
   const { user } = useAuth();
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
 
-  const [users, setUsers] = useState([]);
-  const [loadingUsers, setLoadingUsers] = useState(true);
+  const { data: allUsers = [], isLoading: loadingUsers } = useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    staleTime: 5 * 60_000,
+  });
+  const users = useMemo(() => allUsers.filter((u) => u.uuid !== user.uid), [allUsers, user.uid]);
+  const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ['users'] });
+
   const [search, setSearch] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState('');
@@ -27,19 +35,6 @@ const AdminUsers = () => {
   const [creating, setCreating] = useState(false);
   const [createError, setCreateError] = useState('');
   const [createSuccess, setCreateSuccess] = useState('');
-
-  const fetchUsers = async () => {
-    try {
-      const data = await getUsers();
-      setUsers(data.filter((u) => u.uuid !== user.uid));
-    } catch {
-      // silently fail
-    } finally {
-      setLoadingUsers(false);
-    }
-  };
-
-  useEffect(() => { fetchUsers(); }, []);
 
   const openModal = () => {
     setForm(EMPTY_FORM);
@@ -86,7 +81,7 @@ const AdminUsers = () => {
           : `Utilizador ${form.firstName} ${form.lastName} criado, mas o email de boas-vindas falhou — contacta o utilizador manualmente.`
       );
       setForm(EMPTY_FORM);
-      fetchUsers();
+      invalidateUsers();
     } catch (err) {
       if (err.status === 409) {
         setCreateError('Já existe um utilizador com este email.');
@@ -103,7 +98,7 @@ const AdminUsers = () => {
     setRoleChanging(true);
     try {
       await updateUserProfile(u.uuid, { role: newRole });
-      setUsers((prev) => prev.map((x) => (x.uuid === u.uuid ? { ...x, role: newRole } : x)));
+      invalidateUsers();
       setViewingUser((prev) => (prev && prev.uuid === u.uuid ? { ...prev, role: newRole } : prev));
     } catch {
       // silently fail
@@ -117,7 +112,7 @@ const AdminUsers = () => {
     try {
       // Server-side deletion removes both the profile and the Auth account
       await adminUsersApi('delete', { uid });
-      setUsers((prev) => prev.filter((u) => u.uuid !== uid));
+      invalidateUsers();
       setDeletingId(null);
     } catch {
       setDeleteError('Erro ao eliminar utilizador. Tenta novamente.');

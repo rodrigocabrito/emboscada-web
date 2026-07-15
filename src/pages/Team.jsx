@@ -1,5 +1,6 @@
-import { useState, useEffect, useMemo } from 'react';
-import { getUsers, getSessions } from '../firebase/firestore';
+import { useState, useMemo } from 'react';
+import { useQuery } from '@tanstack/react-query';
+import { getUsers, getMonitorSessionCounts } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
 import { roleLabel } from '../utils/roles';
 import useEscapeKey from '../hooks/useEscapeKey';
@@ -156,37 +157,22 @@ const UserModal = ({ user, onClose, sessionCount }) => {
 };
 
 const Team = () => {
-  const [users, setUsers] = useState([]);
-  const [sessions, setSessions] = useState([]);
-  const [loading, setLoading] = useState(true);
   const [selectedUser, setSelectedUser] = useState(null);
 
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [usersData, sessionsData] = await Promise.all([getUsers(), getSessions()]);
-        setUsers(usersData);
-        setSessions(sessionsData);
-      } catch {
-        // silently fail
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  const { data: users = [], isLoading: loading } = useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    staleTime: 5 * 60_000,
+  });
 
-  const sessionCountMap = useMemo(() => {
-    const map = {};
-    sessions.forEach((session) => {
-      if (session.monitors) {
-        session.monitors.forEach((monitorId) => {
-          map[monitorId] = (map[monitorId] || 0) + 1;
-        });
-      }
-    });
-    return map;
-  }, [sessions]);
+  // Aggregation queries — counts sessions per monitor without downloading them
+  const uids = useMemo(() => users.map((u) => u.uuid), [users]);
+  const { data: sessionCountMap = {} } = useQuery({
+    queryKey: ['monitorSessionCounts', uids],
+    queryFn: () => getMonitorSessionCounts(uids),
+    enabled: uids.length > 0,
+    staleTime: 5 * 60_000,
+  });
 
   const admins = users.filter((u) => u.role === 'admin');
   const leaders = users.filter((u) => u.role === 'monitor_leader');

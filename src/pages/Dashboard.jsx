@@ -1,7 +1,8 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
+import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
-import { getSessions, getUsers } from '../firebase/firestore';
+import { getUpcomingSessions, getUsers } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
 
 const TYPE_BADGE = {
@@ -124,24 +125,18 @@ const SessionRow = ({ session, usersById, highlight, onClick }) => {
 const Dashboard = () => {
   const { user, profile } = useAuth();
   const navigate = useNavigate();
-  const [allSessions, setAllSessions] = useState([]);
-  const [usersById, setUsersById] = useState({});
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    const fetchData = async () => {
-      try {
-        const [sessions, users] = await Promise.all([getSessions(), getUsers()]);
-        setAllSessions(sessions);
-        setUsersById(Object.fromEntries(users.map((u) => [u.uuid, u])));
-      } catch {
-        // silently fail
-      } finally {
-        setLoading(false);
-      }
-    };
-    fetchData();
-  }, []);
+  // Bounded query: only sessions from today onward, shared via the query cache
+  const { data: allSessions = [], isLoading: loading } = useQuery({
+    queryKey: ['upcomingSessions'],
+    queryFn: getUpcomingSessions,
+    staleTime: 60_000,
+  });
+  const { data: users = [] } = useQuery({
+    queryKey: ['users'],
+    queryFn: getUsers,
+    staleTime: 5 * 60_000,
+  });
+  const usersById = useMemo(() => Object.fromEntries(users.map((u) => [u.uuid, u])), [users]);
 
   // My upcoming assigned sessions, sorted chronologically
   const myUpcoming = useMemo(() => {

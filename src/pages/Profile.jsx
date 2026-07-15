@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { updateUserProfile, changePassword, logoutUser } from '../firebase/auth';
-import { getSessions, getEvaluation } from '../firebase/firestore';
+import { getMonitorSessionCount, getEvaluation } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
 import { roleLabel } from '../utils/roles';
 
@@ -55,7 +55,13 @@ const Profile = () => {
   const navigate = useNavigate();
 
   const initials = `${profile?.firstName?.[0] ?? ''}${profile?.lastName?.[0] ?? ''}`.toUpperCase();
-  const [sessionCount, setSessionCount] = useState(0);
+
+  // Aggregation query — counts this user's sessions without downloading them
+  const { data: sessionCount = 0 } = useQuery({
+    queryKey: ['monitorSessionCount', user.uid],
+    queryFn: () => getMonitorSessionCount(user.uid),
+    staleTime: 5 * 60_000,
+  });
 
   const { data: evaluation } = useQuery({
     queryKey: ['evaluation', user.uid],
@@ -88,18 +94,6 @@ const Profile = () => {
     }
   }, [profile]);
 
-  useEffect(() => {
-    const fetchSessionCount = async () => {
-      try {
-        const sessions = await getSessions();
-        const count = sessions.filter((s) => s.monitors?.includes(user.uid)).length;
-        setSessionCount(count);
-      } catch {
-        // silently fail
-      }
-    };
-    fetchSessionCount();
-  }, [user.uid]);
   const [infoLoading, setInfoLoading] = useState(false);
   const [infoSuccess, setInfoSuccess] = useState('');
   const [infoError, setInfoError] = useState('');

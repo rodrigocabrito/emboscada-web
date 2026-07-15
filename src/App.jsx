@@ -1,3 +1,4 @@
+import { lazy, Suspense } from 'react';
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
@@ -13,24 +14,26 @@ const queryClient = new QueryClient({
   },
 });
 
-import Login from './pages/Login';
-import Dashboard from './pages/Dashboard';
-import Sessions from './features/sessions/Sessions';
-import SessionDetail from './features/sessions/SessionDetail';
-import Team from './pages/Team';
-import Admin from './features/admin/Admin';
-import AdminUsers from './features/admin/AdminUsers';
-import AdminCatalogo from './features/admin/AdminCatalogo';
-import AdminStock from './features/admin/AdminStock';
-import AdminStockBullets from './features/admin/AdminStockBullets';
-import AdminSessions from './features/admin/AdminSessions';
-import AdminSchedule from './features/admin/AdminSchedule';
-import UserEvaluation from './features/admin/UserEvaluation';
-import EvaluationView from './features/evaluation/EvaluationView';
-import Availability from './pages/Availability';
-import Announcements from './pages/Announcements';
-import Profile from './pages/Profile';
-import NotFound from './pages/NotFound';
+// Route-level code splitting: each page loads on demand instead of shipping
+// one monolithic bundle (admin pages especially are rarely needed by monitors).
+const Login = lazy(() => import('./pages/Login'));
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const Sessions = lazy(() => import('./features/sessions/Sessions'));
+const SessionDetail = lazy(() => import('./features/sessions/SessionDetail'));
+const Team = lazy(() => import('./pages/Team'));
+const Admin = lazy(() => import('./features/admin/Admin'));
+const AdminUsers = lazy(() => import('./features/admin/AdminUsers'));
+const AdminCatalogo = lazy(() => import('./features/admin/AdminCatalogo'));
+const AdminStock = lazy(() => import('./features/admin/AdminStock'));
+const AdminStockBullets = lazy(() => import('./features/admin/AdminStockBullets'));
+const AdminSessions = lazy(() => import('./features/admin/AdminSessions'));
+const AdminSchedule = lazy(() => import('./features/admin/AdminSchedule'));
+const UserEvaluation = lazy(() => import('./features/admin/UserEvaluation'));
+const EvaluationView = lazy(() => import('./features/evaluation/EvaluationView'));
+const Availability = lazy(() => import('./pages/Availability'));
+const Announcements = lazy(() => import('./pages/Announcements'));
+const Profile = lazy(() => import('./pages/Profile'));
+const NotFound = lazy(() => import('./pages/NotFound'));
 
 import './styles/global.css';
 
@@ -57,6 +60,7 @@ const AppContent = () => {
   return (
     <>
       {user && <Navbar />}
+      <Suspense fallback={<div className="page" style={{ textAlign: 'center', paddingTop: '3rem', color: 'var(--text-muted)' }}>A carregar…</div>}>
       <Routes>
         <Route path="/" element={<RootRedirect />} />
         <Route path="/login" element={<Login />} />
@@ -190,6 +194,7 @@ const AppContent = () => {
         />
         <Route path="*" element={<NotFound />} />
       </Routes>
+      </Suspense>
     </>
   );
 };

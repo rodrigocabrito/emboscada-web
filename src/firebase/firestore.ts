@@ -18,6 +18,7 @@ import {
   runTransaction,
   arrayUnion,
   arrayRemove,
+  documentId,
   Timestamp,
   DocumentSnapshot,
   type QueryConstraint,
@@ -129,10 +130,11 @@ export const setAmmoStockCount = async (amount: number, date: string, note: stri
 // Recalculates currentStock from the ammoRestocks history for a given caliber.
 // Base = most recent count entry; adds all restock/removal entries recorded after it.
 const recalcAmmoStock = async (caliber: string): Promise<void> => {
-  const snap = await getDocs(query(collection(db, 'ammoRestocks'), orderBy('createdAt', 'asc')));
+  // Filter server-side; sort client-side to avoid needing a composite index
+  const snap = await getDocs(query(collection(db, 'ammoRestocks'), where('caliber', '==', caliber)));
   const entries = snap.docs
     .map((d) => ({ id: d.id, ...d.data() } as AmmoRestock))
-    .filter((r) => r.caliber === caliber);
+    .sort((a, b) => (a.createdAt?.toMillis?.() ?? 0) - (b.createdAt?.toMillis?.() ?? 0));
 
   let baseAmount = 0;
   let baseIdx = -1;
@@ -163,10 +165,14 @@ export const deleteAmmoCount = async (id: string, caliber: string): Promise<void
 };
 
 export const getAmmoRestocks = async (caliber: string): Promise<AmmoRestock[]> => {
-  const snap = await getDocs(query(collection(db, 'ammoRestocks'), orderBy('date', 'desc')));
+  // Filter server-side; sort client-side to avoid needing a composite index
+  const snap = await getDocs(query(collection(db, 'ammoRestocks'), where('caliber', '==', caliber)));
   return snap.docs
     .map((d) => ({ id: d.id, ...d.data() }) as AmmoRestock)
-    .filter((r) => r.caliber === caliber);
+    .sort((a, b) =>
+      b.date.localeCompare(a.date)
+      || ((b.createdAt?.toMillis?.() ?? 0) - (a.createdAt?.toMillis?.() ?? 0))
+    );
 };
 
 export const getSessionsWithAmmo = async (): Promise<Session[]> => {
@@ -327,6 +333,35 @@ export const getSessions = async (): Promise<Session[]> => {
   const q = query(collection(db, 'sessions'), orderBy('sessionDatetime', 'asc'));
   const snapshot = await getDocs(q);
   return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Session);
+};
+
+// Sessions from the start of today onward — bounded read for the dashboard
+export const getUpcomingSessions = async (): Promise<Session[]> => {
+  const d = new Date();
+  const p = (n: number) => String(n).padStart(2, '0');
+  const todayStart = `${d.getFullYear()}-${p(d.getMonth() + 1)}-${p(d.getDate())}T00:00`;
+  const q = query(
+    collection(db, 'sessions'),
+    where('sessionDatetime', '>=', todayStart),
+    orderBy('sessionDatetime', 'asc')
+  );
+  const snapshot = await getDocs(q);
+  return snapshot.docs.map((d) => ({ id: d.id, ...d.data() }) as Session);
+};
+
+// Aggregation queries: count sessions per monitor without downloading them
+export const getMonitorSessionCount = async (uid: string): Promise<number> => {
+  const snap = await getCountFromServer(
+    query(collection(db, 'sessions'), where('monitors', 'array-contains', uid))
+  );
+  return snap.data().count;
+};
+
+export const getMonitorSessionCounts = async (uids: string[]): Promise<Record<string, number>> => {
+  const entries = await Promise.all(
+    uids.map(async (uid) => [uid, await getMonitorSessionCount(uid)] as const)
+  );
+  return Object.fromEntries(entries);
 };
 
 const buildSessionConstraints = (filters: SessionFilters = {}): QueryConstraint[] => {
@@ -560,12 +595,18 @@ export const setAvailability = async (userId: string, date: string, data: SetAva
 };
 
 export const getAvailabilityForMonth = async (userId: string, yearMonth: string): Promise<Record<number, Availability>> => {
-  const q = query(collection(db, 'availability'), where('userId', '==', userId));
+  // Doc ids are `${userId}_${YYYY-MM-DD}` (see availDocId), so an ID range reads
+  // exactly one user-month without needing a composite index.
+  const q = query(
+    collection(db, 'availability'),
+    where(documentId(), '>=', `${userId}_${yearMonth}-01`),
+    where(documentId(), '<=', `${userId}_${yearMonth}-31`)
+  );
   const snapshot = await getDocs(q);
   const map: Record<number, Availability> = {};
   snapshot.docs.forEach((d) => {
     const data = d.data() as Availability;
-    if (data.date?.startsWith(yearMonth)) {
+    if (data.userId === userId && data.date?.startsWith(yearMonth)) {
       const day = parseInt(data.date.split('-')[2], 10);
       map[day] = data;
     }
