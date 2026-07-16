@@ -1,0 +1,19 @@
+version: 2
+updates:
+  # npm dependencies — weekly PRs, grouped so you review one PR instead of ten
+  - package-ecosystem: npm
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    groups:
+      minor-and-patch:
+        update-types: [minor, patch]
+    open-pull-requests-limit: 5
+
+  # Keep the GitHub Actions used in CI up to date
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
