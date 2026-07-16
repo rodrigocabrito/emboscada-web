@@ -1,0 +1,114 @@
+rules_version = '2';
+
+// Emboscada — Cloud Firestore security rules
+// Goal: close the public "test mode" hole. Everything requires an authenticated
+// staff account; sensitive collections require the admin role.
+//
+// Publish via Firebase Console → Firestore Database → Rules → paste → Publish
+// (or `firebase deploy --only firestore:rules` if you set up the CLI).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userDoc() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+    }
+
+    function isAdmin() {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().role == 'admin';
+    }
+
+    function hasRole(r) {
+      return signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid))
+        && userDoc().role == r;
+    }
+
+    // ── Users ────────────────────────────────────────────────────────────────
+    // Everyone signed in can read the roster (team page, monitor pickers, name
+    // lookups). User docs are CREATED server-side only (/api/admin-users, via
+    // service account — bypasses these rules), so clients never create them.
+    // A user may update their OWN doc but may NOT change their own role
+    // (prevents privilege escalation). Admins can do anything.
+    match /users/{userId} {
+      allow read: if signedIn();
+      allow create: if false;
+      allow update: if isAdmin()
+        || (request.auth.uid == userId
+            && request.resource.data.role == resource.data.role);
+      allow delete: if isAdmin();
+    }
+
+    // ── Evaluations (doc id == user uid) ───────────────────────────────────────
+    // A user can read their own evaluation; only admins can write them.
+    match /evaluations/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || isAdmin());
+      allow write: if isAdmin();
+    }
+
+    // ── Ammo stock — admin only ────────────────────────────────────────────────
+    match /ammo/{docId} {
+      allow read, write: if isAdmin();
+    }
+    match /ammoRestocks/{docId} {
+      allow read, write: if isAdmin();
+    }
+
+    // ── Catalog — staff read, admin write ──────────────────────────────────────
+    match /catalog/{docId} {
+      allow read: if signedIn();
+      allow write: if isAdmin();
+    }
+
+    // ── Sessions ───────────────────────────────────────────────────────────────
+    // Staff read/create. Updates are field-scoped by role:
+    //  - admin: everything
+    //  - monitor_leader: line items (packs/extras/others) + payment fields
+    //  - monitor: line items only
+    match /sessions/{docId} {
+      allow read, create: if signedIn();
+      allow delete: if isAdmin();
+      allow update: if isAdmin()
+        || (hasRole('monitor_leader')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                 ['packId', 'packName', 'numPacks', 'packPrice', 'extras', 'others', 'total',
+                  'signal', 'status', 'paymentTypes', 'cashPaid', 'updatedAt']))
+        || (hasRole('monitor')
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(
+                 ['packId', 'packName', 'numPacks', 'packPrice', 'extras', 'others', 'total',
+                  'updatedAt']));
+    }
+
+    // ── Availability — a user manages only their own entries; staff can read ───
+    match /availability/{docId} {
+      allow read: if signedIn();
+      allow create, update: if signedIn() && request.resource.data.userId == request.auth.uid;
+      allow delete: if signedIn() && resource.data.userId == request.auth.uid;
+    }
+
+    // ── Announcements ──────────────────────────────────────────────────────────
+    // Everyone reads; publishing happens server-side only (/api/publish-announcement,
+    // via service account — bypasses these rules) so the notification email is sent
+    // atomically with the write. Admins edit/delete. Any signed-in user may update
+    // ONLY the reactions map (to add/remove their own reaction).
+    match /announcements/{docId} {
+      allow read: if signedIn();
+      allow create: if false;
+      allow delete: if isAdmin();
+      allow update: if isAdmin()
+        || (signedIn()
+            && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['reactions']));
+    }
+
+    // ── Customers / Events / Bookings — staff only ─────────────────────────────
+    match /customers/{docId} { allow read, write: if signedIn(); }
+    match /events/{docId}    { allow read, write: if signedIn(); }
+    match /bookings/{docId}  { allow read, write: if signedIn(); }
+  }
+}
