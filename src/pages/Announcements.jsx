@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useMemo } from 'react';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
@@ -27,24 +27,38 @@ const fmtDate = (ts) => {
 
 const initialsOf = (name) => name.split(/\s+/).filter(Boolean).slice(0, 2).map((s) => s[0]).join('').toUpperCase();
 
-const ReactionBar = ({ announcement, uid, onToggle, busy }) => (
+// Nickname when set, otherwise the full name
+const displayName = (u) => u?.nickname || `${u?.firstName ?? ''} ${u?.lastName ?? ''}`.trim();
+
+const ReactionBar = ({ announcement, uid, usersById, onToggle, busy }) => (
   <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginTop: '1rem' }}>
     {REACTIONS.map((r) => {
-      const users = announcement.reactions?.[r.key] ?? [];
-      const active = users.includes(uid);
-      const count = users.length;
+      const reactedBy = announcement.reactions?.[r.key] ?? [];
+      const active = reactedBy.includes(uid);
+      const count = reactedBy.length;
+      // Who reacted — shown on hover (deleted users resolve to '' and drop out)
+      const names = reactedBy.map((id) => displayName(usersById[id])).filter(Boolean);
       return (
-        <button
-          key={r.key}
-          type="button"
-          disabled={busy}
-          onClick={() => onToggle(announcement, r.key, active)}
-          title={r.label}
-          className={`reaction-pill${active ? ' is-active' : ''}`}
-        >
-          <span style={{ fontSize: '1rem', lineHeight: 1 }}>{r.emoji}</span>
-          {count > 0 && <span>{count}</span>}
-        </button>
+        <div key={r.key} className="reaction-wrap">
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onToggle(announcement, r.key, active)}
+            aria-label={names.length ? `${r.label}: ${names.join(', ')}` : r.label}
+            className={`reaction-pill${active ? ' is-active' : ''}`}
+          >
+            <span style={{ fontSize: '1rem', lineHeight: 1 }}>{r.emoji}</span>
+            {count > 0 && <span>{count}</span>}
+          </button>
+          {names.length > 0 && (
+            <div className="reaction-popover" role="tooltip">
+              <div className="reaction-popover-title">{r.emoji} {r.label}</div>
+              {names.map((n, i) => (
+                <div key={i} className="reaction-popover-name">{n}</div>
+              ))}
+            </div>
+          )}
+        </div>
       );
     })}
   </div>
@@ -79,10 +93,9 @@ const Announcements = () => {
     staleTime: 5 * 60_000,
   });
 
-  const authorLabel = (a) => {
-    const author = users.find((u) => u.uuid === a.authorId);
-    return author?.nickname || a.authorName || 'Admin';
-  };
+  const usersById = useMemo(() => Object.fromEntries(users.map((u) => [u.uuid, u])), [users]);
+
+  const authorLabel = (a) => usersById[a.authorId]?.nickname || a.authorName || 'Admin';
 
   const invalidate = () => queryClient.invalidateQueries({ queryKey: ['announcements'] });
 
@@ -226,7 +239,7 @@ const Announcements = () => {
                       <p style={{ margin: '0.4rem 0 0', fontSize: '0.92rem', color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
                         {a.body}
                       </p>
-                      <ReactionBar announcement={a} uid={user.uid} onToggle={handleToggle} busy={reacting} />
+                      <ReactionBar announcement={a} uid={user.uid} usersById={usersById} onToggle={handleToggle} busy={reacting} />
                     </>
                   )}
                 </div>

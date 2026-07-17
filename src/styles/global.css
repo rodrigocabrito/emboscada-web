@@ -2193,7 +2193,63 @@ body {
   color: #4ade80;
 }
 
-/* Comunicados — emoji reaction pill */
+/* Comunicados — reaction pill + "who reacted" hover popover */
+.reaction-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.reaction-popover {
+  position: absolute;
+  bottom: calc(100% + 0.45rem);
+  left: 50%;
+  min-width: max-content;
+  max-width: 220px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 0.5rem;
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+  padding: 0.5rem 0.7rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  z-index: 50;
+  /* Never intercepts clicks; revealed on hover/focus of the wrapper */
+  pointer-events: none;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateX(-50%) translateY(4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+}
+
+.reaction-wrap:hover .reaction-popover,
+.reaction-wrap:focus-within .reaction-popover {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(0);
+}
+
+.reaction-popover-title {
+  font-size: 0.65rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--text-muted);
+  padding-bottom: 0.3rem;
+  margin-bottom: 0.15rem;
+  border-bottom: 1px solid var(--border);
+  white-space: nowrap;
+}
+
+.reaction-popover-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .reaction-pill {
   display: inline-flex;
   align-items: center;
