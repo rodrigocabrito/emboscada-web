@@ -26,6 +26,13 @@ const formatHour = (s) => s.endsWith('h00') ? s.replace('h00', 'h') : s;
 
 const EMPTY_FORM = { available: true, typeOfAvailability: 'full', earlierLimit: '', laterLimit: '' };
 
+// Full/Part = available (optionally with time limits); Out = unavailable
+const AVAIL_OPTIONS = [
+  { value: 'full', label: 'Full' },
+  { value: 'part', label: 'Part' },
+  { value: 'out', label: 'Out', danger: true },
+];
+
 const pad2 = (n) => String(n).padStart(2, '0');
 
 // Cache holidays by year to avoid redundant fetches
@@ -56,18 +63,27 @@ const DayModal = ({ date, existing, onClose, onSaved, onErased }) => {
 
   const label = date.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
 
-  const handleChange = (e) => {
-    const { name, value, type, checked } = e.target;
-    if (name === 'available' && !checked) {
+  // Which of the three buttons is active
+  const selected = form.available ? form.typeOfAvailability : 'out';
+
+  const selectOption = (value) => {
+    if (value === 'out') {
       setForm((prev) => ({ ...prev, available: false, typeOfAvailability: '', earlierLimit: '', laterLimit: '' }));
-    } else if (name === 'earlierLimit') {
+    } else {
+      setForm((prev) => ({ ...prev, available: true, typeOfAvailability: value }));
+    }
+  };
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    if (name === 'earlierLimit') {
       setForm((prev) => ({
         ...prev,
         earlierLimit: value,
         laterLimit: prev.laterLimit && value && toMinutes(prev.laterLimit) <= toMinutes(value) ? '' : prev.laterLimit,
       }));
     } else {
-      setForm((prev) => ({ ...prev, [name]: type === 'checkbox' ? checked : value }));
+      setForm((prev) => ({ ...prev, [name]: value }));
     }
   };
 
@@ -99,48 +115,38 @@ const DayModal = ({ date, existing, onClose, onSaved, onErased }) => {
 
         <form onSubmit={handleSubmit}>
           <div className="form-group" style={{ marginTop: '0.25rem' }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer', userSelect: 'none' }}>
-              <input
-                type="checkbox"
-                name="available"
-                checked={form.available}
-                onChange={handleChange}
-                style={{ width: '1.1rem', height: '1.1rem', accentColor: 'var(--primary)', cursor: 'pointer' }}
-              />
-              <span style={{ fontWeight: 600, fontSize: '0.95rem' }}>Disponível neste dia</span>
-            </label>
+            <label>Disponibilidade</label>
+            <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
+              {AVAIL_OPTIONS.map((opt) => {
+                const active = selected === opt.value;
+                return (
+                  <button
+                    key={opt.value}
+                    type="button"
+                    onClick={() => selectOption(opt.value)}
+                    style={{
+                      flex: 1,
+                      padding: '0.5rem',
+                      borderRadius: 'var(--radius-sm)',
+                      border: '1.5px solid',
+                      borderColor: active ? (opt.danger ? '#dc2626' : 'var(--primary)') : 'var(--border)',
+                      background: active ? (opt.danger ? '#fee2e2' : 'var(--green-100)') : 'var(--surface)',
+                      color: active ? (opt.danger ? '#991b1b' : 'var(--primary)') : 'var(--text-muted)',
+                      fontWeight: 600,
+                      fontSize: '0.875rem',
+                      cursor: 'pointer',
+                      fontFamily: 'var(--font-body)',
+                    }}
+                  >
+                    {opt.label}
+                  </button>
+                );
+              })}
+            </div>
           </div>
 
           {form.available && (
             <>
-              <div className="form-group">
-                <label>Tipo de disponibilidade</label>
-                <div style={{ display: 'flex', gap: '0.5rem', marginTop: '0.4rem' }}>
-                  {[{ value: 'full', label: 'Full' }, { value: 'part', label: 'Part' }].map((opt) => (
-                    <button
-                      key={opt.value}
-                      type="button"
-                      onClick={() => setForm((prev) => ({ ...prev, typeOfAvailability: opt.value }))}
-                      style={{
-                        flex: 1,
-                        padding: '0.5rem',
-                        borderRadius: 'var(--radius-sm)',
-                        border: '1.5px solid',
-                        borderColor: form.typeOfAvailability === opt.value ? 'var(--primary)' : 'var(--border)',
-                        background: form.typeOfAvailability === opt.value ? 'var(--green-100)' : 'var(--surface)',
-                        color: form.typeOfAvailability === opt.value ? 'var(--primary)' : 'var(--text-muted)',
-                        fontWeight: 600,
-                        fontSize: '0.875rem',
-                        cursor: 'pointer',
-                        fontFamily: 'var(--font-body)',
-                      }}
-                    >
-                      {opt.label}
-                    </button>
-                  ))}
-                </div>
-              </div>
-
               <div className="form-row">
                 <div className="form-group">
                   <label htmlFor="earlierLimit">Disponível a partir das</label>
