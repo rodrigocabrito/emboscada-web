@@ -1,12 +1,7 @@
 import { SESSION_TYPES, STATUS_OPTIONS } from '../../../constants/sessions';
 
-const STATUS_PALETTE = {
-  done:            { idle: { bg: 'var(--green-100)', color: 'var(--green-700)', border: 'var(--green-200)' }, sel: { bg: 'var(--green-500)', color: '#fff', border: 'var(--green-500)' } },
-  active:          { idle: { bg: '#dbeafe', color: '#1d4ed8', border: '#93c5fd' }, sel: { bg: '#1d4ed8', color: '#fff', border: '#1d4ed8' } },
-  pending_payment: { idle: { bg: '#fef3c7', color: '#92400e', border: '#fcd34d' }, sel: { bg: '#d97706', color: '#fff', border: '#d97706' } },
-  no_show:         { idle: { bg: '#fee2e2', color: '#991b1b', border: '#fca5a5' }, sel: { bg: '#dc2626', color: '#fff', border: '#dc2626' } },
-  cancelled:       { idle: { bg: '#f3f4f6', color: '#6b7280', border: '#d1d5db' }, sel: { bg: '#6b7280', color: '#fff', border: '#6b7280' } },
-};
+// Status chip colors live in global.css (.status-chip--{status}) so they can
+// adapt to dark mode — inline styles can't.
 
 const TextFilter = ({ label, value, onCommit, onClear, onApply, outerStyle }) => (
   <div className="form-group" style={{ margin: 0, flex: '1 1 160px', ...outerStyle }}>
@@ -148,14 +143,13 @@ const SessionFilters = ({
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
               {STATUS_OPTIONS.map((s) => {
                 const sel = filters.status.includes(s.value);
-                const c = (STATUS_PALETTE[s.value] ?? STATUS_PALETTE.cancelled)[sel ? 'sel' : 'idle'];
                 return (
-                  <button key={s.value} type="button" onClick={() => toggleChip('status', s.value)} style={{
-                    padding: '0.4rem 0.9rem', fontSize: '0.82rem', borderRadius: '999px', cursor: 'pointer',
-                    border: `1.5px solid ${c.border}`,
-                    background: c.bg, color: c.color,
-                    fontWeight: sel ? 600 : 500, transition: 'all 0.15s',
-                  }}>{s.label}</button>
+                  <button
+                    key={s.value}
+                    type="button"
+                    onClick={() => toggleChip('status', s.value)}
+                    className={`status-chip status-chip--${s.value}${sel ? ' is-selected' : ''}`}
+                  >{s.label}</button>
                 );
               })}
             </div>

@@ -4,16 +4,29 @@ import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getCatalogItems, addCatalogItem, updateCatalogItem, deleteCatalogItem } from '../../firebase/firestore';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
+// Each category carries a light and a dark palette. The values are handed to CSS
+// as custom properties (see .cat-tinted in global.css), which picks the right set
+// per theme — inline styles alone can't react to dark mode.
 const CATEGORIES = [
-  { label: 'Paintball',         color: '#ea580c', bg: '#fff7ed', border: '#fdba74' },
-  { label: 'Paintball Kids',   color: '#b45309', bg: '#fffbeb', border: '#fcd34d' },
-  { label: 'Laser Tag',         color: '#1d4ed8', bg: '#eff6ff', border: '#93c5fd' },
-  { label: 'Laser Tag Kids',   color: '#3730a3', bg: '#eef2ff', border: '#a5b4fc' },
-  { label: 'Gel Blast',         color: '#0e7490', bg: '#ecfeff', border: '#67e8f9' },
-  { label: 'Bubble Football',   color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd' },
-  { label: 'Extras',            color: '#065f46', bg: '#ecfdf5', border: '#6ee7b7' },
-  { label: 'Outro',             color: '#374151', bg: '#f3f4f6', border: '#d1d5db' },
+  { label: 'Paintball',       color: '#ea580c', bg: '#fff7ed', border: '#fdba74', darkColor: '#fdba74', darkBg: '#431407', darkBorder: '#9a3412' },
+  { label: 'Paintball Kids',  color: '#b45309', bg: '#fffbeb', border: '#fcd34d', darkColor: '#fcd34d', darkBg: '#451a03', darkBorder: '#92400e' },
+  { label: 'Laser Tag',       color: '#1d4ed8', bg: '#eff6ff', border: '#93c5fd', darkColor: '#93c5fd', darkBg: '#172554', darkBorder: '#1e40af' },
+  { label: 'Laser Tag Kids',  color: '#3730a3', bg: '#eef2ff', border: '#a5b4fc', darkColor: '#a5b4fc', darkBg: '#1e1b4b', darkBorder: '#3730a3' },
+  { label: 'Gel Blast',       color: '#0e7490', bg: '#ecfeff', border: '#67e8f9', darkColor: '#67e8f9', darkBg: '#083344', darkBorder: '#155e75' },
+  { label: 'Bubble Football', color: '#7c3aed', bg: '#f5f3ff', border: '#c4b5fd', darkColor: '#c4b5fd', darkBg: '#2e1065', darkBorder: '#5b21b6' },
+  { label: 'Extras',          color: '#065f46', bg: '#ecfdf5', border: '#6ee7b7', darkColor: '#6ee7b7', darkBg: '#022c22', darkBorder: '#065f46' },
+  { label: 'Outro',           color: '#374151', bg: '#f3f4f6', border: '#d1d5db', darkColor: '#d1d5db', darkBg: '#1f2937', darkBorder: '#4b5563' },
 ];
+
+// Exposes a category's palette to CSS as custom properties
+const catVars = (c) => ({
+  '--cat-bg': c.bg,
+  '--cat-color': c.color,
+  '--cat-border': c.border,
+  '--cat-bg-dark': c.darkBg,
+  '--cat-color-dark': c.darkColor,
+  '--cat-border-dark': c.darkBorder,
+});
 
 const EMPTY_FORM = {
   name: '',
@@ -299,9 +312,8 @@ const AdminCatalogo = () => {
 
       <div className="catalog-filter-bar">
         <button
-          className={`catalog-chip${!filterCategory ? ' catalog-chip--active' : ''}`}
+          className={`catalog-chip${!filterCategory ? ' catalog-chip--all-active' : ''}`}
           onClick={() => setFilterCategory('')}
-          style={!filterCategory ? { background: 'var(--green-100)', borderColor: 'var(--green-500)', color: 'var(--green-700)' } : {}}
         >
           Todos
         </button>
@@ -310,9 +322,9 @@ const AdminCatalogo = () => {
           return (
             <button
               key={c.label}
-              className={`catalog-chip${isActive ? ' catalog-chip--active' : ''}`}
+              className={`catalog-chip${isActive ? ' catalog-chip--active cat-tinted' : ''}`}
               onClick={() => setFilterCategory(isActive ? '' : c.label)}
-              style={isActive ? { background: c.bg, borderColor: c.border, color: c.color } : {}}
+              style={isActive ? catVars(c) : undefined}
             >
               {c.label}
             </button>
@@ -332,7 +344,7 @@ const AdminCatalogo = () => {
           {Object.entries(grouped).map(([cat, { items: catItems, meta }]) => (
             <div key={cat}>
               <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.75rem' }}>
-                <span style={{ fontSize: '0.72rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', background: meta.bg, color: meta.color, border: `1px solid ${meta.border}`, borderRadius: '999px', padding: '0.2rem 0.75rem' }}>
+                <span className="cat-badge cat-tinted" style={catVars(meta)}>
                   {cat}
                 </span>
               </div>
