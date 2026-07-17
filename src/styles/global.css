@@ -608,8 +608,10 @@ body {
   border-color: #1e2d3d;
 }
 
+/* Weekends keep the tinted background, but the number uses the normal --text
+   colour (the muted grey was far too low-contrast on the dark cell). */
 [data-theme="dark"] .avail-cell--weekend .avail-day-num {
-  color: #6b7280;
+  color: var(--text);
 }
 
 [data-theme="dark"] .avail-cell--holiday {
@@ -619,6 +621,24 @@ body {
 
 [data-theme="dark"] .avail-cell--holiday .avail-day-num {
   color: #fbbf24;
+}
+
+/* The holiday name can sit on the holiday, available or unavailable background
+   (a holiday may also be marked available/out) — all dark, so a light amber
+   reads on every one of them. */
+[data-theme="dark"] .avail-holiday-name {
+  color: #fcd34d;
+}
+
+/* The day tag only renders on days with availability set, so in dark mode it
+   sits on the green or red cell. --text-muted (a muted green) has poor contrast
+   there — especially on red — so tint it to match the cell state. */
+[data-theme="dark"] .avail-cell--available .avail-day-tag {
+  color: #86efac;
+}
+
+[data-theme="dark"] .avail-cell--unavailable .avail-day-tag {
+  color: #fca5a5;
 }
 
 [data-theme="dark"] .avail-cell--today {
