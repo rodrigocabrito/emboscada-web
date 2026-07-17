@@ -40,15 +40,7 @@ const ReactionBar = ({ announcement, uid, onToggle, busy }) => (
           disabled={busy}
           onClick={() => onToggle(announcement, r.key, active)}
           title={r.label}
-          style={{
-            display: 'inline-flex', alignItems: 'center', gap: '0.35rem',
-            padding: '0.25rem 0.6rem', borderRadius: '999px', cursor: 'pointer',
-            fontSize: '0.85rem', fontFamily: 'var(--font-body)',
-            border: `1.5px solid ${active ? 'var(--green-500, #22c55e)' : 'var(--border)'}`,
-            background: active ? 'var(--green-100, #dcfce7)' : 'var(--surface)',
-            color: active ? 'var(--green-700, #15803d)' : 'var(--text-muted)',
-            fontWeight: active ? 700 : 500,
-          }}
+          className={`reaction-pill${active ? ' is-active' : ''}`}
         >
           <span style={{ fontSize: '1rem', lineHeight: 1 }}>{r.emoji}</span>
           {count > 0 && <span>{count}</span>}
@@ -254,7 +246,7 @@ const Announcements = () => {
                       onClick={() => setDeleteTarget(a)}
                       aria-label="Eliminar comunicado"
                       title="Eliminar"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-muted)', fontSize: '0.9rem', padding: '0.15rem 0.35rem' }}
+                      style={{ background: 'none', border: 'none', cursor: 'pointer', color: '#dc2626', fontSize: '0.9rem', padding: '0.15rem 0.35rem' }}
                     >
                       ✕
                     </button>

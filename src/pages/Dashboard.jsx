@@ -191,7 +191,7 @@ const Dashboard = () => {
             >
               <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', marginBottom: '1rem' }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', flexWrap: 'wrap' }}>
-                  <span style={{ fontSize: '0.72rem', fontWeight: 800, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--green-700, #15803d)', background: 'var(--green-100, #dcfce7)', padding: '0.2rem 0.6rem', borderRadius: '999px' }}>
+                  <span className="rel-day-badge">
                     {relLabel(daysUntil(nextDate))}
                   </span>
                   <span style={{ fontSize: '1.05rem', fontWeight: 700, textTransform: 'capitalize' }}>{fmtDayLabel(nextDate)}</span>

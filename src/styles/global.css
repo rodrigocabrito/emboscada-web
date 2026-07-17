@@ -2171,6 +2171,162 @@ body {
   white-space: nowrap;
 }
 
+/* ── Green "active/highlight" pills ─────────────────────────────────────────
+   In dark mode --green-100 becomes a dark green while --green-700 stays dark,
+   so the light-mode pairing would render dark-on-dark. These need explicit
+   dark overrides (light text on a dark fill). */
+
+/* Dashboard — "Hoje" / "Amanhã" / "Em N dias" badge */
+.rel-day-badge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--green-700);
+  background: var(--green-100);
+  padding: 0.2rem 0.6rem;
+  border-radius: 999px;
+}
+
+[data-theme="dark"] .rel-day-badge {
+  background: #14532d;
+  color: #4ade80;
+}
+
+/* Comunicados — emoji reaction pill */
+.reaction-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.25rem 0.6rem;
+  border-radius: 999px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-family: var(--font-body);
+  font-weight: 500;
+  border: 1.5px solid var(--border);
+  background: var(--surface);
+  color: var(--text-muted);
+}
+
+.reaction-pill.is-active {
+  border-color: var(--green-500);
+  background: var(--green-100);
+  color: var(--green-700);
+  font-weight: 700;
+}
+
+[data-theme="dark"] .reaction-pill.is-active {
+  background: #14532d;
+  border-color: #16a34a;
+  color: #4ade80;
+}
+
+/* Catálogo — per-category tinting. The palette arrives as CSS custom
+   properties from AdminCatalogo's CATEGORIES (see catVars), so the same
+   classes serve all categories and swap palette with the theme. */
+.cat-tinted {
+  background: var(--cat-bg);
+  color: var(--cat-color);
+  border-color: var(--cat-border);
+}
+
+[data-theme="dark"] .cat-tinted {
+  background: var(--cat-bg-dark);
+  color: var(--cat-color-dark);
+  border-color: var(--cat-border-dark);
+}
+
+/* Category heading badge */
+.cat-badge {
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  border: 1px solid;
+  border-radius: 999px;
+  padding: 0.2rem 0.75rem;
+}
+
+/* Catálogo — "Todos" filter chip when active */
+.catalog-chip--all-active {
+  background: var(--green-100);
+  border-color: var(--green-500);
+  color: var(--green-700);
+}
+
+[data-theme="dark"] .catalog-chip--all-active {
+  background: #14532d;
+  border-color: #16a34a;
+  color: #4ade80;
+}
+
+/* ── Status filter chips (admin/sessions) ──────────────────────────────────── */
+.status-chip {
+  padding: 0.4rem 0.9rem;
+  font-size: 0.82rem;
+  border-radius: 999px;
+  cursor: pointer;
+  border: 1.5px solid;
+  font-weight: 500;
+  transition: all 0.15s;
+}
+
+.status-chip.is-selected {
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Light mode */
+.status-chip--done                  { background: var(--green-100); color: var(--green-700); border-color: var(--green-200); }
+.status-chip--done.is-selected      { background: var(--green-500); border-color: var(--green-500); }
+.status-chip--active                { background: #dbeafe; color: #1d4ed8; border-color: #93c5fd; }
+.status-chip--active.is-selected    { background: #1d4ed8; border-color: #1d4ed8; }
+.status-chip--pending_payment               { background: #fef3c7; color: #92400e; border-color: #fcd34d; }
+.status-chip--pending_payment.is-selected   { background: #d97706; border-color: #d97706; }
+.status-chip--no_show               { background: #fee2e2; color: #991b1b; border-color: #fca5a5; }
+.status-chip--no_show.is-selected   { background: #dc2626; border-color: #dc2626; }
+.status-chip--cancelled             { background: #f3f4f6; color: #6b7280; border-color: #d1d5db; }
+.status-chip--cancelled.is-selected { background: #6b7280; border-color: #6b7280; }
+
+/* Dark mode — dark fills with light text (the light-mode idle colors are
+   unreadable here; --green-100/--green-700 both resolve to dark greens). */
+[data-theme="dark"] .status-chip--done                { background: #14532d; color: #4ade80; border-color: #166534; }
+[data-theme="dark"] .status-chip--done.is-selected    { background: #16a34a; color: #fff; border-color: #16a34a; }
+[data-theme="dark"] .status-chip--active              { background: #1e3a8a; color: #93c5fd; border-color: #1d4ed8; }
+[data-theme="dark"] .status-chip--active.is-selected  { background: #2563eb; color: #fff; border-color: #2563eb; }
+[data-theme="dark"] .status-chip--pending_payment             { background: #78350f; color: #fcd34d; border-color: #92400e; }
+[data-theme="dark"] .status-chip--pending_payment.is-selected { background: #d97706; color: #fff; border-color: #d97706; }
+[data-theme="dark"] .status-chip--no_show             { background: #7f1d1d; color: #fca5a5; border-color: #991b1b; }
+[data-theme="dark"] .status-chip--no_show.is-selected { background: #dc2626; color: #fff; border-color: #dc2626; }
+[data-theme="dark"] .status-chip--cancelled             { background: #374151; color: #d1d5db; border-color: #4b5563; }
+[data-theme="dark"] .status-chip--cancelled.is-selected { background: #6b7280; color: #fff; border-color: #9ca3af; }
+
+/* ── Legend colors — light mode ─────────────────────────────────────────────── */
+.grid-legend-dot--done        { background: #dcfce7; border: 2px solid #15803d; }
+.grid-legend-label--done      { color: #15803d; }
+.grid-legend-dot--active      { background: #dbeafe; border: 2px solid #1e40af; }
+.grid-legend-label--active    { color: #1e40af; }
+.grid-legend-dot--pending     { background: #fef9c3; border: 2px solid #854d0e; }
+.grid-legend-label--pending   { color: #854d0e; }
+.grid-legend-dot--noshow      { background: #fee2e2; border: 2px solid #7f1d1d; }
+.grid-legend-label--noshow    { color: #7f1d1d; }
+.grid-legend-dot--cancelled   { background: #f3f4f6; border: 2px solid #374151; }
+.grid-legend-label--cancelled { color: #374151; }
+
+/* ── Legend colors — dark mode ──────────────────────────────────────────────── */
+/* Light text on dark fills, matching the badge palette used elsewhere */
+[data-theme="dark"] .grid-legend-dot--done        { background: #14532d; border-color: #4ade80; }
+[data-theme="dark"] .grid-legend-label--done      { color: #4ade80; }
+[data-theme="dark"] .grid-legend-dot--active      { background: #1e3a8a; border-color: #93c5fd; }
+[data-theme="dark"] .grid-legend-label--active    { color: #93c5fd; }
+[data-theme="dark"] .grid-legend-dot--pending     { background: #78350f; border-color: #fcd34d; }
+[data-theme="dark"] .grid-legend-label--pending   { color: #fcd34d; }
+[data-theme="dark"] .grid-legend-dot--noshow      { background: #7f1d1d; border-color: #fca5a5; }
+[data-theme="dark"] .grid-legend-label--noshow    { color: #fca5a5; }
+[data-theme="dark"] .grid-legend-dot--cancelled   { background: #374151; border-color: #d1d5db; }
+[data-theme="dark"] .grid-legend-label--cancelled { color: #d1d5db; }
+
 .grid-header h3 {
   margin: 0;
   min-width: 250px;

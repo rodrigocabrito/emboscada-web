@@ -23,20 +23,21 @@ const formatTime = (session) => {
   return d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
 };
 
+// Colors live in global.css (.grid-legend-*--{key}) so they can adapt to dark mode
 const STATUS_LEGEND = [
-  { label: 'Feita',            color: '#15803d', bg: '#dcfce7' },
-  { label: 'Ativa',            color: '#1e40af', bg: '#dbeafe' },
-  { label: 'Pendente',         color: '#854d0e', bg: '#fef9c3' },
-  { label: 'Não compareceu',   color: '#7f1d1d', bg: '#fee2e2' },
-  { label: 'Cancelada',        color: '#374151', bg: '#f3f4f6' },
+  { key: 'done',      label: 'Feita' },
+  { key: 'active',    label: 'Ativa' },
+  { key: 'pending',   label: 'Pendente' },
+  { key: 'noshow',    label: 'Não compareceu' },
+  { key: 'cancelled', label: 'Cancelada' },
 ];
 
 export const GridLegend = () => (
   <div className="grid-legend">
-    {STATUS_LEGEND.map(({ label, color, bg }) => (
-      <div key={label} className="grid-legend-item">
-        <span className="grid-legend-dot" style={{ background: bg, border: `2px solid ${color}` }} />
-        <span className="grid-legend-label" style={{ color }}>{label}</span>
+    {STATUS_LEGEND.map(({ key, label }) => (
+      <div key={key} className="grid-legend-item">
+        <span className={`grid-legend-dot grid-legend-dot--${key}`} />
+        <span className={`grid-legend-label grid-legend-label--${key}`}>{label}</span>
       </div>
     ))}
   </div>
