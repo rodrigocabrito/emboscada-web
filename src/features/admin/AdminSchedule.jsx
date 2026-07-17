@@ -460,8 +460,8 @@ const AdminSchedule = () => {
               <>
                 <RosterGroup label="Full" items={roster.full} status="full" />
                 <RosterGroup label="Part" items={roster.part} status="part" />
-                <RosterGroup label="Out" items={roster.unavailable} status="unavailable" />
                 <RosterGroup label="Sem resposta" items={roster.none} status="none" />
+                <RosterGroup label="Out" items={roster.unavailable} status="unavailable" />
               </>
             )}
           </div>
