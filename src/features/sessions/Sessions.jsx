@@ -5,6 +5,7 @@ import { useSessions } from './hooks/useSessions';
 import GridView, { GridLegend } from './components/SessionsGrid';
 import SessionViewModal from './components/SessionViewModal';
 import NewSessionModal from './components/NewSessionModal';
+import { usePermissions } from '../../hooks/usePermissions';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useScrollLock from '../../hooks/useScrollLock';
 
@@ -28,6 +29,7 @@ const EMPTY_FORM = {
 const Sessions = () => {
   const navigate = useNavigate();
   const location = useLocation();
+  const { isAdmin } = usePermissions();
   const [view, setView] = useState('day');
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -149,9 +151,11 @@ const Sessions = () => {
               </button>
             ))}
           </div>
-          <button className="btn-primary btn-new-session" onClick={openModal}>
-            + Nova Sessão
-          </button>
+          {isAdmin && (
+            <button className="btn-primary btn-new-session" onClick={openModal}>
+              + Nova Sessão
+            </button>
+          )}
         </div>
       </div>
 
@@ -171,7 +175,7 @@ const Sessions = () => {
         />
       )}
 
-      {modalOpen && (
+      {modalOpen && isAdmin && (
         <NewSessionModal
           form={form}
           loading={loading}
