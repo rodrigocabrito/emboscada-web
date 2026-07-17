@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { getUsers, getEvaluation, saveEvaluation } from '../../firebase/firestore';
+import { useVisibleCount } from '../../hooks/useVisibleCount';
 import { sendEmail } from '../../utils/email';
 import { evaluationEmail, APP_URL } from '../../utils/emailTemplates';
 
@@ -181,6 +182,7 @@ const UserEvaluation = () => {
   const [saving, setSaving] = useState(false);
   const [openEvals, setOpenEvals] = useState([]);
   const [openEvalDraft, setOpenEvalDraft] = useState({ date: new Date().toISOString().slice(0, 10), text: '' });
+  const evalsView = useVisibleCount(openEvals.length, 3);
 
   // Sync form state when the loaded evaluation changes — done during render
   // (the React-recommended pattern) instead of an effect, avoiding an extra pass.
@@ -370,7 +372,7 @@ const UserEvaluation = () => {
           {openEvals.length > 0 && (
             <div style={{ marginTop: '1.25rem', display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
               <div style={{ height: '1px', background: 'var(--border)' }} />
-              {openEvals.map((entry) => (
+              {openEvals.slice(0, evalsView.count).map((entry) => (
                 <div key={entry.id} style={{ padding: '0.85rem 1rem', background: 'var(--surface-alt, var(--surface))', borderRadius: '0.5rem', border: '1px solid var(--border)', position: 'relative' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
                     {new Date(entry.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}
@@ -386,6 +388,16 @@ const UserEvaluation = () => {
                   </button>
                 </div>
               ))}
+              {evalsView.hasMore && (
+                <button
+                  type="button"
+                  className="btn-secondary"
+                  style={{ width: 'auto', alignSelf: 'center', marginTop: '0.25rem' }}
+                  onClick={evalsView.showMore}
+                >
+                  Ver mais ({evalsView.remaining})
+                </button>
+              )}
             </div>
           )}
         </div>

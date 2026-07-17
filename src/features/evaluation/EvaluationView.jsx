@@ -2,6 +2,7 @@ import { useEffect, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
+import { useVisibleCount } from '../../hooks/useVisibleCount';
 import { getEvaluation, markEvaluationSeen } from '../../firebase/firestore';
 
 const SCALE = [
@@ -170,6 +171,7 @@ const EvaluationView = () => {
   const activities = evaluation?.activities ?? {};
   const tasks = evaluation?.tasks ?? {};
   const openEvals = ((evaluation?.openEvals ?? []).slice().sort((a, b) => b.date.localeCompare(a.date)));
+  const evalsView = useVisibleCount(openEvals.length, 3);
 
   return (
     <div className="page">
@@ -232,7 +234,7 @@ const EvaluationView = () => {
             <div className="session-detail-card">
               <CardHeader title="Avaliações" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
-                {openEvals.map((entry) => (
+                {openEvals.slice(0, evalsView.count).map((entry) => (
                   <div key={entry.id} style={{ padding: '0.85rem 1rem', background: 'var(--surface-alt, var(--surface))', borderRadius: '0.5rem', border: '1px solid var(--border)' }}>
                     <div style={{ fontSize: '0.75rem', fontWeight: 600, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
                       {new Date(entry.date + 'T00:00:00').toLocaleDateString('pt-PT', { day: '2-digit', month: 'long', year: 'numeric' })}
@@ -240,6 +242,16 @@ const EvaluationView = () => {
                     <p style={{ fontSize: '0.875rem', color: 'var(--text)', whiteSpace: 'pre-wrap', margin: 0 }}>{entry.text}</p>
                   </div>
                 ))}
+                {evalsView.hasMore && (
+                  <button
+                    type="button"
+                    className="btn-secondary"
+                    style={{ width: 'auto', alignSelf: 'center', marginTop: '0.25rem' }}
+                    onClick={evalsView.showMore}
+                  >
+                    Ver mais ({evalsView.remaining})
+                  </button>
+                )}
               </div>
             </div>
           )}
