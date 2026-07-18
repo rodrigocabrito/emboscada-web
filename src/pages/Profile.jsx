@@ -235,7 +235,7 @@ const Profile = () => {
             {getAchievements(profile?.startedAt).length > 0 && (
               <div style={{ borderTop: '1px solid var(--border)', paddingTop: '1.5rem', width: '100%' }}>
                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)', marginBottom: '1rem', textTransform: 'uppercase', letterSpacing: '0.08em' }}>Anos em Emboscada</p>
-                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'nowrap', justifyContent: 'center', overflow: 'hidden' }}>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', justifyContent: 'center' }}>
                   {getAchievements(profile?.startedAt).map((y) => (
                     <Achievement key={y} years={y} />
                   ))}

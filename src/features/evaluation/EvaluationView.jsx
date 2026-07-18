@@ -197,10 +197,10 @@ const EvaluationView = () => {
           Ainda não tens nenhuma avaliação registada.
         </div>
       ) : (
-        <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start' }}>
+        <div className="eval-layout">
 
           {/* Main content */}
-          <div style={{ flex: '1 1 0', minWidth: 0, display: 'flex', flexDirection: 'column', gap: '1.25rem' }}>
+          <div className="eval-main">
 
           {/* Profile */}
           {(evaluation.positivePoints || evaluation.negativePoints || evaluation.preferredTypes || evaluation.lessPreferredTypes) && (
@@ -260,7 +260,7 @@ const EvaluationView = () => {
 
           {/* Changelog — sticky sidebar */}
           {(evaluation.changelog ?? []).length > 0 && (
-            <div className="session-detail-card" style={{ width: '380px', flexShrink: 0, position: 'sticky', top: '5rem', maxHeight: 'calc(100vh - 7rem)', overflowY: 'auto' }}>
+            <div className="session-detail-card eval-sidebar">
               <CardHeader title="Histórico de alterações" />
               <div style={{ display: 'flex', flexDirection: 'column', gap: '0.75rem' }}>
                 {(evaluation.changelog ?? []).map((entry, i) => (
