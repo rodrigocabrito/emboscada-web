@@ -8,7 +8,7 @@ import { TYPE_BADGE } from '../../constants/sessions';
 import { monitorAvail, monitorWarnings } from '../../utils/scheduleRules';
 import useEscapeKey from '../../hooks/useEscapeKey';
 
-const WEEKDAYS = ['Domingo', 'Segunda', 'Terça', 'Quarta', 'Quinta', 'Sexta', 'Sábado'];
+const WEEKDAYS = ['Domingo', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado'];
 
 const pad2 = (n) => String(n).padStart(2, '0');
 const toDateStr = (d) => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
@@ -386,7 +386,8 @@ const AdminSchedule = () => {
     ? sortedSessions.find((s) => s.id === pickerSession.id) ?? pickerSession
     : null;
 
-  const titleLabel = `${WEEKDAYS[currentDate.getDay()]}, ${currentDate.getDate()} de ${currentDate.toLocaleDateString('pt-PT', { month: 'long' })} ${currentDate.getFullYear()}`;
+  // Only the weekday — the full date is already shown by the date picker below
+  const titleLabel = WEEKDAYS[currentDate.getDay()];
 
   return (
     <div className="page">
@@ -400,24 +401,22 @@ const AdminSchedule = () => {
 
       {/* Day navigation */}
       <div className="card" style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '0.75rem', flexWrap: 'wrap', padding: '0.85rem 1.1rem', marginBottom: '1.25rem' }}>
-        <button className="btn-secondary" style={{ width: 'auto', marginTop: 0 }} onClick={() => shiftDay(-1)}>← Dia anterior</button>
+        <button className="btn-secondary" style={{ width: 'auto', marginTop: 0 }} onClick={() => shiftDay(-1)} aria-label="Dia anterior">←</button>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.3rem' }}>
+          {!isToday && (
+            <button className="btn-secondary" style={{ width: 'auto', marginTop: 0, padding: '0.25rem 0.6rem', fontSize: '0.78rem' }} onClick={() => setCurrentDate(new Date())}>
+              Hoje
+            </button>
+          )}
           <span style={{ fontSize: '1.05rem', fontWeight: 700, textTransform: 'capitalize' }}>{titleLabel}</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-            <input
-              type="date"
-              value={dateStr}
-              onChange={(e) => { if (e.target.value) { const [y, m, d] = e.target.value.split('-'); setCurrentDate(new Date(+y, +m - 1, +d)); } }}
-              style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
-            />
-            {!isToday && (
-              <button className="btn-secondary" style={{ width: 'auto', marginTop: 0, padding: '0.25rem 0.6rem', fontSize: '0.78rem' }} onClick={() => setCurrentDate(new Date())}>
-                Hoje
-              </button>
-            )}
-          </div>
+          <input
+            type="date"
+            value={dateStr}
+            onChange={(e) => { if (e.target.value) { const [y, m, d] = e.target.value.split('-'); setCurrentDate(new Date(+y, +m - 1, +d)); } }}
+            style={{ width: 'auto', padding: '0.25rem 0.5rem', fontSize: '0.8rem' }}
+          />
         </div>
-        <button className="btn-secondary" style={{ width: 'auto', marginTop: 0 }} onClick={() => shiftDay(1)}>Dia seguinte →</button>
+        <button className="btn-secondary" style={{ width: 'auto', marginTop: 0 }} onClick={() => shiftDay(1)} aria-label="Dia seguinte">→</button>
       </div>
 
       <div style={{ display: 'flex', gap: '1.5rem', alignItems: 'flex-start', flexWrap: 'wrap' }}>

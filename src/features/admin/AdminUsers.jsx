@@ -166,7 +166,7 @@ const AdminUsers = () => {
               Nenhum outro utilizador registado.
             </p>
           ) : (
-            <table className="data-table">
+            <table className="data-table data-table--responsive">
               <thead>
                 <tr>
                   <th>Nome</th>
@@ -190,14 +190,14 @@ const AdminUsers = () => {
                   );
                   return filtered.map((u) => (
                   <tr key={u.uuid}>
-                    <td className="td-name">{u.firstName} {u.lastName}</td>
-                    <td className="td-muted">{u.email}</td>
-                    <td>
+                    <td className="td-name" data-label="Nome">{u.firstName} {u.lastName}</td>
+                    <td className="td-muted" data-label="Email">{u.email}</td>
+                    <td data-label="Função">
                       <span className={`role-badge role-${u.role}`}>
                         {roleLabel(u.role)}
                       </span>
                     </td>
-                    <td className="td-actions">
+                    <td className="td-actions" data-label="Ações">
                       <button
                         className="btn-table-action"
                         onClick={() => setViewingUser(u)}

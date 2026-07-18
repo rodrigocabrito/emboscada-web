@@ -38,8 +38,8 @@ const relLabel = (n) => (n <= 0 ? 'Hoje' : n === 1 ? 'Amanhã' : `Em ${n} dias`)
 const fmtDayLabel = (dateStr) =>
   new Date(dateStr + 'T00:00:00').toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long' });
 
-const Field = ({ label, children }) => (
-  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
+const Field = ({ label, area, children }) => (
+  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0, gridArea: area }}>
     <span style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
       {label}
     </span>
@@ -62,27 +62,24 @@ const SessionRow = ({ session, usersById, highlight, onClick }) => {
     <button
       type="button"
       onClick={onClick}
+      className="dash-session-row"
       style={{
-        display: 'grid',
-        gridTemplateColumns: '3.4rem 1fr 12rem 6rem 8.5rem 4.5rem 11rem 1rem',
-        alignItems: 'center', gap: '1.25rem', width: '100%', textAlign: 'left',
+        width: '100%', textAlign: 'left',
         padding: highlight ? '0.9rem 1.1rem' : '0.75rem 1rem',
         background: 'var(--surface)',
         border: `1.5px solid ${highlight ? 'var(--green-500, #22c55e)' : 'var(--border)'}`,
         borderRadius: '0.6rem', cursor: 'pointer', fontFamily: 'var(--font-body)',
       }}
     >
-      <span style={{ fontSize: highlight ? '1.4rem' : '1.15rem', fontWeight: 800, lineHeight: 1, color: 'var(--text)', justifySelf: 'center' }}>
+      <span style={{ gridArea: 'time', fontSize: highlight ? '1.4rem' : '1.15rem', fontWeight: 800, lineHeight: 1, color: 'var(--text)', justifySelf: 'center', alignSelf: 'center' }}>
         {session.sessionTime}
       </span>
 
-      <span />
+      <Field label="Cliente" area="cliente">{session.spocName || session.spoc || '—'}</Field>
 
-      <Field label="Cliente">{session.spocName || session.spoc || '—'}</Field>
+      <Field label="Jogadores" area="jogadores">👥 {players || '—'}</Field>
 
-      <Field label="Jogadores">👥 {players || '—'}</Field>
-
-      <Field label="Tipo">
+      <Field label="Tipo" area="tipo">
         {session.typeOfSession ? (
           <span style={{ background: badge.bg, color: badge.color, borderRadius: '0.4rem', padding: '0.15rem 0.55rem', fontSize: '0.75rem', fontWeight: 700 }}>
             {session.typeOfSession}
@@ -90,9 +87,9 @@ const SessionRow = ({ session, usersById, highlight, onClick }) => {
         ) : '—'}
       </Field>
 
-      <Field label="Calibre">{hasCaliber ? session.caliber : '—'}</Field>
+      <Field label="Calibre" area="calibre">{hasCaliber ? session.caliber : '—'}</Field>
 
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
+      <div style={{ gridArea: 'monitores', display: 'flex', flexDirection: 'column', gap: '0.2rem', minWidth: 0 }}>
         <span style={{ fontSize: '0.6rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em', color: 'var(--text-muted)' }}>
           {monitors.length > 1 ? 'Monitores' : 'Monitor'}
         </span>
@@ -109,7 +106,7 @@ const SessionRow = ({ session, usersById, highlight, onClick }) => {
         )}
       </div>
 
-      <span style={{ color: 'var(--text-muted)', fontSize: '1.1rem', justifySelf: 'end' }}>›</span>
+      <span style={{ gridArea: 'chev', color: 'var(--text-muted)', fontSize: '1.1rem', justifySelf: 'end', alignSelf: 'center' }}>›</span>
     </button>
   );
 };

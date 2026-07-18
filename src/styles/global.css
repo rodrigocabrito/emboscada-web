@@ -542,18 +542,19 @@ body {
 }
 
 .avail-cell--holiday {
-  background: #fef9c3;
-  border-color: #fde047;
+  background: #f3f4f6;
+  border-color: #e5e7eb;
+  box-shadow: inset 0 0 0 1px rgba(0,0,0,0.06), inset 0 2px 4px rgba(0,0,0,0.04);
 }
 
 .avail-cell--holiday .avail-day-num {
-  color: #854d0e;
+  color: #6b7280;
 }
 
 .avail-holiday-name {
   font-size: 0.6rem;
   font-weight: 600;
-  color: #92400e;
+  color: #6b7280;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
@@ -565,6 +566,11 @@ body {
 .avail-cell--available {
   border-color: #86efac;
   background: #dcfce7;
+}
+
+.avail-cell--partial {
+  border-color: #fde047;
+  background: #fef9c3;
 }
 
 .avail-cell--unavailable {
@@ -580,6 +586,11 @@ body {
 .avail-cell--today.avail-cell--available {
   border: 2.5px solid #818cf8;
   background: #dcfce7;
+}
+
+.avail-cell--today.avail-cell--partial {
+  border: 2.5px solid #818cf8;
+  background: #fef9c3;
 }
 
 .avail-cell--today.avail-cell--unavailable {
@@ -601,6 +612,11 @@ body {
   max-width: 100%;
 }
 
+/* The condensed Full/Part/Out label is mobile-only (see the mobile block) */
+.avail-day-tag--short {
+  display: none;
+}
+
 /* ─── Availability — dark mode overrides ───────────────────────────────────── */
 /* Order matters: weekend/holiday first, then available/unavailable override them */
 [data-theme="dark"] .avail-cell--weekend {
@@ -615,19 +631,19 @@ body {
 }
 
 [data-theme="dark"] .avail-cell--holiday {
-  background: #422006;
-  border-color: #78350f;
+  background: #1a2332;
+  border-color: #1e2d3d;
 }
 
 [data-theme="dark"] .avail-cell--holiday .avail-day-num {
-  color: #fbbf24;
+  color: var(--text);
 }
 
 /* The holiday name can sit on the holiday, available or unavailable background
    (a holiday may also be marked available/out) — all dark, so a light amber
    reads on every one of them. */
 [data-theme="dark"] .avail-holiday-name {
-  color: #fcd34d;
+  color: #d1d5db;
 }
 
 /* The day tag only renders on days with availability set, so in dark mode it
@@ -635,6 +651,10 @@ body {
    there — especially on red — so tint it to match the cell state. */
 [data-theme="dark"] .avail-cell--available .avail-day-tag {
   color: #86efac;
+}
+
+[data-theme="dark"] .avail-cell--partial .avail-day-tag {
+  color: #fde68a;
 }
 
 [data-theme="dark"] .avail-cell--unavailable .avail-day-tag {
@@ -651,6 +671,15 @@ body {
   border-color: #4ade80;
 }
 
+[data-theme="dark"] .avail-cell--partial {
+  background: #422006;
+  border-color: #f59e0b;
+}
+
+[data-theme="dark"] .avail-cell--partial .avail-day-num {
+  color: #fde68a;
+}
+
 [data-theme="dark"] .avail-cell--unavailable {
   background: #7f1d1d;
   border-color: #ef4444;
@@ -665,9 +694,55 @@ body {
   background: #14532d;
 }
 
+[data-theme="dark"] .avail-cell--today.avail-cell--partial {
+  border-color: #4338ca;
+  background: #422006;
+}
+
 [data-theme="dark"] .avail-cell--today.avail-cell--unavailable {
   border-color: #4338ca;
   background: #7f1d1d;
+}
+
+/* ─── Availability — mobile ────────────────────────────────────────────────── */
+@media (max-width: 768px) {
+  /* Cells are too narrow for the times/"Disponível" — swap in Full/Part/Out */
+  .avail-day-tag--full {
+    display: none;
+  }
+
+  .avail-day-tag--short {
+    display: block;
+  }
+
+  /* Drop the "Hoje" badge out of the top-right corner (it overlapped the day
+     number on the small cells) and stack it below the number instead. Shrink
+     the pill so it fits the narrow cell — at full size it was clipped by the
+     cell's overflow:hidden. */
+  .avail-today-badge {
+    position: static;
+    order: 2;
+    align-self: flex-start;
+    margin-top: 0.1rem;
+    font-size: 0.5rem;
+    padding: 0.05rem 0.3rem;
+    letter-spacing: 0;
+  }
+
+  .avail-holiday-name,
+  .avail-day-tag {
+    order: 3;
+  }
+
+  /* Arrows alone are enough on mobile — drop the "Mês anterior"/"Próximo mês"
+     text and shrink the month title so the whole nav row fits */
+  .avail-nav-label {
+    display: none;
+  }
+
+  .avail-month-title {
+    font-size: 1.1rem;
+  }
 }
 
 /* ─── Admin ─────────────────────────────────────────────────────────────────── */
@@ -1597,6 +1672,22 @@ body {
   .form-row {
     grid-template-columns: 1fr;
   }
+
+  /* Session detail: the two-column card layout can't fit side by side on a
+     phone — stack the cards, and reduce card padding to reclaim width. */
+  .session-detail-layout {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .session-detail-card {
+    padding: 1.25rem 1rem;
+  }
+
+  /* Full-width stacked action buttons (their labels don't fit side by side) */
+  .session-detail-footer {
+    flex-direction: column;
+  }
 }
 
 /* ─── Modal ─────────────────────────────────────────────────────────────────── */
@@ -1707,6 +1798,7 @@ body {
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   overflow: hidden;
+  flex-shrink: 0; /* don't let the toolbar squeeze it */
 }
 
 .view-toggle button {
@@ -1718,6 +1810,7 @@ body {
   font-size: 0.85rem;
   font-family: var(--font-body);
   color: var(--text-muted);
+  white-space: nowrap; /* "Semana" must never clip */
   transition: background var(--transition), color var(--transition);
 }
 
@@ -2039,6 +2132,51 @@ body {
   color: var(--text-muted);
 }
 
+/* Admin sessions results — on mobile the 6-column table can't fit, so each row
+   becomes a stacked card with the column name shown as a label per field. */
+@media (max-width: 768px) {
+  .data-table--responsive thead {
+    display: none;
+  }
+
+  .data-table--responsive tbody tr {
+    display: block;
+    padding: 0.75rem 1rem;
+  }
+
+  .data-table--responsive td {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    padding: 0.25rem 0;
+    text-align: right;
+    word-break: break-word;
+  }
+
+  .data-table--responsive td::before {
+    content: attr(data-label);
+    flex-shrink: 0;
+    font-size: 0.68rem;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+    color: var(--text-muted);
+    text-align: left;
+  }
+
+  /* Action-icon cells: drop the label and spread the view/evaluate/delete icons
+     evenly across the full width of the block. */
+  .data-table--responsive td.td-actions {
+    justify-content: space-between;
+    padding-top: 0.5rem;
+  }
+
+  .data-table--responsive td.td-actions::before {
+    display: none;
+  }
+}
+
 .td-actions {
   text-align: right;
   white-space: nowrap;
@@ -2070,6 +2208,61 @@ body {
 .role-monitor {
   background: var(--green-100);
   color: var(--green-700);
+}
+
+/* Dark mode: the light badge fills glare against the dark UI, so give each role
+   a deep, tinted background with a light-toned label (matching --green fix). */
+[data-theme="dark"] .role-admin {
+  background: #312e81;
+  color: #c7d2fe;
+}
+
+[data-theme="dark"] .role-monitor_leader {
+  background: #78350f;
+  color: #fcd34d;
+}
+
+/* --green-100 and --green-700 both resolve to dark greens in dark mode, so the
+   badge text is unreadable — pin it to a light green on a deep green instead. */
+[data-theme="dark"] .role-monitor {
+  background: #14532d;
+  color: #86efac;
+}
+
+/* Payment icons: the MBWay logo is near-black, so swap to a light variant in
+   dark mode. Light mode shows --light, dark mode shows --dark. */
+.pay-icon--dark {
+  display: none;
+}
+
+[data-theme="dark"] .pay-icon--light {
+  display: none;
+}
+
+[data-theme="dark"] .pay-icon--dark {
+  display: block;
+}
+
+/* When selected, the icon box turns light even in dark mode, so the light-tuned
+   icon would vanish — show the original (dark) icon on that light background. */
+[data-theme="dark"] .pay-type-btn.is-selected .pay-icon--light {
+  display: block;
+}
+
+[data-theme="dark"] .pay-type-btn.is-selected .pay-icon--dark {
+  display: none;
+}
+
+.pay-type-label {
+  color: var(--text-muted);
+}
+
+.pay-type-btn.is-selected .pay-type-label {
+  color: var(--primary);
+}
+
+[data-theme="dark"] .pay-type-btn.is-selected .pay-type-label {
+  color: var(--primary-light, #86efac);
 }
 
 .btn-table-action {
@@ -2169,7 +2362,9 @@ body {
   display: flex;
   flex-direction: row;
   gap: 0.75rem;
+  row-gap: 0.35rem;
   align-items: center;
+  flex-wrap: wrap; /* never push off-screen on narrow viewports */
 }
 
 .grid-legend-item {
@@ -2211,6 +2406,53 @@ body {
 [data-theme="dark"] .rel-day-badge {
   background: #14532d;
   color: #4ade80;
+}
+
+/* Home — upcoming session row. Desktop: one wide line. The grid areas let the
+   same markup restack into a compact card on mobile (see the mobile override). */
+.dash-session-row {
+  display: grid;
+  grid-template-columns: 3.4rem 1fr 12rem 6rem 8.5rem 4.5rem 11rem 1rem;
+  grid-template-areas: "time . cliente jogadores tipo calibre monitores chev";
+  align-items: center;
+  gap: 1.25rem;
+}
+
+@media (max-width: 768px) {
+  .dash-session-row {
+    grid-template-columns: auto 1fr auto;
+    grid-template-areas:
+      "time cliente   chev"
+      "time tipo      calibre"
+      "time jogadores jogadores"
+      "time monitores monitores";
+    column-gap: 0.7rem;
+    row-gap: 0.5rem;
+  }
+}
+
+/* Admin sessions — filter action buttons. Desktop: one row, "Aplicar" pushed
+   to the far right. Mobile: stack so each button sits on its own line. */
+.filter-actions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.filter-actions .filter-apply {
+  margin-left: auto;
+}
+
+@media (max-width: 768px) {
+  .filter-actions {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .filter-actions .filter-apply {
+    margin-left: 0;
+  }
 }
 
 /* Comunicados — reaction pill + "who reacted" hover popover */
@@ -2689,21 +2931,22 @@ body {
   overflow-x: auto;
 }
 
-.grid-week-header-row {
-  display: grid;
-  grid-template-columns: repeat(7, 1fr);
-  gap: 0.75rem;
-  margin-bottom: 0.25rem;
-}
-
+/* Day label lives inside each week column (header of the column card) */
 .grid-week-day-label {
   display: flex;
   flex-direction: column;
   align-items: center;
   padding: 0.4rem 0;
-  border-radius: var(--radius-sm);
   background: var(--surface);
-  border: 1px solid var(--border);
+  border-bottom: 1px solid var(--border);
+}
+
+.grid-day-empty {
+  font-size: 0.72rem;
+  color: var(--text-muted);
+  text-align: center;
+  padding: 0.5rem 0;
+  opacity: 0.7;
 }
 
 .grid-week-day-today {
@@ -2786,19 +3029,70 @@ body {
 
   .grid-header h3 {
     min-width: auto;
+    font-size: 0.95rem;
+    text-align: center;
   }
 
   .grid-header button {
-    font-size: 0.78rem;
-    padding: 0.35rem 0.7rem;
+    font-size: 0.9rem;
+    padding: 0.35rem 0.8rem;
   }
 
-  .grid-week {
-    grid-template-columns: repeat(3, 1fr);
+  /* Arrow-only navigation — the ← / → say enough on a small screen */
+  .grid-nav-label {
+    display: none;
   }
-
 
   .grid-session-card {
     max-width: 150px;
+  }
+
+  /* Week view becomes a vertical agenda: one full-width card per day, with
+     the day header on the left and that day's sessions wrapping below it. */
+  .grid-week {
+    grid-template-columns: 1fr;
+    gap: 0.6rem;
+  }
+
+  .grid-day-column {
+    min-height: 0;
+  }
+
+  .grid-week-day-label {
+    flex-direction: row;
+    justify-content: flex-start;
+    align-items: baseline;
+    gap: 0.5rem;
+    padding: 0.45rem 0.75rem;
+  }
+
+  .grid-day-sessions {
+    flex-direction: row;
+    flex-wrap: wrap;
+    overflow-y: visible;
+  }
+
+  .grid-day-sessions > .grid-session-card {
+    flex: 1 1 42%;
+    max-width: calc(50% - 0.2rem);
+  }
+
+  .grid-day-empty {
+    padding: 0.15rem 0.25rem;
+    text-align: left;
+  }
+
+  /* Tighter legend so all five statuses fit comfortably */
+  .grid-legend {
+    gap: 0.5rem;
+  }
+
+  .grid-legend-dot {
+    width: 12px;
+    height: 12px;
+  }
+
+  .grid-legend-label {
+    font-size: 0.72rem;
   }
 }

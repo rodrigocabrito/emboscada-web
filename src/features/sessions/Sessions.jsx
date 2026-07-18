@@ -138,7 +138,7 @@ const Sessions = () => {
             onClick={() => setHideCancelled((prev) => !prev)}
             style={{ padding: '0.4rem 0.9rem', fontSize: '0.85rem', marginTop: 0, width: 'fit-content', opacity: hideCancelled ? 1 : 0.6, visibility: (view === 'day' || view === 'week') ? 'visible' : 'hidden' }}
           >
-            {hideCancelled ? '✓ Canceladas ocultas' : 'Ocultar Canceladas'}
+            {hideCancelled ? 'Canceladas ocultas' : 'Ocultar Canceladas'}
           </button>
           <div className="view-toggle">
             {VIEWS.map((v) => (

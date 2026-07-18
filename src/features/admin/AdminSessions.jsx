@@ -278,7 +278,7 @@ const AdminSessions = () => {
             {hasFilters ? 'Nenhuma sessão encontrada para os filtros aplicados.' : 'Nenhuma sessão registada.'}
           </p>
         ) : (
-          <table className="data-table">
+          <table className="data-table data-table--responsive">
             <thead>
               <tr>
                 <SortTh field="date" sort={sort} onSort={handleSort}>Data</SortTh>
@@ -294,12 +294,12 @@ const AdminSessions = () => {
                 const date = (s.sessionDatetime || s.sessionDate || '').slice(0, 10);
                 return (
                   <tr key={s.id} onClick={() => navigate(`/sessions/${s.id}`, { state: { from: '/admin/sessions' } })} style={{ cursor: 'pointer' }}>
-                    <td>{date ? fmt(date) : '—'}</td>
-                    <td className="td-name">{s.spocName || s.spoc || '—'}</td>
-                    <td className="td-muted">{s.spocEmail || '—'}</td>
-                    <td className="td-muted">{s.spocPhoneNumber || '—'}</td>
-                    <td className="td-muted">{s.typeOfSession || '—'}</td>
-                    <td>
+                    <td data-label="Data">{date ? fmt(date) : '—'}</td>
+                    <td className="td-name" data-label="Nome">{s.spocName || s.spoc || '—'}</td>
+                    <td className="td-muted" data-label="Email">{s.spocEmail || '—'}</td>
+                    <td className="td-muted" data-label="Telefone">{s.spocPhoneNumber || '—'}</td>
+                    <td className="td-muted" data-label="Tipo">{s.typeOfSession || '—'}</td>
+                    <td data-label="Estado">
                       <span className={`badge ${getStatusBadgeClass(s.status)}`} style={{ fontSize: '0.75rem' }}>
                         {getStatusLabel(s.status)}
                       </span>

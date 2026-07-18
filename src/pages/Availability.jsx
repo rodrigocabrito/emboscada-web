@@ -288,7 +288,7 @@ const Availability = () => {
       </div>
 
       <div className="avail-nav">
-        <button className="avail-nav-btn" onClick={prevMonth}>← Mês anterior</button>
+        <button className="avail-nav-btn" onClick={prevMonth} aria-label="Mês anterior">←<span className="avail-nav-label"> Mês anterior</span></button>
         <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '0.4rem' }}>
           <button
             className="avail-today-btn"
@@ -299,7 +299,7 @@ const Availability = () => {
           </button>
           <h2 className="avail-month-title">{MONTHS[month]} {year}</h2>
         </div>
-        <button className="avail-nav-btn" onClick={nextMonth}>Próximo mês →</button>
+        <button className="avail-nav-btn" onClick={nextMonth} aria-label="Próximo mês"><span className="avail-nav-label">Próximo mês </span>→</button>
       </div>
 
       <div className="avail-grid">
@@ -311,7 +311,8 @@ const Availability = () => {
           const isToday = isCurrentMonth && day === today.getDate();
           const entry = monthData[day];
           const hasData = !!entry;
-          const isAvailable = hasData && entry.available;
+          const isFullAvail = hasData && entry.available && entry.typeOfAvailability !== 'part';
+          const isPartAvail = hasData && entry.available && entry.typeOfAvailability === 'part';
           const isUnavailable = hasData && !entry.available;
           const dow = new Date(year, month, day).getDay();
           const isWeekend = dow === 0 || dow === 6;
@@ -321,7 +322,7 @@ const Availability = () => {
           return (
             <button
               key={day}
-              className={`avail-cell avail-cell--day${isWeekend ? ' avail-cell--weekend' : ''}${holidayName ? ' avail-cell--holiday' : ''}${isToday ? ' avail-cell--today' : ''}${isAvailable ? ' avail-cell--available' : ''}${isUnavailable ? ' avail-cell--unavailable' : ''}`}
+              className={`avail-cell avail-cell--day${isWeekend ? ' avail-cell--weekend' : ''}${holidayName ? ' avail-cell--holiday' : ''}${isToday ? ' avail-cell--today' : ''}${isFullAvail ? ' avail-cell--available' : ''}${isPartAvail ? ' avail-cell--partial' : ''}${isUnavailable ? ' avail-cell--unavailable' : ''}`}
               onClick={() => setSelectedDay(day)}
               disabled={loading}
             >
@@ -329,17 +330,23 @@ const Availability = () => {
               <span className="avail-day-num">{day}</span>
               {holidayName && <span className="avail-holiday-name">{holidayName}</span>}
               {hasData && (
-                <span className="avail-day-tag">
-                  {(() => {
-                    if (isUnavailable) return 'Indisponível';
-                    const e = entry.earlierLimit ? formatHour(entry.earlierLimit) : '';
-                    const l = entry.laterLimit ? formatHour(entry.laterLimit) : '';
-                    if (e && !l) return `A partir das ${e}`;
-                    if (!e && l) return `Até às ${l}`;
-                    if (e && l) return `Das ${e} às ${l}`;
-                    return 'Disponível';
-                  })()}
-                </span>
+                <>
+                  <span className="avail-day-tag avail-day-tag--full">
+                    {(() => {
+                      if (isUnavailable) return 'Out';
+                      const e = entry.earlierLimit ? formatHour(entry.earlierLimit) : '';
+                      const l = entry.laterLimit ? formatHour(entry.laterLimit) : '';
+                      if (e && !l) return `A partir das ${e}`;
+                      if (!e && l) return `Até às ${l}`;
+                      if (e && l) return `Das ${e} às ${l}`;
+                      return 'Full';
+                    })()}
+                  </span>
+                  {/* Mobile-only condensed label — cells are too narrow for the times */}
+                  <span className="avail-day-tag avail-day-tag--short">
+                    {isUnavailable ? 'Out' : isPartAvail ? 'Part' : 'Full'}
+                  </span>
+                </>
               )}
             </button>
           );
