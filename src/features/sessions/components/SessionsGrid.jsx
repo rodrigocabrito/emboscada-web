@@ -207,9 +207,9 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange, hi
             </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
-            <button onClick={() => onDateChange(new Date(currentDate.getTime() - 86400000))}>← Anterior</button>
+            <button aria-label="Dia anterior" onClick={() => onDateChange(new Date(currentDate.getTime() - 86400000))}>←<span className="grid-nav-label"> Anterior</span></button>
             <h3 style={{ margin: 0 }}>{currentDate.toLocaleDateString('pt-PT', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' })}</h3>
-            <button onClick={() => onDateChange(new Date(currentDate.getTime() + 86400000))}>Próximo →</button>
+            <button aria-label="Dia seguinte" onClick={() => onDateChange(new Date(currentDate.getTime() + 86400000))}><span className="grid-nav-label">Próximo </span>→</button>
           </div>
         </div>
         {daySessions.length === 0 ? (
@@ -292,29 +292,19 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange, hi
             </button>
           </div>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '2rem' }}>
-            <button onClick={() => onDateChange(new Date(currentDate.getTime() - 604800000))}>← Semana Anterior</button>
+            <button aria-label="Semana anterior" onClick={() => onDateChange(new Date(currentDate.getTime() - 604800000))}>←<span className="grid-nav-label"> Semana Anterior</span></button>
             <h3 style={{ margin: 0 }}>
               {weekStart.toLocaleDateString('pt-PT', { day: 'numeric', month: 'short' })} –{' '}
               {new Date(weekEnd.getTime() - 86400000).toLocaleDateString('pt-PT', { day: 'numeric', month: 'short', year: 'numeric' })}
             </h3>
-            <button onClick={() => onDateChange(new Date(currentDate.getTime() + 604800000))}>Próxima Semana →</button>
+            <button aria-label="Próxima semana" onClick={() => onDateChange(new Date(currentDate.getTime() + 604800000))}><span className="grid-nav-label">Próxima Semana </span>→</button>
           </div>
-        </div>
-        <div className="grid-week-header-row">
-          {days.map((day, idx) => {
-            const isToday = day.toDateString() === new Date().toDateString();
-            return (
-              <div key={idx} className={`grid-week-day-label ${isToday ? 'grid-week-day-today' : ''}`}>
-                <span className="grid-week-weekday">{day.toLocaleDateString('pt-PT', { weekday: 'short' }).replace('.', '')}</span>
-                <span className="grid-week-daynum">{day.getDate()}</span>
-              </div>
-            );
-          })}
         </div>
         <div className="grid-week">
           {days.map((day, idx) => {
             const dayEnd = new Date(day);
             dayEnd.setDate(dayEnd.getDate() + 1);
+            const isToday = day.toDateString() === new Date().toDateString();
 
             const daySessions = sessions
               .filter((s) => {
@@ -325,10 +315,17 @@ const GridView = ({ sessions, users, view, currentDate, onEdit, onDateChange, hi
 
             return (
               <div key={idx} className="grid-day-column">
+                {/* Label lives inside the column so days and headers can never
+                    misalign, and mobile can stack the days as an agenda list */}
+                <div className={`grid-week-day-label ${isToday ? 'grid-week-day-today' : ''}`}>
+                  <span className="grid-week-weekday">{day.toLocaleDateString('pt-PT', { weekday: 'short' }).replace('.', '')}</span>
+                  <span className="grid-week-daynum">{day.getDate()}</span>
+                </div>
                 <div className="grid-day-sessions">
                   {daySessions.map((s) => (
                     <GridSessionCard key={s.id} session={s} users={users} onEdit={onEdit} hideStatus hideSpoc />
                   ))}
+                  {daySessions.length === 0 && <span className="grid-day-empty">Sem sessões</span>}
                 </div>
               </div>
             );

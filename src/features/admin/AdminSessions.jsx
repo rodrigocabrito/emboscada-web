@@ -1,10 +1,15 @@
 import { useState, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
-import { getSessionsAll } from '../../firebase/firestore';
+import { getSessionsAll, getUsers } from '../../firebase/firestore';
 import { useSessionsPage } from './hooks/useSessionsPage';
 import SessionFilters from './components/SessionFilters';
 import { getStatusLabel, getStatusBadgeClass } from '../../constants/sessions';
+import { applyClientFilters } from '../../utils/sessionFilters';
+import { buildCsv, downloadCsv } from '../../utils/csv';
+import { sessionCsvColumns } from './sessionsCsv';
+import { useToast } from '../../context/ToastContext';
+import useEscapeKey from '../../hooks/useEscapeKey';
 
 const fmt = (d) =>
   new Date(d).toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit', year: 'numeric' });
@@ -40,8 +45,6 @@ const loadSaved = () => {
 
 const saveFilters = (f) => sessionStorage.setItem('adminSessionsFilters', JSON.stringify(f));
 
-const normalize = (s) => (s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase();
-
 // Sortable table header — module-scoped so its identity is stable across renders
 const SortTh = ({ field, children, sort, onSort }) => {
   const active = sort.field === field;
@@ -55,6 +58,7 @@ const SortTh = ({ field, children, sort, onSort }) => {
 
 const AdminSessions = () => {
   const navigate = useNavigate();
+  const showToast = useToast();
   const [sort, setSort] = useState({ field: null, dir: null });
   const [textPage, setTextPage] = useState(1);
   const [pendingFilters, setPendingFilters] = useState(loadSaved);
@@ -100,37 +104,53 @@ const AdminSessions = () => {
     loadMore();
   };
 
-  const filtered = useMemo(() => {
-    const hasEqualityFilter = !!(serverFilters.typeOfSession?.length || serverFilters.status?.length);
-    let result = sessions;
+  const filtered = useMemo(
+    () => applyClientFilters(sessions, appliedFilters, serverFilters),
+    [sessions, appliedFilters, serverFilters]
+  );
 
-    if (appliedFilters.name) {
-      const q = normalize(appliedFilters.name);
-      result = result.filter((s) => normalize(s.spocName || s.spoc || '').includes(q));
+  // ── CSV export ─────────────────────────────────────────────────────────────
+  // Monitors are resolved to names; the ['users'] cache is shared with other pages
+  const { data: users = [] } = useQuery({ queryKey: ['users'], queryFn: getUsers, staleTime: 5 * 60_000 });
+  const usersById = useMemo(() => Object.fromEntries(users.map((u) => [u.uuid, u])), [users]);
+
+  const [showExport, setShowExport] = useState(false);
+  const [exporting, setExporting] = useState(false);
+  useEscapeKey(() => setShowExport(false), showExport);
+
+  // Human-readable summary of the filters the export will use
+  const exportSummary = useMemo(() => {
+    const parts = [];
+    if (appliedFilters.name) parts.push(['Nome', appliedFilters.name]);
+    if (appliedFilters.email) parts.push(['Email', appliedFilters.email]);
+    if (appliedFilters.phoneNumber) parts.push(['Telemóvel', appliedFilters.phoneNumber]);
+    if (appliedFilters.dateFrom) parts.push(['De', appliedFilters.dateFrom]);
+    if (appliedFilters.dateTo) parts.push(['Até', appliedFilters.dateTo]);
+    if (appliedFilters.typeOfSession.length) parts.push(['Tipo', appliedFilters.typeOfSession.join(', ')]);
+    if (appliedFilters.status.length) parts.push(['Estado', appliedFilters.status.map(getStatusLabel).join(', ')]);
+    return parts;
+  }, [appliedFilters]);
+
+  const handleExport = async () => {
+    setExporting(true);
+    try {
+      // Re-fetch everything matching the filters — the table may only hold
+      // the pages loaded so far, but the export must cover the full match.
+      const all = await getSessionsAll(serverFilters);
+      const rows = applyClientFilters(all, appliedFilters, serverFilters);
+      if (!rows.length) {
+        showToast('Nenhuma sessão corresponde ao filtro — nada para exportar.');
+        return;
+      }
+      const csv = buildCsv(sessionCsvColumns(usersById), rows);
+      downloadCsv(`sessoes-${new Date().toISOString().slice(0, 10)}.csv`, csv);
+      setShowExport(false);
+    } catch {
+      showToast('Erro ao exportar as sessões. Tenta novamente.');
+    } finally {
+      setExporting(false);
     }
-    if (appliedFilters.email) {
-      const q = appliedFilters.email.toLowerCase();
-      result = result.filter((s) => (s.spocEmail || '').toLowerCase().includes(q));
-    }
-    if (appliedFilters.phoneNumber) {
-      const q = appliedFilters.phoneNumber.toLowerCase();
-      result = result.filter((s) => (s.spocPhoneNumber || '').toLowerCase().includes(q));
-    }
-    // When both typeOfSession and status are selected, Firestore only applies typeOfSession
-    // (one 'in' limit), so filter status client-side.
-    if (serverFilters.status?.length > 0 && serverFilters.typeOfSession?.length > 0) {
-      result = result.filter((s) => serverFilters.status.includes(s.status));
-    }
-    // Default date sort when Firestore skips orderBy to avoid composite index
-    if (hasEqualityFilter) {
-      result = [...result].sort((a, b) => {
-        const da = a.sessionDatetime || '';
-        const db = b.sessionDatetime || '';
-        return da < db ? -1 : da > db ? 1 : 0;
-      });
-    }
-    return result;
-  }, [sessions, appliedFilters, serverFilters]);
+  };
 
   const handleSort = (field) => {
     setSort((prev) => {
@@ -216,8 +236,20 @@ const AdminSessions = () => {
         <button className="btn-secondary" style={{ width: 'auto', marginBottom: '1rem' }} onClick={() => navigate('/admin')}>
           ← Voltar
         </button>
-        <h1>Sessões</h1>
-        <p>Consulta e filtra todas as sessões registadas.</p>
+        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+          <div>
+            <h1>Sessões</h1>
+            <p>Consulta e filtra todas as sessões registadas.</p>
+          </div>
+          <button
+            type="button"
+            className="btn-secondary"
+            style={{ width: 'auto', marginTop: 0 }}
+            onClick={() => setShowExport(true)}
+          >
+            ⭳ Exportar CSV
+          </button>
+        </div>
       </div>
 
       {/* Filters */}
@@ -246,7 +278,7 @@ const AdminSessions = () => {
             {hasFilters ? 'Nenhuma sessão encontrada para os filtros aplicados.' : 'Nenhuma sessão registada.'}
           </p>
         ) : (
-          <table className="data-table">
+          <table className="data-table data-table--responsive">
             <thead>
               <tr>
                 <SortTh field="date" sort={sort} onSort={handleSort}>Data</SortTh>
@@ -262,12 +294,12 @@ const AdminSessions = () => {
                 const date = (s.sessionDatetime || s.sessionDate || '').slice(0, 10);
                 return (
                   <tr key={s.id} onClick={() => navigate(`/sessions/${s.id}`, { state: { from: '/admin/sessions' } })} style={{ cursor: 'pointer' }}>
-                    <td>{date ? fmt(date) : '—'}</td>
-                    <td className="td-name">{s.spocName || s.spoc || '—'}</td>
-                    <td className="td-muted">{s.spocEmail || '—'}</td>
-                    <td className="td-muted">{s.spocPhoneNumber || '—'}</td>
-                    <td className="td-muted">{s.typeOfSession || '—'}</td>
-                    <td>
+                    <td data-label="Data">{date ? fmt(date) : '—'}</td>
+                    <td className="td-name" data-label="Nome">{s.spocName || s.spoc || '—'}</td>
+                    <td className="td-muted" data-label="Email">{s.spocEmail || '—'}</td>
+                    <td className="td-muted" data-label="Telefone">{s.spocPhoneNumber || '—'}</td>
+                    <td className="td-muted" data-label="Tipo">{s.typeOfSession || '—'}</td>
+                    <td data-label="Estado">
                       <span className={`badge ${getStatusBadgeClass(s.status)}`} style={{ fontSize: '0.75rem' }}>
                         {getStatusLabel(s.status)}
                       </span>
@@ -297,6 +329,51 @@ const AdminSessions = () => {
               ? `A mostrar ${visibleSessions.length} de ${sortedFiltered.length} resultados`
               : `A mostrar ${sessions.length} de ${totalCount ?? '...'}`}
           </p>
+        </div>
+      )}
+
+      {/* ── Confirm CSV export ── */}
+      {showExport && (
+        <div className="modal-overlay" onClick={() => !exporting && setShowExport(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()} style={{ maxWidth: '460px' }}>
+            <div className="modal-header">
+              <h2 className="modal-title">Exportar sessões</h2>
+              <button className="modal-close" onClick={() => setShowExport(false)} disabled={exporting} aria-label="Fechar">✕</button>
+            </div>
+
+            <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', margin: '0.5rem 0 1rem' }}>
+              Serão exportadas <strong style={{ color: 'var(--text)' }}>todas as sessões que correspondem ao filtro atual</strong> — não apenas as visíveis na tabela.
+            </p>
+
+            <div style={{ background: 'var(--surface-alt, var(--surface))', border: '1px solid var(--border)', borderRadius: '0.5rem', padding: '0.75rem 0.9rem', marginBottom: '1.25rem' }}>
+              <div style={{ fontSize: '0.65rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em', color: 'var(--text-muted)', marginBottom: '0.5rem' }}>
+                Filtro aplicado
+              </div>
+              {exportSummary.length === 0 ? (
+                <p style={{ margin: 0, fontSize: '0.85rem', color: 'var(--text)' }}>
+                  Sem filtros — serão exportadas <strong>todas</strong> as sessões.
+                </p>
+              ) : (
+                <div style={{ display: 'flex', flexDirection: 'column', gap: '0.3rem' }}>
+                  {exportSummary.map(([label, value]) => (
+                    <div key={label} style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', fontSize: '0.85rem' }}>
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>{label}</span>
+                      <span style={{ color: 'var(--text)', textAlign: 'right' }}>{value}</span>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            <div className="modal-footer">
+              <button type="button" className="btn-secondary" onClick={() => setShowExport(false)} disabled={exporting}>
+                Cancelar
+              </button>
+              <button type="button" className="btn-primary" style={{ marginTop: 0 }} onClick={handleExport} disabled={exporting}>
+                {exporting ? 'A exportar...' : 'Exportar'}
+              </button>
+            </div>
+          </div>
         </div>
       )}
     </div>

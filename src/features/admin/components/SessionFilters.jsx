@@ -87,7 +87,7 @@ const SessionFilters = ({
         </div>
       </div>
 
-      <div style={{ display: 'flex', gap: '0.5rem', alignItems: 'center' }}>
+      <div className="filter-actions">
         <button
           type="button"
           className={showAdvanced ? 'btn-primary' : 'btn-secondary'}
@@ -95,11 +95,6 @@ const SessionFilters = ({
           onClick={() => setShowAdvanced((v) => !v)}
         >
           {showAdvanced ? '- Filtros' : '+ Filtros'}
-          {(filters.typeOfSession.length > 0 || filters.status.length > 0) && (
-            <span style={{ marginLeft: '0.4rem', background: 'var(--primary)', color: '#fff', borderRadius: '999px', fontSize: '0.65rem', padding: '0.05rem 0.4rem', fontWeight: 700 }}>
-              {filters.typeOfSession.length + filters.status.length}
-            </span>
-          )}
         </button>
         <button
           className="btn-secondary"
@@ -110,8 +105,8 @@ const SessionFilters = ({
           Limpar filtros
         </button>
         <button
-          className="btn-primary"
-          style={{ width: 'auto', whiteSpace: 'nowrap', fontSize: '0.875rem', padding: '0.5rem 1rem', marginLeft: 'auto', marginTop: 0 }}
+          className="btn-primary filter-apply"
+          style={{ width: 'auto', whiteSpace: 'nowrap', fontSize: '0.875rem', padding: '0.5rem 1rem', marginTop: 0 }}
           onClick={onApply}
         >
           Aplicar filtros
