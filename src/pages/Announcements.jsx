@@ -210,7 +210,7 @@ const Announcements = () => {
                 </span>
                 <div style={{ flex: 1, minWidth: 0 }}>
                   <div style={{ display: 'flex', alignItems: 'baseline', justifyContent: 'space-between', gap: '0.5rem', flexWrap: 'wrap' }}>
-                    <span style={{ fontWeight: 700, fontSize: '0.95rem' }}>{authorLabel(a)}</span>
+                    <span style={{ fontWeight: 700, fontSize: '0.95rem', overflowWrap: 'anywhere' }}>{authorLabel(a)}</span>
                     <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
                       {fmtDate(a.createdAt)}{a.updatedAt ? ' · editado' : ''}
                     </span>
@@ -235,8 +235,8 @@ const Announcements = () => {
                     </div>
                   ) : (
                     <>
-                      {a.title && <h3 style={{ margin: '0.5rem 0 0.25rem', fontSize: '1.05rem' }}>{a.title}</h3>}
-                      <p style={{ margin: '0.4rem 0 0', fontSize: '0.92rem', color: 'var(--text)', whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>
+                      {a.title && <h3 style={{ margin: '0.5rem 0 0.25rem', fontSize: '1.05rem', overflowWrap: 'anywhere' }}>{a.title}</h3>}
+                      <p style={{ margin: '0.4rem 0 0', fontSize: '0.92rem', color: 'var(--text)', whiteSpace: 'pre-wrap', overflowWrap: 'anywhere', lineHeight: 1.5 }}>
                         {a.body}
                       </p>
                       <ReactionBar announcement={a} uid={user.uid} usersById={usersById} onToggle={handleToggle} busy={reacting} />

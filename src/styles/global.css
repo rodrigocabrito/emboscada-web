@@ -1780,6 +1780,26 @@ body {
   line-height: 1.4;
 }
 
+/* Mobile modals: a tall modal (e.g. the announcement form with a 9-row
+   textarea) can exceed the viewport. Centering then pushes the header and
+   footer buttons off-screen with no way to reach them, since the overlay
+   itself doesn't scroll. Top-align and let the overlay scroll instead. */
+@media (max-width: 768px) {
+  .modal-overlay {
+    overflow-y: auto;
+    padding: 0.75rem;
+  }
+
+  /* Center when it fits; margin:auto + the scrollable overlay keeps a tall
+     modal fully reachable (top isn't clipped, unlike plain align-items:center). */
+  .modal {
+    max-width: 100%;
+    max-height: none;
+    padding: 1.25rem 1.1rem;
+    margin: auto;
+  }
+}
+
 /* ─── Sessions ──────────────────────────────────────────────────────────────── */
 .sessions-toolbar {
   display: flex;
