@@ -3,9 +3,10 @@ import { useNavigate } from 'react-router-dom';
 import { useQuery } from '@tanstack/react-query';
 import { useAuth } from '../context/AuthContext';
 import { updateUserProfile, changePassword, logoutUser } from '../firebase/auth';
-import { getMonitorSessionCount, getEvaluation } from '../firebase/firestore';
+import { getMonitorSessionCount, getMonitorSessions, getEvaluation } from '../firebase/firestore';
 import { getUserColor } from '../utils/avatarColors';
 import { roleLabel } from '../utils/roles';
+import { computeEarnings, rateLabel } from '../utils/pay';
 
 const SCALE = [
   { value: 0, selBg: '#e5e7eb', selColor: '#374151' },
@@ -15,6 +16,18 @@ const SCALE = [
   { value: 4, selBg: '#86efac', selColor: '#14532d' },
   { value: 5, selBg: '#15803d', selColor: '#fff' },
 ];
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const fmtEur = (n) => `${Number(n || 0).toLocaleString('pt-PT')} €`;
+
+// Current-month + all-time earnings for the profile card. `subject` is the
+// user profile (carries rate history so past sessions use their era's rate).
+const calcEarnings = (sessions, subject) => {
+  const d = new Date();
+  const thisMonth = `${d.getFullYear()}-${pad2(d.getMonth() + 1)}`;
+  const { total, byMonth } = computeEarnings(sessions, subject);
+  return { month: byMonth[thisMonth] || 0, total };
+};
 
 const calcOverallAvg = (evaluation) => {
   if (!evaluation) return null;
@@ -68,6 +81,13 @@ const Profile = () => {
     queryFn: () => getEvaluation(user.uid),
     staleTime: 5 * 60_000,
   });
+
+  const { data: mySessions = [] } = useQuery({
+    queryKey: ['monitorSessions', user.uid],
+    queryFn: () => getMonitorSessions(user.uid),
+    staleTime: 60_000,
+  });
+  const earnings = calcEarnings(mySessions, profile);
   const overallAvg = calcOverallAvg(evaluation);
   const avgScale = overallAvg !== null ? SCALE.find((s) => s.value === Math.round(overallAvg)) : null;
   const unseenUpdates = Math.max(0, (evaluation?.saveCount ?? 0) - (profile?.lastEvalSeenCount ?? 0));
@@ -217,6 +237,25 @@ const Profile = () => {
                 </span>
               )}
             </div>
+          </div>
+
+          <div className="card" style={{ marginTop: '1rem', padding: '1.5rem', textAlign: 'center' }}>
+            <div style={{ fontSize: '0.7rem', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.08em', color: 'var(--text-muted)', marginBottom: '0.35rem' }}>
+              Ganhos este mês
+            </div>
+            <div style={{ fontSize: '1.9rem', fontWeight: 800, color: 'var(--primary)', marginBottom: '0.15rem' }}>
+              {fmtEur(earnings.month)}
+            </div>
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: '1.1rem' }}>
+              Tarifa {rateLabel(profile?.rate)} · {fmtEur(earnings.total)} acumulado
+            </div>
+            <button
+              className="btn-secondary"
+              style={{ width: '100%', marginTop: 0 }}
+              onClick={() => navigate('/earnings')}
+            >
+              Ver ganhos
+            </button>
           </div>
 
           <div className="card" style={{ marginTop: '1rem', padding: '1.5rem', textAlign: 'center' }}>

@@ -32,6 +32,7 @@ const AdminSessions = lazy(() => import('./features/admin/AdminSessions'));
 const AdminSchedule = lazy(() => import('./features/admin/AdminSchedule'));
 const UserEvaluation = lazy(() => import('./features/admin/UserEvaluation'));
 const EvaluationView = lazy(() => import('./features/evaluation/EvaluationView'));
+const EarningsView = lazy(() => import('./features/earnings/EarningsView'));
 const Availability = lazy(() => import('./pages/Availability'));
 const Announcements = lazy(() => import('./pages/Announcements'));
 const Profile = lazy(() => import('./pages/Profile'));
@@ -119,6 +120,14 @@ const AppContent = () => {
           }
         />
         <Route
+          path="/earnings"
+          element={
+            <ProtectedRoute>
+              <EarningsView />
+            </ProtectedRoute>
+          }
+        />
+        <Route
           path="/availability"
           element={
             <ProtectedRoute>
@@ -163,6 +172,14 @@ const AppContent = () => {
           element={
             <ProtectedRoute adminOnly={true}>
               <UserEvaluation />
+            </ProtectedRoute>
+          }
+        />
+        <Route
+          path="/admin/users/:id/earnings"
+          element={
+            <ProtectedRoute adminOnly={true}>
+              <EarningsView />
             </ProtectedRoute>
           }
         />

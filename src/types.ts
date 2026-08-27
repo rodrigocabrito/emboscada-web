@@ -14,6 +14,8 @@ export type PaymentType = 'card' | 'mbway' | 'cash';
 
 export type UserRole = 'admin' | 'monitor_leader' | 'monitor' | 'customer';
 
+export type UserRate = 'junior' | 'senior';
+
 export interface LineItem {
   catalogId: string;
   name: string;
@@ -63,6 +65,10 @@ export interface User {
   lastName: string;
   nickname?: string;
   role: UserRole;
+  rate?: UserRate;
+  /** Rate over time; `from` is a "YYYY-MM-DDTHH:MM" local timestamp. Sessions
+   *  are paid at the rate in effect when they happened. */
+  rateHistory?: { rate: UserRate; from: string }[];
 }
 
 export type CatalogCategory = SessionType | 'Extras' | 'Outro';
