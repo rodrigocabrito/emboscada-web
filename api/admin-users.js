@@ -67,11 +67,12 @@ async function run(req, res) {
 
   // ── Create user: Auth account + profile + welcome email, all server-side ──
   if (action === 'create') {
-    const { email, firstName, lastName, role, nickname, birthday, startedAt } = body;
+    const { email, firstName, lastName, role, nickname, birthday, startedAt, rate } = body;
     if (!email || !firstName || !role) {
       return res.status(400).json({ error: 'Missing email, firstName or role' });
     }
     const password = generatePassword();
+    const initialRate = rate === 'senior' ? 'senior' : 'junior';
 
     const createRes = await fetch(
       `https://identitytoolkit.googleapis.com/v1/projects/${PROJECT_ID}/accounts`,
@@ -97,6 +98,13 @@ async function run(req, res) {
           lastName: fsValue(lastName || ''),
           nickname: fsValue(nickname || ''),
           role: fsValue(role),
+          rate: fsValue(initialRate),
+          // Seed rate history from the epoch so this initial rate applies to
+          // every session until an admin changes it. Keep in sync with
+          // SEED_FROM in src/utils/pay.js.
+          rateHistory: { arrayValue: { values: [
+            { mapValue: { fields: { rate: fsValue(initialRate), from: fsValue('0000-01-01T00:00') } } },
+          ] } },
           birthday: fsValue(birthday),
           startedAt: fsValue(startedAt),
           mustChangePassword: fsValue(true),

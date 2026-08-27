@@ -1,4 +1,4 @@
-import { useState, useMemo, useCallback } from 'react';
+import { useState, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useQuery, useQueryClient } from '@tanstack/react-query';
 import { useAuth } from '../../context/AuthContext';
@@ -7,10 +7,18 @@ import { updateUserProfile } from '../../firebase/auth';
 import { getUsers } from '../../firebase/firestore';
 import { adminUsersApi } from '../../utils/adminApi';
 import { ROLE_OPTIONS, roleLabel } from '../../utils/roles';
+import { RATE_OPTIONS, normalizeRate, promoteToSenior, seniorSinceDate } from '../../utils/pay';
 import useEscapeKey from '../../hooks/useEscapeKey';
 import useScrollLock from '../../hooks/useScrollLock';
 
-const EMPTY_FORM = { email: '', firstName: '', lastName: '', nickname: '', birthday: '', startedAt: '', role: 'monitor' };
+const EMPTY_FORM = { email: '', firstName: '', lastName: '', nickname: '', birthday: '', startedAt: '', role: 'monitor', rate: 'junior' };
+
+const pad2 = (n) => String(n).padStart(2, '0');
+const todayStr = () => {
+  const d = new Date();
+  return `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
+};
+const fmtDatePt = (s) => (s ? new Date(`${s}T00:00`).toLocaleDateString('pt-PT') : '');
 
 const AdminUsers = () => {
   const { user } = useAuth();
@@ -23,14 +31,20 @@ const AdminUsers = () => {
     queryFn: getUsers,
     staleTime: 5 * 60_000,
   });
-  const users = useMemo(() => allUsers.filter((u) => u.uuid !== user.uid), [allUsers, user.uid]);
+  const users = allUsers;
   const invalidateUsers = () => queryClient.invalidateQueries({ queryKey: ['users'] });
 
   const [search, setSearch] = useState('');
   const [deletingId, setDeletingId] = useState(null);
   const [deleteError, setDeleteError] = useState('');
   const [viewingUser, setViewingUser] = useState(null);
+  const [rateDate, setRateDate] = useState(todayStr());
   useEscapeKey(() => setViewingUser(null), !!viewingUser);
+
+  const openView = (u) => {
+    setRateDate(seniorSinceDate(u) || todayStr());
+    setViewingUser(u);
+  };
 
   const [modalOpen, setModalOpen] = useState(false);
   const [form, setForm] = useState(EMPTY_FORM);
@@ -72,6 +86,7 @@ const AdminUsers = () => {
         firstName: form.firstName,
         lastName: form.lastName,
         role: form.role,
+        rate: form.rate,
         nickname: form.nickname,
         birthday: form.birthday || null,
         startedAt: form.startedAt || null,
@@ -106,6 +121,23 @@ const AdminUsers = () => {
       showToast('Não foi possível alterar a função do utilizador.');
     } finally {
       setRoleChanging(false);
+    }
+  };
+
+  const [rateChanging, setRateChanging] = useState(false);
+  // Makes a user count as Senior from `dateStr` onward (Junior before it).
+  const applySeniorFrom = async (u, dateStr) => {
+    if (!dateStr) return;
+    setRateChanging(true);
+    try {
+      const patch = promoteToSenior(dateStr);
+      await updateUserProfile(u.uuid, patch);
+      invalidateUsers();
+      setViewingUser((prev) => (prev && prev.uuid === u.uuid ? { ...prev, ...patch } : prev));
+    } catch {
+      showToast('Não foi possível alterar a tarifa do utilizador.');
+    } finally {
+      setRateChanging(false);
     }
   };
 
@@ -200,7 +232,7 @@ const AdminUsers = () => {
                     <td className="td-actions" data-label="Ações">
                       <button
                         className="btn-table-action"
-                        onClick={() => setViewingUser(u)}
+                        onClick={() => openView(u)}
                         aria-label="Ver detalhes"
                       >
                         <img src="/eye.png" alt="Ver detalhes" style={{ width: '22px', height: '22px' }} />
@@ -212,13 +244,15 @@ const AdminUsers = () => {
                       >
                         <img src="/evaluation.png" alt="Avaliar" style={{ width: '22px', height: '22px' }} />
                       </button>
-                      <button
-                        className="btn-table-delete"
-                        onClick={() => { setDeleteError(''); setDeletingId(u.uuid); }}
-                        aria-label="Eliminar"
-                      >
-                        <img src="/trash.png" alt="Eliminar" style={{ width: '22px', height: '22px' }} />
-                      </button>
+                      {u.uuid !== user.uid && (
+                        <button
+                          className="btn-table-delete"
+                          onClick={() => { setDeleteError(''); setDeletingId(u.uuid); }}
+                          aria-label="Eliminar"
+                        >
+                          <img src="/trash.png" alt="Eliminar" style={{ width: '22px', height: '22px' }} />
+                        </button>
+                      )}
                     </td>
                   </tr>
                 ));
@@ -278,10 +312,59 @@ const AdminUsers = () => {
                   <span style={{ color: 'var(--text)', textAlign: 'right' }}>{value}</span>
                 </div>
               ))}
+
+              {/* Rate — promote-only (Junior → Senior) with an effective date.
+                  Sessions on/after the date earn the Senior rate; earlier ones
+                  stay Junior. */}
+              {(() => {
+                const isSenior = normalizeRate(viewingUser.rate) === 'senior';
+                const sinceDate = seniorSinceDate(viewingUser);
+                const statusText = isSenior
+                  ? (sinceDate ? `Sénior · desde ${fmtDatePt(sinceDate)}` : 'Sénior')
+                  : 'Júnior';
+                const canApply = !!rateDate && !rateChanging && (!isSenior || rateDate !== sinceDate);
+                return (
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.6rem', paddingTop: '0.5rem', borderTop: '1px solid var(--border)' }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', gap: '1rem', fontSize: '0.9rem' }}>
+                      <span style={{ color: 'var(--text-muted)', fontWeight: 600, whiteSpace: 'nowrap' }}>Tarifa</span>
+                      <span style={{ color: 'var(--text)', textAlign: 'right', fontWeight: 600 }}>{statusText}</span>
+                    </div>
+                    <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.5rem', flexWrap: 'wrap' }}>
+                      <div style={{ display: 'flex', flexDirection: 'column', gap: '0.25rem', flex: 1, minWidth: '150px' }}>
+                        <label htmlFor="seniorFrom" style={{ fontSize: '0.7rem', fontWeight: 600, color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                          Sénior a partir de
+                        </label>
+                        <input
+                          id="seniorFrom"
+                          type="date"
+                          className="input-field"
+                          value={rateDate}
+                          onChange={(e) => setRateDate(e.target.value)}
+                        />
+                      </div>
+                      <button
+                        type="button"
+                        className="btn-primary"
+                        style={{ width: 'auto', margin: 0, padding: '0.55rem 0.9rem', fontSize: '0.82rem' }}
+                        disabled={!canApply}
+                        onClick={() => applySeniorFrom(viewingUser, rateDate)}
+                      >
+                        {rateChanging ? 'A guardar…' : (isSenior ? 'Atualizar data' : 'Promover a Sénior')}
+                      </button>
+                    </div>
+                    <p style={{ margin: 0, fontSize: '0.72rem', color: 'var(--text-muted)' }}>
+                      Sessões a partir desta data contam como Sénior; as anteriores contam como Júnior.
+                    </p>
+                  </div>
+                );
+              })()}
             </div>
             <div className="modal-footer">
+              <button className="btn-primary" style={{ marginTop: 0 }} onClick={() => navigate(`/admin/users/${viewingUser.uuid}/earnings`)}>
+                Ver ganhos
+              </button>
               {viewingUser.role === 'monitor' && (
-                <button className="btn-primary" style={{ marginTop: 0 }} disabled={roleChanging} onClick={() => changeRole(viewingUser, 'monitor_leader')}>
+                <button className="btn-secondary" style={{ marginTop: 0 }} disabled={roleChanging} onClick={() => changeRole(viewingUser, 'monitor_leader')}>
                   {roleChanging ? 'A atualizar...' : 'Promover a Líder'}
                 </button>
               )}
@@ -380,20 +463,37 @@ const AdminUsers = () => {
                 />
               </div>
 
-              <div className="form-group">
-                <label htmlFor="role">Função</label>
-                <select
-                  id="role"
-                  name="role"
-                  value={form.role}
-                  onChange={handleChange}
-                  className="form-select"
-                  required
-                >
-                  {ROLE_OPTIONS.map((r) => (
-                    <option key={r.value} value={r.value}>{r.label}</option>
-                  ))}
-                </select>
+              <div className="form-row">
+                <div className="form-group">
+                  <label htmlFor="role">Função</label>
+                  <select
+                    id="role"
+                    name="role"
+                    value={form.role}
+                    onChange={handleChange}
+                    className="form-select"
+                    required
+                  >
+                    {ROLE_OPTIONS.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div className="form-group">
+                  <label htmlFor="rate">Tarifa</label>
+                  <select
+                    id="rate"
+                    name="rate"
+                    value={form.rate}
+                    onChange={handleChange}
+                    className="form-select"
+                    required
+                  >
+                    {RATE_OPTIONS.map((r) => (
+                      <option key={r.value} value={r.value}>{r.label}</option>
+                    ))}
+                  </select>
+                </div>
               </div>
 
               {createError && <div className="error-msg"><span>⚠</span> {createError}</div>}

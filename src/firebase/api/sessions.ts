@@ -57,6 +57,15 @@ export const getMonitorSessionCount = async (uid: string): Promise<number> => {
   return snap.data().count;
 };
 
+// All sessions a monitor is assigned to (any status) — powers the earnings
+// breakdown, which filters to 'done' client-side. Small per-user result set.
+export const getMonitorSessions = async (uid: string): Promise<Session[]> => {
+  const snap = await getDocs(
+    query(collection(db, 'sessions'), where('monitors', 'array-contains', uid))
+  );
+  return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as Session);
+};
+
 export const getMonitorSessionCounts = async (uids: string[]): Promise<Record<string, number>> => {
   const entries = await Promise.all(
     uids.map(async (uid) => [uid, await getMonitorSessionCount(uid)] as const)
