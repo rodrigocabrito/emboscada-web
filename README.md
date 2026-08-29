@@ -116,26 +116,33 @@ The app runs at the URL Vite prints (default `http://localhost:5173`).
 ## Environment variables
 
 ### Client (Vite) — in `.env.local` locally and in Vercel
-| Variable | Purpose |
-|----------|---------|
-| `VITE_FIREBASE_API_KEY` | Firebase web config |
-| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase web config |
-| `VITE_FIREBASE_PROJECT_ID` | Firebase web config |
-| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase web config |
-| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase web config |
-| `VITE_FIREBASE_APP_ID` | Firebase web config |
-| `VITE_PUBLIC_URL` | *(optional)* Public base URL for links/assets inside emails (e.g. `https://your-app.vercel.app`) |
+| Variable | Purpose | Where to check / update |
+|----------|---------|-------------------------|
+| `VITE_FIREBASE_API_KEY` | Firebase web config | Firebase Console → Project settings → General → *Your apps* (SDK config). Mirror the value into Vercel → Settings → Environment Variables. |
+| `VITE_FIREBASE_AUTH_DOMAIN` | Firebase web config | Firebase Console → Project settings → General → *Your apps* → Vercel env vars. |
+| `VITE_FIREBASE_PROJECT_ID` | Firebase web config | Firebase Console → Project settings → General → *Your apps* → Vercel env vars. |
+| `VITE_FIREBASE_STORAGE_BUCKET` | Firebase web config | Firebase Console → Project settings → General → *Your apps* → Vercel env vars. |
+| `VITE_FIREBASE_MESSAGING_SENDER_ID` | Firebase web config | Firebase Console → Project settings → Cloud Messaging → Vercel env vars. |
+| `VITE_FIREBASE_APP_ID` | Firebase web config | Firebase Console → Project settings → General → *Your apps* → Vercel env vars. |
+| `VITE_PUBLIC_URL` | *(optional)* Public base URL for links/assets inside emails (e.g. `https://your-app.vercel.app`) | Vercel → Settings → Environment Variables (or Vercel → Domains for the value to use). |
 
 ### Server (serverless functions) — set in **Vercel only**, never in client code
-| Variable | Purpose |
-|----------|---------|
-| `FIREBASE_PROJECT_ID` | Verify the caller's Firebase ID token & admin role |
-| `FIREBASE_CLIENT_EMAIL` | Service-account email — lets the functions act with admin rights (create/delete users, publish announcements) |
-| `FIREBASE_PRIVATE_KEY` | Service-account private key (paste the full value, including `-----BEGIN…` and the `\n` sequences) |
-| `GMAIL_USER` | Gmail address used as the email sender |
-| `GMAIL_APP_PASSWORD` | Gmail **App Password** (requires 2-Step Verification) |
+| Variable | Purpose | Where to check / update |
+|----------|---------|-------------------------|
+| `FIREBASE_PROJECT_ID` | Verify the caller's Firebase ID token & admin role | Vercel → Settings → Environment Variables. Value = Firebase Console → Project settings → General. |
+| `FIREBASE_CLIENT_EMAIL` | Service-account email — lets the functions act with admin rights (create/delete users, publish announcements) | Vercel → Settings → Environment Variables. Value = `client_email` in the Firebase service-account JSON (see below). |
+| `FIREBASE_PRIVATE_KEY` | Service-account private key (paste the full value, including `-----BEGIN…` and the `\n` sequences) | Vercel → Settings → Environment Variables. Value = `private_key` in the Firebase service-account JSON. Rotate via Firebase Console → Service accounts → Generate new private key. |
+| `GMAIL_USER` | Gmail address used as the email sender | Vercel → Settings → Environment Variables. |
+| `GMAIL_APP_PASSWORD` | Gmail **App Password** (requires 2-Step Verification) | Vercel → Settings → Environment Variables. Generate/revoke at Google Account → Security → App passwords. |
+| `RESERVATION_TO_PORTO` | *(optional)* Where public reservation/quote emails go when **Porto** is selected. Falls back to a test address if unset. | Vercel → Settings → Environment Variables. |
+| `RESERVATION_TO_MONSANTO` | *(optional)* Same, for **Monsanto / Lisboa**. Falls back to a test address if unset. | Vercel → Settings → Environment Variables. |
+| `RESERVATION_TO` | *(optional)* Catch-all fallback recipient when the park matches neither Porto nor Monsanto. Falls back to a test address if unset. | Vercel → Settings → Environment Variables. |
 
 The service-account credentials come from **Firebase Console → Project settings → Service accounts → Generate new private key** (a JSON file with `client_email` and `private_key`).
+
+> **Reservation email routing:** until the three `RESERVATION_TO*` vars are set, every reservation/quote email is delivered to the hard-coded test address `rodri.cabrito@gmail.com` (see `TEST_TO` in [`api/reservation.js`](api/reservation.js)). Set them in Vercel for go-live — no code change needed.
+
+**Managing them in Vercel:** Dashboard → project → **Settings → Environment Variables** (each var is scoped Production / Preview / Development; values are write-only once saved). Or via CLI after `vercel link`: `vercel env ls` to list, `vercel env add <NAME>` / `vercel env rm <NAME>` to change, `vercel env pull .env.local` to fetch current values locally.
 
 ---
 
