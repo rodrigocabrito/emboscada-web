@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
-import { Link } from 'react-router-dom';
 import { hero, categories, activities, site } from '../content';
 import { useT } from '../i18n';
+import { PubLink } from '../components/LangLink';
 
 const Home = () => {
   const t = useT();
@@ -29,7 +29,7 @@ const Home = () => {
           <span className="pub-hero-eyebrow">Emboscada Parque Aventura</span>
           <h1>{t(hero[slide].title)}</h1>
           <p>{t(hero[slide].subtitle)}</p>
-          <Link to="/reservations" className="pub-cta">{t('Reservar agora')}</Link>
+          <PubLink to="/reservations" className="pub-cta">{t('Reservar agora')}</PubLink>
         </div>
         <div className="pub-hero-dots">
           {hero.map((h, i) => (
@@ -48,12 +48,12 @@ const Home = () => {
         <div className="pub-container">
           <div className="pub-cards">
             {categories.map((c) => (
-              <Link key={c.title} to={c.to} className="pub-card" style={{ backgroundImage: `url(${c.image})` }}>
+              <PubLink key={c.title} to={c.to} className="pub-card" style={{ backgroundImage: `url(${c.image})` }}>
                 <div className="pub-card-body">
                   <h3>{t(c.title)}</h3>
                   {c.subtitle && <span>{t(c.subtitle)}</span>}
                 </div>
-              </Link>
+              </PubLink>
             ))}
           </div>
         </div>

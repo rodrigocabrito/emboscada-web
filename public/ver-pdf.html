@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/jpeg" href="/emboscada_logo.jpg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Emboscada Parque Aventura</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #1f2d26; }
+      iframe { border: 0; width: 100%; height: 100%; display: block; }
+    </style>
+  </head>
+  <body>
+    <iframe id="pdf" title="PDF"></iframe>
+    <script>
+      // Only the known corporate-terms PDFs may be embedded (no arbitrary URLs).
+      var ALLOWED = {
+        pt: '/site/condicoes-reservas-empresas.pdf',
+        en: '/site/corporate-booking-terms-en.pdf',
+      };
+      var lang = new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'pt';
+      document.documentElement.lang = lang;
+      document.getElementById('pdf').src = ALLOWED[lang];
+    </script>
+  </body>
+</html>

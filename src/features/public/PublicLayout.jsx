@@ -1,9 +1,15 @@
-import { useState } from 'react';
-import { NavLink, Link, Outlet, useLocation } from 'react-router-dom';
-import { site, nav, footer, schedule, contacts, LANGS } from './content';
+import { useState, useEffect } from 'react';
+import { Outlet, useLocation } from 'react-router-dom';
+import { site, nav, footer, schedule, contacts, LANGS, pageTitles, pageMeta, telHref, canonicalPath, localizePath } from './content';
 import { LanguageProvider } from './LanguageProvider';
 import { useT, useLang } from './i18n';
+import { setDescription, setCanonical, setSocialTags, setJsonLd, setAlternates } from './head';
+import { businessJsonLd, faqJsonLd } from './structuredData';
+import { PubLink, PubNavLink } from './components/LangLink';
 import Flag from './components/Flag';
+
+const OG_LOCALE = { pt: 'pt_PT', en: 'en_GB', fr: 'fr_FR', es: 'es_ES' };
+const ALT_LANGS = ['pt', 'en', 'fr', 'es'];
 
 const LanguageSwitcher = () => {
   const { lang, setLang } = useLang();
@@ -32,15 +38,47 @@ const PublicShell = () => {
   const [menuOpen, setMenuOpen] = useState(false);
   const location = useLocation();
   const t = useT();
+  const { lang } = useLang();
   const close = () => setMenuOpen(false);
+
+  // Per-route, per-language SEO metadata: tab title (Option B "<page> · <brand>"),
+  // meta description, canonical, Open Graph/Twitter card, and JSON-LD structured
+  // data (business info site-wide; FAQ markup only on the FAQ page).
+  useEffect(() => {
+    const cpath = canonicalPath(location.pathname);
+    const key = pageTitles[cpath];
+    const title = key ? `${t(key)} · ${site.name}` : site.name;
+    const description = pageMeta[cpath] || pageMeta['/'];
+    const origin = window.location.origin;
+    const url = origin + location.pathname;
+
+    document.documentElement.lang = lang;
+    document.title = title;
+    setDescription(description);
+    setCanonical(url);
+    setAlternates([
+      ...ALT_LANGS.map((l) => ({ hreflang: l, href: origin + localizePath(cpath, l) })),
+      { hreflang: 'x-default', href: origin + localizePath(cpath, 'pt') },
+    ]);
+    setSocialTags({
+      title,
+      description,
+      url,
+      image: `${origin}/site/hero-1.jpg`,
+      locale: OG_LOCALE[lang] || 'pt_PT',
+      siteName: site.name,
+    });
+    setJsonLd('ld-business', businessJsonLd(origin));
+    setJsonLd('ld-faq', cpath === '/faqs' ? faqJsonLd() : null);
+  }, [location.pathname, lang, t]);
 
   return (
     <div className="public-site">
       <header className="pub-header">
         <div className="pub-container pub-nav">
-          <Link to="/" className="pub-logo" onClick={close} aria-label={site.name}>
+          <PubLink to="/" className="pub-logo" onClick={close} aria-label={site.name}>
             <img src={site.logo} alt={site.name} />
-          </Link>
+          </PubLink>
 
           <button
             className="pub-nav-toggle"
@@ -54,17 +92,17 @@ const PublicShell = () => {
           <ul className={`pub-nav-links${menuOpen ? ' is-open' : ''}`}>
             {nav.map((item) => (
               <li key={item.to}>
-                <NavLink
+                <PubNavLink
                   to={item.to}
                   end={item.to === '/'}
                   className={({ isActive }) => (isActive ? 'is-active' : '')}
                   onClick={close}
                 >
                   {t(item.label)}
-                </NavLink>
+                </PubNavLink>
               </li>
             ))}
-            <li><Link to="/reservations" className="pub-cta" onClick={close}>{t('Reservar')}</Link></li>
+            <li><PubLink to="/reservations" className="pub-cta" onClick={close}>{t('Reservar')}</PubLink></li>
             <li className="pub-lang-wrap"><LanguageSwitcher /></li>
           </ul>
         </div>
@@ -80,7 +118,7 @@ const PublicShell = () => {
             <h4>{t('Links Rápidos')}</h4>
             <ul>
               {footer.quickLinks.map((l) => (
-                <li key={l.label}><Link to={l.to}>{t(l.label)}</Link></li>
+                <li key={l.label}><PubLink to={l.to}>{t(l.label)}</PubLink></li>
               ))}
             </ul>
           </div>
@@ -94,8 +132,8 @@ const PublicShell = () => {
           <div>
             <h4>{t('Contactos')}</h4>
             <ul>
-              <li>{t('Porto')}: {contacts.porto.phone}</li>
-              <li>{t('Lisboa')}: {contacts.lisboa.phone}</li>
+              <li>{t('Porto')}: <a href={telHref(contacts.porto.phone)}>{contacts.porto.phone}</a></li>
+              <li>{t('Lisboa')}: <a href={telHref(contacts.lisboa.phone)}>{contacts.lisboa.phone}</a></li>
             </ul>
           </div>
           <div>
@@ -105,7 +143,7 @@ const PublicShell = () => {
                 <li key={l.label}>
                   {l.href
                     ? <a href={l.href} target="_blank" rel="noreferrer">{t(l.label)}</a>
-                    : <Link to={l.to}>{t(l.label)}</Link>}
+                    : <PubLink to={l.to}>{t(l.label)}</PubLink>}
                 </li>
               ))}
             </ul>

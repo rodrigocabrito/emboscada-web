@@ -9,7 +9,7 @@ const NotFound = () => {
         <p className="not-found-text">
           Desculpa, a página que procuras não existe ou foi movida para outro local.
         </p>
-        <Link to="/" className="btn-primary not-found-btn">
+        <Link to="/" className="btn-primary not-found-btn" style={{ color: '#fff' }}>
           Voltar ao Início
         </Link>
       </div>

@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
-import { pages, contacts, schedule } from '../content';
+import { pages, contacts, schedule, telHref } from '../content';
 import { useT } from '../i18n';
+import { PubLink } from '../components/LangLink';
 
 const Contactos = () => {
   const t = useT();
@@ -21,7 +21,7 @@ const Contactos = () => {
                 <h3>{t(c.label)}</h3>
                 {c.address && <div style={{ color: 'var(--pub-muted)', margin: '0.5rem 0 0.25rem' }}>{c.address}</div>}
                 {c.gps && <div style={{ color: 'var(--pub-muted)', fontSize: '0.85rem', marginBottom: '0.85rem' }}>GPS: {c.gps}</div>}
-                <div className="pub-phone">{c.phone}</div>
+                <div className="pub-phone"><a href={telHref(c.phone)}>{c.phone}</a></div>
                 <a href={`mailto:${c.email}`}>{c.email}</a>
               </div>
             ))}
@@ -30,8 +30,8 @@ const Contactos = () => {
             {t('Horários — Verão:')} {t(schedule.verao)} · {t('Inverno:')} {t(schedule.inverno)}
           </p>
           <div style={{ display: 'flex', gap: '0.75rem', justifyContent: 'center', flexWrap: 'wrap', marginTop: '1.5rem' }}>
-            <Link to="/reservations" className="pub-cta">{t('Pedir reserva')}</Link>
-            <Link to="/faqs" className="pub-cta pub-cta--ghost">{t('Perguntas Frequentes')}</Link>
+            <PubLink to="/reservations" className="pub-cta">{t('Pedir reserva')}</PubLink>
+            <PubLink to="/faqs" className="pub-cta pub-cta--ghost">{t('Perguntas Frequentes')}</PubLink>
           </div>
         </div>
       </section>

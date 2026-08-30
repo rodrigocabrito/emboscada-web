@@ -7,10 +7,10 @@ const Empresas = () => {
   const t = useT();
   const { lang } = useLang();
   const p = pages.empresas;
-  // Portuguese gets the PT terms; every other language gets the English version.
-  const termsPdf = lang === 'pt'
-    ? '/site/condicoes-reservas-empresas.pdf'
-    : '/site/corporate-booking-terms-en.pdf';
+  // Opens the PDF inside a small viewer page (public/ver-pdf.html) so the browser
+  // tab shows the Emboscada favicon instead of a generic PDF icon. Portuguese gets
+  // the PT terms; every other language gets the English version.
+  const termsPdf = lang === 'pt' ? '/ver-pdf.html?lang=pt' : '/ver-pdf.html?lang=en';
   return (
     <>
       <section className="pub-page-hero">
@@ -72,9 +72,8 @@ const Empresas = () => {
               href={termsPdf}
               target="_blank"
               rel="noreferrer"
-              download
             >
-              ↓ {t('Condições de reserva para empresas')}
+              ↗ {t('Condições de reserva para empresas')}
             </a>
           </p>
         </div>

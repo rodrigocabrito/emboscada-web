@@ -87,7 +87,7 @@ const Reservas = () => {
               <div className="pub-form-msg pub-form-msg--ok">
                 ✓ {t('Pedido enviado! Entramos em contacto para confirmar a tua reserva.')}
               </div>
-              <button type="button" className="pub-cta pub-cta--ghost" onClick={() => setStatus('idle')}>
+              <button type="button" className="pub-cta pub-cta--ghost" style={{ alignSelf: 'center' }} onClick={() => setStatus('idle')}>
                 {t('Fazer outro pedido')}
               </button>
             </div>

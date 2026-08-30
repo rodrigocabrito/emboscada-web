@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
 import { pages, parks } from '../content';
 import { useT } from '../i18n';
+import { PubLink } from '../components/LangLink';
 
 const Campos = () => {
   const t = useT();
@@ -17,11 +17,11 @@ const Campos = () => {
         <div className="pub-container">
           <div className="pub-contact-band">
             {parks.map((pk) => (
-              <Link key={pk.slug} to={`/fields/${pk.slug}`} className="pub-contact-card pub-park-card">
+              <PubLink key={pk.slug} to={`/fields/${pk.slug}`} className="pub-contact-card pub-park-card">
                 {pk.image && <img className="pub-park-img" src={pk.image} alt={pk.name} loading="lazy" />}
                 <h3>{pk.name}</h3>
                 <div style={{ color: 'var(--pub-muted)' }}>{t(pk.city)}</div>
-              </Link>
+              </PubLink>
             ))}
           </div>
         </div>
