@@ -37,6 +37,65 @@ export const nav = [
   { label: 'Contactos', to: '/contacts' },
 ];
 
+// Browser-tab titles per route (PT keys, translated at runtime). Home shows the
+// bare brand; every other page becomes "<translated page> · Emboscada Parque
+// Aventura". Location names (Porto/Monsanto) are proper nouns and fall through
+// untranslated.
+export const pageTitles = {
+  '/': '',
+  '/adults': 'Adultos',
+  '/kids': 'Crianças',
+  '/companies': 'Empresas',
+  '/fields': 'Campos',
+  '/fields/porto': 'Porto',
+  '/fields/monsanto': 'Monsanto',
+  '/contacts': 'Contactos',
+  '/reservations': 'Reservas',
+  '/faqs': 'Perguntas Frequentes',
+  '/privacy': 'Política de Privacidade',
+};
+
+// Meta descriptions per route. Portuguese — the primary market and the language
+// Google indexes for these single-URL pages. ~150 chars, unique per page.
+export const pageMeta = {
+  '/': 'Paintball, lasertag, gelblast e bubble football no Porto e em Lisboa (Monsanto). Diversão em segurança para grupos, empresas, aniversários e despedidas.',
+  '/adults': 'Paintball e lasertag para adultos no Porto e em Lisboa. Packs para grupos, despedidas de solteiro e amigos, com monitorização em todos os jogos.',
+  '/kids': 'Paintball, lasertag e gelblast para crianças em segurança. Perfeito para festas de aniversário e grupos, no Porto e em Lisboa.',
+  '/companies': 'Team building e eventos de empresa no Porto e em Lisboa. Paintball, lasertag e muito mais para grupos. Peça o seu orçamento à medida.',
+  '/fields': 'Os nossos campos no Porto e em Lisboa (Monsanto): cenários, localização e galerias de fotos. Descobre onde vais viver a próxima aventura.',
+  '/fields/porto': 'Campo de paintball e lasertag no Porto (Vila Nova de Gaia). Cenários, localização e galeria. Reserva a tua aventura na Emboscada.',
+  '/fields/monsanto': 'Campo de paintball e lasertag em Lisboa (Monsanto). Cenários, localização e galeria. Reserva a tua aventura na Emboscada.',
+  '/contacts': 'Contactos da Emboscada Parque Aventura no Porto e em Lisboa: telefone, email e morada. Fala connosco para reservar a tua experiência.',
+  '/reservations': 'Pede a tua reserva de paintball, lasertag, gelblast ou bubble football no Porto ou em Lisboa. Preenche o formulário e confirmamos contigo.',
+  '/faqs': 'Perguntas frequentes sobre reservas, idades, preços, equipamento e segurança na Emboscada Parque Aventura. Esclarece todas as tuas dúvidas.',
+  '/privacy': 'Política de privacidade da Emboscada Parque Aventura: como recolhemos, tratamos e protegemos os teus dados pessoais.',
+};
+
+// Builds a tel: href from a display phone (Portuguese +351, digits only).
+export const telHref = (phone) => `tel:+351${String(phone).replace(/\D/g, '')}`;
+
+// ── Language in the URL (#9) ──
+// Every language carries a path prefix, Portuguese included (/pt/adults,
+// /en/adults, /fr/…, /es/…). The bare root redirects to /pt.
+export const LOCALE_CODES = ['pt', 'en', 'fr', 'es'];
+
+// Strip a leading /pt /en /fr /es segment → the canonical path used for content
+// lookups and hreflang. Trailing slashes are normalised away.
+export const canonicalPath = (pathname) => {
+  const parts = pathname.split('/');
+  const rest = LOCALE_CODES.includes(parts[1]) ? `/${parts.slice(2).join('/')}` : pathname;
+  return rest === '/' || rest === '' ? '/' : rest.replace(/\/$/, '');
+};
+
+// Prefix a link target for a language. Preserves any ?query/#hash.
+export const localizePath = (to, lang) => {
+  if (typeof to !== 'string' || !to.startsWith('/')) return to;
+  const q = to.search(/[?#]/);
+  const path = q === -1 ? to : to.slice(0, q);
+  const suffix = q === -1 ? '' : to.slice(q);
+  return (path === '/' ? `/${lang}` : `/${lang}${path}`) + suffix;
+};
+
 // Rotating hero slides on the home page.
 export const hero = [
   { title: 'PAINTBALL', subtitle: 'PARA CRIANÇAS, ADULTOS E FAMÍLIAS', image: '/site/hero-1.jpg' },

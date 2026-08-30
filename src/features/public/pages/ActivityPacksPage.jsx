@@ -1,6 +1,6 @@
-import { Link } from 'react-router-dom';
 import { pages, packPages, packValue } from '../content';
 import { useT } from '../i18n';
+import { PubLink } from '../components/LangLink';
 
 // Data-driven activities + packs page. Shared by /adults and /kids — the
 // content comes from packPages[pageKey] and pages[pageKey] in content.js.
@@ -57,12 +57,12 @@ const ActivityPacksPage = ({ pageKey }) => {
                   <ul className="pub-pack-list">
                     {pack.items.map((it) => <li key={it}>{t(it)}</li>)}
                   </ul>
-                  <Link
+                  <PubLink
                     to={`/reservations?activity=${encodeURIComponent(a.title)}&pack=${encodeURIComponent(packValue(pack.name, audience))}`}
                     className="pub-cta pub-cta--ghost"
                   >
                     {t('Reservar')}
-                  </Link>
+                  </PubLink>
                 </div>
               ))}
             </div>

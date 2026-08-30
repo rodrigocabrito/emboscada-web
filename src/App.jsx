@@ -1,5 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react';
-import { BrowserRouter, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
@@ -52,6 +52,36 @@ const NotFound = lazy(() => import('./pages/NotFound'));
 import './styles/global.css';
 import './styles/public.css';
 
+// Public marketing routes, defined once and rendered twice: at the root (PT,
+// unprefixed) and again under /:lang for English/French/Spanish (#9).
+const publicRoutes = [
+  { index: true, element: <Home /> },
+  { path: 'adults', element: <ActivityPacksPage pageKey="adultos" /> },
+  { path: 'kids', element: <ActivityPacksPage pageKey="crianca" /> },
+  { path: 'companies', element: <Empresas /> },
+  { path: 'fields', element: <Campos /> },
+  { path: 'fields/porto', element: <LocationPage slug="porto" /> },
+  { path: 'fields/monsanto', element: <LocationPage slug="monsanto" /> },
+  { path: 'contacts', element: <Contactos /> },
+  { path: 'reservations', element: <Reservas /> },
+  { path: 'faqs', element: <Faqs /> },
+  { path: 'privacy', element: <Privacy /> },
+];
+const renderPublicRoutes = () =>
+  publicRoutes.map((r, i) =>
+    r.index
+      ? <Route key={i} index element={r.element} />
+      : <Route key={i} path={r.path} element={r.element} />,
+  );
+
+// Guards the /:lang subtree: only en/fr/es are valid prefixes; anything else is
+// a real 404 (so /random doesn't silently render the home page as "language").
+const PUBLIC_LOCALES = ['pt', 'en', 'fr', 'es'];
+const LangGuard = () => {
+  const { lang } = useParams();
+  return PUBLIC_LOCALES.includes(lang) ? <Outlet /> : <NotFound />;
+};
+
 // The hidden staff login. Reachable only by typing /portal — no public link
 // points here. If already signed in, skip straight to the dashboard.
 const PortalGate = () => {
@@ -90,18 +120,13 @@ const AppContent = () => {
       <ScrollToTop />
       <Routes>
         {/* ── Public marketing site (open to everyone, no staff nav) ── */}
+        {/* Bare root → default language */}
+        <Route path="/" element={<Navigate to="/pt" replace />} />
         <Route element={<PublicLayout />}>
-          <Route path="/" element={<Home />} />
-          <Route path="/adults" element={<ActivityPacksPage pageKey="adultos" />} />
-          <Route path="/kids" element={<ActivityPacksPage pageKey="crianca" />} />
-          <Route path="/companies" element={<Empresas />} />
-          <Route path="/fields" element={<Campos />} />
-          <Route path="/fields/porto" element={<LocationPage slug="porto" />} />
-          <Route path="/fields/monsanto" element={<LocationPage slug="monsanto" />} />
-          <Route path="/contacts" element={<Contactos />} />
-          <Route path="/reservations" element={<Reservas />} />
-          <Route path="/faqs" element={<Faqs />} />
-          <Route path="/privacy" element={<Privacy />} />
+          {/* Every language is prefixed: /pt, /en, /fr, /es */}
+          <Route path=":lang" element={<LangGuard />}>
+            {renderPublicRoutes()}
+          </Route>
         </Route>
 
         {/* ── Hidden staff portal login ── */}
