@@ -111,7 +111,7 @@ export const categories = [
   { title: 'FESTAS DE ANIVERSÁRIO', image: '/site/cat-aniversario.jpg', to: '/kids' },
   { title: 'DESPEDIDAS DE SOLTEIRO', image: '/site/cat-despedidas.jpg', to: '/adults' },
   { title: 'EMPRESAS', subtitle: 'Team Building', image: '/site/cat-empresas.jpg', to: '/companies' },
-  { title: 'GRUPOS', subtitle: 'Família e Amigos', image: '/site/cat-grupos.jpg', to: '/companies' },
+  { title: 'GRUPOS', subtitle: 'Família e Amigos', image: '/site/cat-grupos.jpg', to: '/reservations' },
 ];
 
 // "As nossas actividades"
