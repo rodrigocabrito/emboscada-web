@@ -115,12 +115,15 @@ const PublicShell = () => {
       <footer className="pub-footer">
         <div className="pub-container pub-footer-grid">
           <div>
-            <h4>{t('Links Rápidos')}</h4>
-            <ul>
-              {footer.quickLinks.map((l) => (
-                <li key={l.label}><PubLink to={l.to}>{t(l.label)}</PubLink></li>
-              ))}
-            </ul>
+            <h4>{t('Siga-nos')}</h4>
+            <div className="pub-social">
+              <a href="https://www.facebook.com/EmboscadaParqueAventura" target="_blank" rel="noopener noreferrer" aria-label="Facebook">
+                <i className="ti ti-brand-facebook" aria-hidden="true"></i>
+              </a>
+              <a href="https://www.instagram.com/emboscada_parque_aventura" target="_blank" rel="noopener noreferrer" aria-label="Instagram">
+                <i className="ti ti-brand-instagram" aria-hidden="true"></i>
+              </a>
+            </div>
           </div>
           <div>
             <h4>{t('Horários')}</h4>

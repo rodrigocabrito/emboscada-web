@@ -14,14 +14,15 @@
   <body>
     <iframe id="pdf" title="PDF"></iframe>
     <script>
-      // Only the known corporate-terms PDFs may be embedded (no arbitrary URLs).
-      var ALLOWED = {
-        pt: '/site/condicoes-reservas-empresas.pdf',
-        en: '/site/corporate-booking-terms-en.pdf',
-      };
-      var lang = new URLSearchParams(location.search).get('lang') === 'en' ? 'en' : 'pt';
-      document.documentElement.lang = lang;
-      document.getElementById('pdf').src = ALLOWED[lang];
+      var params = new URLSearchParams(location.search);
+      // Embed only our own static PDFs (same-origin, under /site/, no traversal).
+      var raw = params.get('src') || '';
+      if (/^\/site\/[A-Za-z0-9/_-]+\.pdf$/.test(raw)) {
+        document.getElementById('pdf').src = raw;
+      }
+      // Optional tab title (e.g. the invite name); assigning is text-only, no HTML.
+      var title = params.get('title');
+      if (title) document.title = title + ' · Emboscada Parque Aventura';
     </script>
   </body>
 </html>

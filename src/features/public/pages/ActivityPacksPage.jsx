@@ -2,6 +2,9 @@ import { pages, packPages, packValue } from '../content';
 import { useT } from '../i18n';
 import { PubLink } from '../components/LangLink';
 
+// The on-site restaurant (Lisboa Camping) that caters the Monsanto park.
+const RESTAURANT_URL = 'https://lisboacamping.com/whatwedo/restaurante/';
+
 // Data-driven activities + packs page. Shared by /adults and /kids — the
 // content comes from packPages[pageKey] and pages[pageKey] in content.js.
 const ActivityPacksPage = ({ pageKey }) => {
@@ -11,6 +14,7 @@ const ActivityPacksPage = ({ pageKey }) => {
   if (!p || !data) return null;
   const { activities } = data;
   const audience = pageKey === 'crianca' ? 'Crianças' : 'Adultos';
+  const equipmentTo = pageKey === 'crianca' ? '/kids/equipment' : '/adults/equipment';
 
   return (
     <>
@@ -23,6 +27,9 @@ const ActivityPacksPage = ({ pageKey }) => {
               <a key={a.slug} href={`#${a.slug}`} className="pub-anchor">{t(a.title)}</a>
             ))}
           </nav>
+          <div style={{ marginTop: '1.5rem' }}>
+            <PubLink to={equipmentTo} className="pub-cta pub-cta--ghost">{t('Ver equipamento')}</PubLink>
+          </div>
         </div>
       </section>
 
@@ -67,12 +74,56 @@ const ActivityPacksPage = ({ pageKey }) => {
               ))}
             </div>
 
+            {a.invite && (
+              <div className="pub-invite-cta">
+                <a className="pub-cta" href={`/ver-pdf.html?src=${encodeURIComponent(a.invite)}${a.inviteTitle ? `&title=${encodeURIComponent(t(a.inviteTitle))}` : ''}`} target="_blank" rel="noreferrer">
+                  {t('Ver convite de aniversário')} <span aria-hidden="true">↗</span>
+                </a>
+              </div>
+            )}
+
             <div className="pub-includes">
               <h4>{t('Qualquer pack inclui')}</h4>
               <ul>
                 {a.includes.map((it) => <li key={it}>{t(it)}</li>)}
               </ul>
             </div>
+
+            {(a.extras?.length > 0 || a.facilities?.length > 0) && (
+              <div className="pub-extras-grid">
+                {a.extras?.length > 0 && (
+                  <div className="pub-extras">
+                    <h4>{t('Consumos opcionais')}</h4>
+                    <ul className="pub-extras-list">
+                      {a.extras.map((ex) => (
+                        <li key={ex.name}><span>{t(ex.name)}</span><strong>{ex.price}</strong></li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+                {a.facilities?.length > 0 && (
+                  <div className="pub-facilities">
+                    <h4>{t('Instalações')}</h4>
+                    <p className="pub-facilities-note">{t('Disponível apenas no Parque de Monsanto (Lisboa).')}</p>
+                    <ul className="pub-facilities-list">
+                      {a.facilities.map((f) => <li key={f}>{t(f)}</li>)}
+                    </ul>
+                    <div className="pub-facility-ctas">
+                      {pageKey === 'crianca' && a.facilities.includes('Zona de Lanches') && (
+                        <PubLink className="pub-cta pub-cta--ghost pub-cta--sm" to="/snacks">
+                          {t('Ver serviço de lanches')} <span aria-hidden="true">›</span>
+                        </PubLink>
+                      )}
+                      {a.facilities.some((f) => f.startsWith('Monsanto Villas Restaurante')) && (
+                        <a className="pub-cta pub-cta--ghost pub-cta--sm" href={RESTAURANT_URL} target="_blank" rel="noopener noreferrer">
+                          {t('Monsanto Villas Restaurante')} <span aria-hidden="true">↗</span>
+                        </a>
+                      )}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </section>
       ))}

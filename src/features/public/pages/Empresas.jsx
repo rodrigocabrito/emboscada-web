@@ -10,7 +10,8 @@ const Empresas = () => {
   // Opens the PDF inside a small viewer page (public/ver-pdf.html) so the browser
   // tab shows the Emboscada favicon instead of a generic PDF icon. Portuguese gets
   // the PT terms; every other language gets the English version.
-  const termsPdf = lang === 'pt' ? '/ver-pdf.html?lang=pt' : '/ver-pdf.html?lang=en';
+  const termsFile = lang === 'pt' ? '/site/condicoes-reservas-empresas.pdf' : '/site/corporate-booking-terms-en.pdf';
+  const termsPdf = `/ver-pdf.html?src=${encodeURIComponent(termsFile)}`;
   return (
     <>
       <section className="pub-page-hero">

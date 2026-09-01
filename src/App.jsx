@@ -23,6 +23,8 @@ const Login = lazy(() => import('./pages/Login'));
 const PublicLayout = lazy(() => import('./features/public/PublicLayout'));
 const Home = lazy(() => import('./features/public/pages/Home'));
 const ActivityPacksPage = lazy(() => import('./features/public/pages/ActivityPacksPage'));
+const EquipmentPage = lazy(() => import('./features/public/pages/EquipmentPage'));
+const LanchesPage = lazy(() => import('./features/public/pages/LanchesPage'));
 const Empresas = lazy(() => import('./features/public/pages/Empresas'));
 const Campos = lazy(() => import('./features/public/pages/Campos'));
 const LocationPage = lazy(() => import('./features/public/pages/LocationPage'));
@@ -57,7 +59,9 @@ import './styles/public.css';
 const publicRoutes = [
   { index: true, element: <Home /> },
   { path: 'adults', element: <ActivityPacksPage pageKey="adultos" /> },
+  { path: 'adults/equipment', element: <EquipmentPage pageKey="adultos" /> },
   { path: 'kids', element: <ActivityPacksPage pageKey="crianca" /> },
+  { path: 'kids/equipment', element: <EquipmentPage pageKey="crianca" /> },
   { path: 'companies', element: <Empresas /> },
   { path: 'fields', element: <Campos /> },
   { path: 'fields/porto', element: <LocationPage slug="porto" /> },
@@ -66,6 +70,7 @@ const publicRoutes = [
   { path: 'reservations', element: <Reservas /> },
   { path: 'faqs', element: <Faqs /> },
   { path: 'privacy', element: <Privacy /> },
+  { path: 'snacks', element: <LanchesPage /> },
 ];
 const renderPublicRoutes = () =>
   publicRoutes.map((r, i) =>

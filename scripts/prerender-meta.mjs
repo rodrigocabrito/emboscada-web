@@ -27,6 +27,8 @@ const TITLE_I18N = {
   'Reservas': { en: 'Booking', fr: 'Réservation', es: 'Reservas' },
   'Perguntas Frequentes': { en: 'FAQs', fr: 'FAQ', es: 'Preguntas frecuentes' },
   'Política de Privacidade': { en: 'Privacy Policy', fr: 'Politique de confidentialité', es: 'Política de privacidad' },
+  'Equipamento': { en: 'Equipment', fr: 'Équipement', es: 'Equipamiento' },
+  'Lanches': { en: 'Snacks', fr: 'Goûters', es: 'Meriendas' },
 };
 const tr = (str, lang) => (lang === 'pt' || !str ? str : (TITLE_I18N[str]?.[lang] || str));
 const esc = (s) => String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

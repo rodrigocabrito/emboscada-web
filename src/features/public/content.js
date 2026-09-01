@@ -44,7 +44,9 @@ export const nav = [
 export const pageTitles = {
   '/': '',
   '/adults': 'Adultos',
+  '/adults/equipment': 'Equipamento',
   '/kids': 'Crianças',
+  '/kids/equipment': 'Equipamento',
   '/companies': 'Empresas',
   '/fields': 'Campos',
   '/fields/porto': 'Porto',
@@ -53,6 +55,7 @@ export const pageTitles = {
   '/reservations': 'Reservas',
   '/faqs': 'Perguntas Frequentes',
   '/privacy': 'Política de Privacidade',
+  '/snacks': 'Lanches',
 };
 
 // Meta descriptions per route. Portuguese — the primary market and the language
@@ -60,7 +63,9 @@ export const pageTitles = {
 export const pageMeta = {
   '/': 'Paintball, lasertag, gelblast e bubble football no Porto e em Lisboa (Monsanto). Diversão em segurança para grupos, empresas, aniversários e despedidas.',
   '/adults': 'Paintball e lasertag para adultos no Porto e em Lisboa. Packs para grupos, despedidas de solteiro e amigos, com monitorização em todos os jogos.',
+  '/adults/equipment': 'O equipamento incluído nas atividades para adultos na Emboscada — paintball, lasertag e bubble football, com monitor qualificado e seguro.',
   '/kids': 'Paintball, lasertag e gelblast para crianças em segurança. Perfeito para festas de aniversário e grupos, no Porto e em Lisboa.',
+  '/kids/equipment': 'O equipamento incluído nas atividades para crianças na Emboscada — paintball, lasertag e gelblast, com monitor qualificado e seguro.',
   '/companies': 'Team building e eventos de empresa no Porto e em Lisboa. Paintball, lasertag e muito mais para grupos. Peça o seu orçamento à medida.',
   '/fields': 'Os nossos campos no Porto e em Lisboa (Monsanto): cenários, localização e galerias de fotos. Descobre onde vais viver a próxima aventura.',
   '/fields/porto': 'Campo de paintball e lasertag no Porto (Vila Nova de Gaia). Cenários, localização e galeria. Reserva a tua aventura na Emboscada.',
@@ -69,6 +74,7 @@ export const pageMeta = {
   '/reservations': 'Pede a tua reserva de paintball, lasertag, gelblast ou bubble football no Porto ou em Lisboa. Preenche o formulário e confirmamos contigo.',
   '/faqs': 'Perguntas frequentes sobre reservas, idades, preços, equipamento e segurança na Emboscada Parque Aventura. Esclarece todas as tuas dúvidas.',
   '/privacy': 'Política de privacidade da Emboscada Parque Aventura: como recolhemos, tratamos e protegemos os teus dados pessoais.',
+  '/snacks': 'Serviço de lanches para festas e grupos no Parque de Monsanto (Lisboa): menus Esquilo e Tenda, bolo de aniversário e extras.',
 };
 
 // Builds a tel: href from a display phone (Portuguese +351, digits only).
@@ -251,11 +257,6 @@ export const contacts = {
 export const schedule = { verao: '09:00 – 19:00', inverno: '09:00 – 18:00' };
 
 export const footer = {
-  quickLinks: [
-    { label: 'Adultos', to: '/adults' },
-    { label: 'Crianças', to: '/kids' },
-    { label: 'Empresas', to: '/companies' },
-  ],
   usefulLinks: [
     { label: 'Perguntas Frequentes', to: '/faqs' },
     { label: 'Contactos', to: '/contacts' },
@@ -290,6 +291,24 @@ export const adultosActivities = [
       'Seguro de responsabilidade civil e de acidentes pessoais',
       'Acesso a todos os cenários de jogo',
     ],
+    extras: [
+      { name: 'Fato macaco (aluguer)', price: '5,00€' },
+      { name: 'Luvas (aluguer)', price: '3,00€' },
+      { name: 'SUPER COMBO — Fato + Luvas (aluguer)', price: '6,50€' },
+      { name: 'Fato Fantasia', price: '25,00€' },
+      { name: '500 bolas extra', price: '30,00€' },
+      { name: '1000 bolas extra', price: '50,00€' },
+      { name: '2000 bolas extra', price: '80,00€' },
+    ],
+    facilities: [
+      'Espaço com 10 000 m² exterior e semicoberto',
+      'Blocos balneários de acesso partilhado (hóspedes do Parque de Campismo)',
+      'Estacionamento gratuito limitado',
+      '3 cenários imersivos',
+      'Zona de Lanches',
+      'Zona de Jogadores',
+      'Monsanto Villas Restaurante disponível no local (Parque de Campismo)',
+    ],
   },
   {
     slug: 'lasertag',
@@ -310,6 +329,22 @@ export const adultosActivities = [
       'Seguro de responsabilidade civil e de acidentes pessoais',
       'Acesso a todos os cenários de jogo outdoor',
     ],
+    extras: [
+      { name: 'Fato macaco (aluguer)', price: '5,00€' },
+      { name: 'Luvas (aluguer)', price: '3,00€' },
+      { name: 'SUPER COMBO — Fato + Luvas (aluguer)', price: '6,50€' },
+      { name: '30 minutos extra (por jogador)', price: '5,00€' },
+      { name: '60 minutos extra (por jogador)', price: '7,00€' },
+    ],
+    facilities: [
+      'Espaço com 10 000 m² exterior e semicoberto',
+      'Blocos balneários de acesso partilhado (hóspedes do Parque de Campismo)',
+      'Estacionamento gratuito limitado',
+      '3 cenários imersivos outdoor',
+      'Zona de Lanches',
+      'Zona de Jogadores',
+      'Monsanto Villas Restaurante disponível no local (Parque de Campismo)',
+    ],
   },
   {
     slug: 'bubble',
@@ -326,6 +361,13 @@ export const adultosActivities = [
       'Monitorização e acompanhamento de todos os jogos',
       'Seguro de responsabilidade civil e de acidentes pessoais',
     ],
+    facilities: [
+      'Espaço com 10 000 m² exterior e semicoberto',
+      'Blocos balneários de acesso partilhado (hóspedes do Parque de Campismo)',
+      'Estacionamento gratuito limitado',
+      'Acesso ao campo de futebol 5 x 5 – Outdoor',
+      'Monsanto Villas Restaurante disponível no local (Parque de Campismo)',
+    ],
   },
 ];
 
@@ -339,6 +381,8 @@ export const criancaActivities = [
     image: '/site/crianca-paintball.jpg',
     imagePos: 'center 38%', // crop moved up ~75px total
     intro: 'Paintball infantil com marcador Cal 50 (baixo impacto). Escalões MINI (6–9) e KIDS (10–15).',
+    invite: '/site/convites/convite-paintball-kids.pdf',
+    inviteTitle: 'Convite Paintball Kids',
     packs: [
       { name: 'Pack Paintball 100', price: '19,95', items: ['100 bolas', 'Máscara Térmica', 'Colete de Proteção', 'Marcador Cal 50'] },
       { name: 'Pack Paintball 300', price: '27,95', items: ['300 bolas', 'Máscara Térmica', 'Colete de Proteção', 'Marcador Cal 50'] },
@@ -353,6 +397,23 @@ export const criancaActivities = [
       'Acesso a todos os cenários de jogo',
       'Zona de Lanches (30 min) após a atividade',
     ],
+    extras: [
+      { name: 'Fato macaco (aluguer)', price: '5,00€' },
+      { name: 'Luvas (aluguer)', price: '3,00€' },
+      { name: 'SUPER COMBO — Fato + Luvas (aluguer)', price: '6,50€' },
+      { name: '500 bolas extra', price: '30,00€' },
+      { name: '1000 bolas extra', price: '50,00€' },
+      { name: '2000 bolas extra', price: '80,00€' },
+    ],
+    facilities: [
+      'Espaço com 10 000 m² exterior e semicoberto',
+      'Blocos balneários de acesso partilhado (hóspedes do Parque de Campismo)',
+      'Estacionamento gratuito limitado',
+      '3 cenários imersivos',
+      'Zona de Lanches',
+      'Zona de Jogadores',
+      'Monsanto Villas Restaurante disponível no local (Parque de Campismo)',
+    ],
   },
   {
     slug: 'lasertag',
@@ -362,6 +423,8 @@ export const criancaActivities = [
     image: '/site/crianca-lasertag.jpg',
     imagePos: 'center 14%', // crop moved up ~225px total
     intro: 'Lasertag outdoor em cenários imersivos, com monitorização em todos os jogos.',
+    invite: '/site/convites/convite-lasertag-kids.pdf',
+    inviteTitle: 'Convite Lasertag Kids',
     packs: [
       { name: 'Pack Lasertag', price: '24,00', items: ['Tempo: 1h30', 'Headset', 'Marcador Falcon F1', 'Touca Higiénica'] },
       { name: 'Pack Lasertag Aniversário', price: '28,00', items: ['Tempo: 2h00', 'Headset', 'Marcador Falcon F1', 'Fato Macaco', 'Touca Higiénica'] },
@@ -373,6 +436,22 @@ export const criancaActivities = [
       'Acesso a todos os cenários de jogo outdoor',
       'Zona de Lanches (30 min) após a atividade',
     ],
+    extras: [
+      { name: 'Fato macaco (aluguer)', price: '5,00€' },
+      { name: 'Luvas (aluguer)', price: '3,00€' },
+      { name: 'SUPER COMBO — Fato + Luvas (aluguer)', price: '6,50€' },
+      { name: '30 minutos extra (por jogador)', price: '5,00€' },
+      { name: '60 minutos extra (por jogador)', price: '7,00€' },
+    ],
+    facilities: [
+      'Espaço com 10 000 m² exterior e semicoberto',
+      'Blocos balneários de acesso partilhado (hóspedes do Parque de Campismo)',
+      'Estacionamento gratuito limitado',
+      '3 cenários imersivos',
+      'Zona de Lanches',
+      'Zona de Jogadores',
+      'Monsanto Villas Restaurante disponível no local (Parque de Campismo)',
+    ],
   },
   {
     slug: 'gelblast',
@@ -381,6 +460,8 @@ export const criancaActivities = [
     age: 'Recomendável dos 6 aos 9 anos',
     image: '/site/crianca-gelblast.jpg',
     intro: 'Bolas de gel de baixo impacto, ideais para os mais novos. Duração 1h00–1h30.',
+    invite: '/site/convites/convite-gelblast.pdf',
+    inviteTitle: 'Convite Gelblast',
     packs: [
       { name: 'Pack Base Gelblast', price: '16,95', items: ['1500 bolas de gel por criança', 'Máscara com lente térmica', 'Colete de Proteção', 'Lançador Gelblast'] },
     ],
@@ -390,6 +471,22 @@ export const criancaActivities = [
       'Seguro de responsabilidade civil e de acidentes pessoais',
       'Acesso a todos os cenários de jogo',
       'Zona de Lanches (30 min) após a atividade',
+    ],
+    extras: [
+      { name: 'Fato macaco (aluguer)', price: '5,00€' },
+      { name: 'Luvas (aluguer)', price: '3,00€' },
+      { name: 'SUPER COMBO — Fato + Luvas (aluguer)', price: '6,50€' },
+      { name: '5 000 bolas de gel extra (10 carregamentos de 500)', price: '7,00€' },
+      { name: '10 000 bolas de gel extra (20 carregamentos de 500)', price: '10,00€' },
+    ],
+    facilities: [
+      'Espaço com 10 000 m² exterior e semicoberto',
+      'Blocos balneários de acesso partilhado (hóspedes do Parque de Campismo)',
+      'Estacionamento gratuito limitado',
+      '3 cenários imersivos',
+      'Zona de Lanches',
+      'Zona de Jogadores',
+      'Monsanto Villas Restaurante disponível no local (Parque de Campismo)',
     ],
   },
 ];
@@ -404,6 +501,106 @@ export const packPages = {
   crianca: {
     activities: criancaActivities,
     note: 'Mínimo 10 jogadores. Inclui zona de lanches (30 min) após a atividade. Serviço de lanches e consumos opcionais disponíveis na reserva.',
+  },
+};
+
+// Snack service (Monsanto park) — linked from the "Zona de Lanches" facility on
+// the activity pages. Rendered by LanchesPage.
+export const lanchesPage = {
+  title: 'Serviço de Lanches',
+  lead: 'Menus de lanche para festas e grupos, servidos no Parque de Monsanto (Lisboa).',
+  // Shown as a carousel in the first cell of the menu row.
+  images: [
+    '/site/snacks/popcorn.webp',
+    '/site/snacks/chips.webp',
+    '/site/snacks/pizza.webp',
+    '/site/snacks/fruit.webp',
+    '/site/snacks/brigadeiros.webp',
+    '/site/snacks/salgados.webp',
+  ],
+  menus: [
+    { name: 'Menu Esquilo', price: '8,50€', per: 'por criança', items: ['Tábua mista de salgados', 'Mini pastelaria / biscoitos', 'Tábua de mini pizzas', 'Batata chips', 'Pipocas', 'Sumo sem gás e água lisa'] },
+    { name: 'Menu Tenda', price: '14,50€', per: 'por criança', items: ['Tábua de mini salgados', 'Mini hambúrguer de vitela', 'Tábua de pizza', 'Brigadeiro individual', 'Espetada de fruta', 'Batata chips', 'Pipocas', 'Sumo sem gás e água lisa'] },
+  ],
+  extras: [
+    { name: 'Bolo de aniversário', price: '19,90€ / kg' },
+    { name: 'Decoração base', price: '45,00€' },
+    { name: 'Fonte de chocolate com bolachas', price: '55,00€' },
+  ],
+  note: 'Servidos até às 18h30, mediante encomenda com um mínimo de 48 horas úteis de antecedência. Serviço do Monsanto Villas Restaurante (Lisboa Camping & Bungalows), no Parque de Monsanto.',
+  booking: 'O Parque Emboscada agiliza a contratação do serviço de lanches nas opções Esquilo e Tenda. Para adicionar extras ou esclarecer dúvidas sobre o catering deve entrar em contacto com a responsável, Dália Fontes, via email.',
+  contact: { name: 'Dália Fontes', email: 'iloisyfontes@gmail.com' },
+};
+
+// Equipment included per activity, per audience. Mirrors the reference site's
+// equipment pages; reached from a button on /adults and /kids. Item names are
+// kept in Portuguese (product names). Universal inclusions in `includes`.
+const EQ = '/site/equipment';
+export const equipmentPages = {
+  adultos: {
+    title: 'Equipamento para Adultos',
+    lead: 'O material que faz parte de cada atividade.',
+    activities: [
+      { title: 'Paintball', items: [
+        { name: 'Marcador calibre 68', img: `${EQ}/pb-marcador-68.jpg` },
+        { name: 'Máscara de Proteção Térmica', img: `${EQ}/mascara-termica.jpg` },
+        { name: 'Colete de Proteção', img: `${EQ}/colete.jpg` },
+        { name: 'Fato Macaco', img: `${EQ}/coveralls.jpg` },
+        { name: 'Luvas de Proteção', img: `${EQ}/luva-adulto.jpg` },
+        { name: 'Fato Fantasia', img: `${EQ}/fato-fantasia.jpg` },
+        { name: 'Battle Pack com potes de bolas', img: `${EQ}/battlepack.jpg` },
+      ] },
+      { title: 'Lasertag', items: [
+        { name: 'Marcador de Lasertag', img: `${EQ}/lasertag-marcador.jpg` },
+        { name: 'Head Band', img: `${EQ}/lasertag-headband.jpg` },
+        { name: 'Braçadeira eletrónica (noivo/noiva)', img: `${EQ}/lasertag-shockband.jpg` },
+        { name: 'Touca higiénica', img: `${EQ}/lasertag-touca.jpg` },
+        { name: 'Fato Macaco', img: `${EQ}/coveralls.jpg` },
+        { name: 'Fato Fantasia', img: `${EQ}/fato-fantasia.jpg` },
+        { name: 'Luvas de Proteção', img: `${EQ}/luva-adulto.jpg` },
+      ] },
+      { title: 'Bubble Football', items: [
+        { name: 'Bolas de Bubble Ball – 1,50 m de diâmetro', img: `${EQ}/bubble-ball.jpg` },
+        { name: 'Bola de futebol', img: `${EQ}/bola-futebol.jpg` },
+      ] },
+    ],
+    includes: [
+      { name: 'Monitor Qualificado', img: `${EQ}/monitor.jpg` },
+      { name: 'Seguro', img: `${EQ}/seguro.jpg` },
+    ],
+  },
+  crianca: {
+    title: 'Equipamento para Crianças',
+    lead: 'O material que faz parte de cada atividade.',
+    activities: [
+      { title: 'Paintball', items: [
+        { name: 'Marcador BLASTER de Baixo Impacto (6–9 anos)', img: `${EQ}/pb-marcador-50.jpg` },
+        { name: 'Marcador calibre 50 VIPER (10–15 anos)', img: `${EQ}/pb-marcador-68.jpg` },
+        { name: 'Máscara de Proteção Térmica', img: `${EQ}/mascara-termica.jpg` },
+        { name: 'Colete de Proteção', img: `${EQ}/colete.jpg` },
+        { name: 'Fato Macaco', img: `${EQ}/fato-macaco.jpg` },
+        { name: 'Luvas de Proteção', img: `${EQ}/luvas.jpg` },
+        { name: 'Lanche / bolo de aniversário (opcional)', img: `${EQ}/lanche.jpg` },
+      ] },
+      { title: 'Lasertag', items: [
+        { name: 'Marcador de Lasertag', img: `${EQ}/lasertag-marcador.jpg` },
+        { name: 'Head Band', img: `${EQ}/lasertag-headband.jpg` },
+        { name: 'Touca higiénica', img: `${EQ}/lasertag-touca.jpg` },
+        { name: 'Fato Macaco', img: `${EQ}/fato-macaco.jpg` },
+        { name: 'Luvas de Proteção', img: `${EQ}/luvas.jpg` },
+      ] },
+      { title: 'Gelblast', items: [
+        { name: 'Lançador Gelblast de gel de água', img: `${EQ}/gelblast.webp` },
+        { name: 'Máscara de Proteção Térmica', img: `${EQ}/mascara-termica.jpg` },
+        { name: 'Colete de Proteção', img: `${EQ}/colete.jpg` },
+        { name: 'Fato Macaco', img: `${EQ}/fato-macaco.jpg` },
+        { name: 'Luvas de Proteção', img: `${EQ}/luvas.jpg` },
+      ] },
+    ],
+    includes: [
+      { name: 'Monitor Qualificado', img: `${EQ}/monitor.jpg` },
+      { name: 'Seguro', img: `${EQ}/seguro.jpg` },
+    ],
   },
 };
 

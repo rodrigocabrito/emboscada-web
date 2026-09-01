@@ -23,7 +23,6 @@ const T = {
   // ── Buttons / CTAs ──
   'Reservar agora': { en: 'Book now', fr: 'Réserver', es: 'Reservar ahora' },
   'Pedir reserva': { en: 'Request a booking', fr: 'Demander une réservation', es: 'Solicitar reserva' },
-  'Pedir reserva online': { en: 'Book online', fr: 'Réserver en ligne', es: 'Reservar en línea' },
   'Pedir orçamento': { en: 'Request a quote', fr: 'Demander un devis', es: 'Solicitar presupuesto' },
   'Peça o seu orçamento': { en: 'Request your quote', fr: 'Demandez votre devis', es: 'Solicita tu presupuesto' },
   'Condições de reserva para empresas': { en: 'Company booking terms', fr: 'Conditions de réservation entreprises', es: 'Condiciones de reserva para empresas' },
@@ -70,13 +69,89 @@ const T = {
   'Porto': { en: 'Porto', fr: 'Porto', es: 'Oporto' },
 
   // ── Footer ──
-  'Links Rápidos': { en: 'Quick Links', fr: 'Liens rapides', es: 'Enlaces rápidos' },
+  'Siga-nos': { en: 'Follow us', fr: 'Suivez-nous', es: 'Síguenos' },
   'Horários': { en: 'Opening Hours', fr: 'Horaires', es: 'Horarios' },
   'Links Úteis': { en: 'Useful Links', fr: 'Liens utiles', es: 'Enlaces útiles' },
   'Crianças': { en: 'Kids', fr: 'Enfants', es: 'Niños' },
   'Perguntas Frequentes': { en: 'FAQs', fr: 'FAQ', es: 'Preguntas frecuentes' },
   'Livro de Reclamações': { en: 'Complaints Book', fr: 'Livre de réclamations', es: 'Libro de reclamaciones' },
   'Política de Privacidade': { en: 'Privacy Policy', fr: 'Politique de confidentialité', es: 'Política de privacidad' },
+  // ── Equipment page ──
+  'Ver equipamento': { en: 'View equipment', fr: 'Voir l’équipement', es: 'Ver equipamiento' },
+  'Ver convite de aniversário': { en: 'View birthday invitation', fr: 'Voir le carton d’invitation', es: 'Ver la invitación de cumpleaños' },
+  'Convite Paintball Kids': { en: 'Paintball Kids Invitation', fr: 'Invitation Paintball Kids', es: 'Invitación Paintball Kids' },
+  'Convite Lasertag Kids': { en: 'Lasertag Kids Invitation', fr: 'Invitation Lasertag Kids', es: 'Invitación Lasertag Kids' },
+  'Convite Gelblast': { en: 'Gelblast Invitation', fr: 'Invitation Gelblast', es: 'Invitación Gelblast' },
+  'Equipamento': { en: 'Equipment', fr: 'Équipement', es: 'Equipamiento' },
+  'Equipamento para Adultos': { en: 'Equipment for Adults', fr: 'Équipement pour adultes', es: 'Equipamiento para adultos' },
+  'Equipamento para Crianças': { en: 'Equipment for Children', fr: 'Équipement pour enfants', es: 'Equipamiento para niños' },
+  'O material que faz parte de cada atividade.': { en: 'The gear included in each activity.', fr: 'Le matériel inclus dans chaque activité.', es: 'El material incluido en cada actividad.' },
+  'Todas as atividades incluem': { en: 'Every activity includes', fr: 'Toutes les activités incluent', es: 'Todas las actividades incluyen' },
+  'Voltar aos packs': { en: 'Back to packs', fr: 'Retour aux packs', es: 'Volver a los packs' },
+  'Monitor Qualificado': { en: 'Qualified instructor', fr: 'Moniteur qualifié', es: 'Monitor cualificado' },
+  'Seguro': { en: 'Insurance', fr: 'Assurance', es: 'Seguro' },
+  'Queres o teu próprio material? Conhece a nossa loja online.': { en: 'Want your own gear? Check out our online store.', fr: 'Envie de votre propre matériel ? Découvrez notre boutique en ligne.', es: '¿Quieres tu propio material? Descubre nuestra tienda online.' },
+  'Visitar a Loja Emboscada': { en: 'Visit the Emboscada Store', fr: 'Visiter la boutique Emboscada', es: 'Visitar la tienda Emboscada' },
+  'Consumos opcionais': { en: 'Optional extras', fr: 'Suppléments optionnels', es: 'Consumibles opcionales' },
+  'Instalações': { en: 'Facilities', fr: 'Installations', es: 'Instalaciones' },
+  'Disponível apenas no Parque de Monsanto (Lisboa).': { en: 'Available only at the Monsanto park (Lisbon).', fr: 'Disponible uniquement au parc de Monsanto (Lisbonne).', es: 'Disponible solo en el parque de Monsanto (Lisboa).' },
+  'Zona de Lanches': { en: 'Snack Zone', fr: 'Zone de goûters', es: 'Zona de meriendas' },
+  'Ver serviço de lanches': { en: 'View snack service', fr: 'Voir le service de goûters', es: 'Ver el servicio de meriendas' },
+  'O Parque Emboscada agiliza a contratação do serviço de lanches nas opções Esquilo e Tenda. Para adicionar extras ou esclarecer dúvidas sobre o catering deve entrar em contacto com a responsável, Dália Fontes, via email.': { en: 'Emboscada Park streamlines booking the snack service in the Esquilo and Tenda options. To add extras or ask about the catering, contact the coordinator, Dália Fontes, by email.', fr: 'Le Parc Emboscada facilite la réservation du service de goûters dans les options Esquilo et Tenda. Pour ajouter des extras ou poser des questions sur le traiteur, contactez la responsable, Dália Fontes, par e-mail.', es: 'El Parque Emboscada agiliza la contratación del servicio de meriendas en las opciones Esquilo y Tenda. Para añadir extras o resolver dudas sobre el catering, contacta con la responsable, Dália Fontes, por correo electrónico.' },
+  // ── Equipment / extras / facilities / snacks content ──
+  'Marcador calibre 68': { en: 'Cal .68 marker', fr: 'Marqueur calibre 68', es: 'Marcador calibre 68' },
+  'Máscara de Proteção Térmica': { en: 'Thermal protection mask', fr: 'Masque de protection thermique', es: 'Máscara de protección térmica' },
+  'Luvas de Proteção': { en: 'Protective gloves', fr: 'Gants de protection', es: 'Guantes de protección' },
+  'Battle Pack com potes de bolas': { en: 'Battle Pack with ball pods', fr: 'Battle Pack avec pots de billes', es: 'Battle Pack con botes de bolas' },
+  'Marcador de Lasertag': { en: 'Lasertag marker', fr: 'Marqueur Lasertag', es: 'Marcador de Lasertag' },
+  'Head Band': { en: 'Headband', fr: 'Bandeau', es: 'Cinta de cabeza' },
+  'Braçadeira eletrónica (noivo/noiva)': { en: 'Electronic armband (groom/bride)', fr: 'Brassard électronique (marié/mariée)', es: 'Brazalete electrónico (novio/novia)' },
+  'Touca higiénica': { en: 'Hygienic cap', fr: 'Charlotte hygiénique', es: 'Gorro higiénico' },
+  'Bolas de Bubble Ball – 1,50 m de diâmetro': { en: 'Bubble balls – 1.50 m diameter', fr: 'Bulles Bubble Ball – 1,50 m de diamètre', es: 'Bolas Bubble Ball – 1,50 m de diámetro' },
+  'Bola de futebol': { en: 'Football', fr: 'Ballon de football', es: 'Balón de fútbol' },
+  'Marcador BLASTER de Baixo Impacto (6–9 anos)': { en: 'Low-impact BLASTER marker (ages 6–9)', fr: 'Marqueur BLASTER faible impact (6–9 ans)', es: 'Marcador BLASTER de bajo impacto (6–9 años)' },
+  'Marcador calibre 50 VIPER (10–15 anos)': { en: 'Cal .50 VIPER marker (ages 10–15)', fr: 'Marqueur calibre 50 VIPER (10–15 ans)', es: 'Marcador calibre 50 VIPER (10–15 años)' },
+  'Lanche / bolo de aniversário (opcional)': { en: 'Snack / birthday cake (optional)', fr: 'Goûter / gâteau d’anniversaire (optionnel)', es: 'Merienda / tarta de cumpleaños (opcional)' },
+  'Lançador Gelblast de gel de água': { en: 'Gelblast water-gel launcher', fr: 'Lanceur Gelblast à billes de gel', es: 'Lanzador Gelblast de gel de agua' },
+  'Fato macaco (aluguer)': { en: 'Coveralls (rental)', fr: 'Combinaison (location)', es: 'Mono (alquiler)' },
+  'Luvas (aluguer)': { en: 'Gloves (rental)', fr: 'Gants (location)', es: 'Guantes (alquiler)' },
+  'SUPER COMBO — Fato + Luvas (aluguer)': { en: 'SUPER COMBO — Coveralls + Gloves (rental)', fr: 'SUPER COMBO — Combinaison + Gants (location)', es: 'SÚPER COMBO — Mono + Guantes (alquiler)' },
+  '500 bolas extra': { en: '500 extra balls', fr: '500 billes supplémentaires', es: '500 bolas extra' },
+  '1000 bolas extra': { en: '1000 extra balls', fr: '1000 billes supplémentaires', es: '1000 bolas extra' },
+  '2000 bolas extra': { en: '2000 extra balls', fr: '2000 billes supplémentaires', es: '2000 bolas extra' },
+  '30 minutos extra (por jogador)': { en: '30 extra minutes (per player)', fr: '30 minutes supplémentaires (par joueur)', es: '30 minutos extra (por jugador)' },
+  '60 minutos extra (por jogador)': { en: '60 extra minutes (per player)', fr: '60 minutes supplémentaires (par joueur)', es: '60 minutos extra (por jugador)' },
+  '5 000 bolas de gel extra (10 carregamentos de 500)': { en: '5,000 extra gel balls (10 reloads of 500)', fr: '5 000 billes de gel supplémentaires (10 recharges de 500)', es: '5 000 bolas de gel extra (10 recargas de 500)' },
+  '10 000 bolas de gel extra (20 carregamentos de 500)': { en: '10,000 extra gel balls (20 reloads of 500)', fr: '10 000 billes de gel supplémentaires (20 recharges de 500)', es: '10 000 bolas de gel extra (20 recargas de 500)' },
+  'Espaço com 10 000 m² exterior e semicoberto': { en: '10,000 m² outdoor and semi-covered space', fr: 'Espace de 10 000 m² extérieur et semi-couvert', es: 'Espacio de 10 000 m² exterior y semicubierto' },
+  'Blocos balneários de acesso partilhado (hóspedes do Parque de Campismo)': { en: 'Shared changing-room blocks (campsite guests)', fr: 'Blocs sanitaires à accès partagé (clients du camping)', es: 'Bloques de vestuarios de acceso compartido (huéspedes del camping)' },
+  'Estacionamento gratuito limitado': { en: 'Limited free parking', fr: 'Stationnement gratuit limité', es: 'Aparcamiento gratuito limitado' },
+  '3 cenários imersivos': { en: '3 immersive scenarios', fr: '3 scénarios immersifs', es: '3 escenarios inmersivos' },
+  '3 cenários imersivos outdoor': { en: '3 immersive outdoor scenarios', fr: '3 scénarios immersifs en plein air', es: '3 escenarios inmersivos al aire libre' },
+  'Zona de Jogadores': { en: 'Players’ area', fr: 'Zone joueurs', es: 'Zona de jugadores' },
+  'Monsanto Villas Restaurante disponível no local (Parque de Campismo)': { en: 'Monsanto Villas Restaurante on-site (campsite)', fr: 'Monsanto Villas Restaurante sur place (camping)', es: 'Monsanto Villas Restaurante en el sitio (camping)' },
+  'Acesso ao campo de futebol 5 x 5 – Outdoor': { en: 'Access to the 5-a-side football pitch – Outdoor', fr: 'Accès au terrain de football à 5 – Extérieur', es: 'Acceso al campo de fútbol 5 x 5 – Exterior' },
+  'Tábua mista de salgados': { en: 'Mixed savoury platter', fr: 'Plateau d’amuse-bouches salés', es: 'Tabla mixta de salados' },
+  'Mini pastelaria / biscoitos': { en: 'Mini pastries / biscuits', fr: 'Mini pâtisseries / biscuits', es: 'Mini pastelería / galletas' },
+  'Tábua de mini pizzas': { en: 'Mini-pizza platter', fr: 'Plateau de mini pizzas', es: 'Tabla de mini pizzas' },
+  'Batata chips': { en: 'Potato chips', fr: 'Chips', es: 'Patatas fritas' },
+  'Pipocas': { en: 'Popcorn', fr: 'Pop-corn', es: 'Palomitas' },
+  'Sumo sem gás e água lisa': { en: 'Still juice and water', fr: 'Jus sans gaz et eau plate', es: 'Zumo sin gas y agua' },
+  'Tábua de mini salgados': { en: 'Mini savouries platter', fr: 'Plateau de mini amuse-bouches salés', es: 'Tabla de mini salados' },
+  'Mini hambúrguer de vitela': { en: 'Mini veal burger', fr: 'Mini burger de veau', es: 'Mini hamburguesa de ternera' },
+  'Tábua de pizza': { en: 'Pizza platter', fr: 'Plateau de pizza', es: 'Tabla de pizza' },
+  'Brigadeiro individual': { en: 'Individual brigadeiro', fr: 'Brigadeiro individuel', es: 'Brigadeiro individual' },
+  'Espetada de fruta': { en: 'Fruit skewer', fr: 'Brochette de fruits', es: 'Brocheta de fruta' },
+  'Bolo de aniversário': { en: 'Birthday cake', fr: 'Gâteau d’anniversaire', es: 'Tarta de cumpleaños' },
+  'Decoração base': { en: 'Basic decoration', fr: 'Décoration de base', es: 'Decoración básica' },
+  'Fonte de chocolate com bolachas': { en: 'Chocolate fountain with biscuits', fr: 'Fontaine de chocolat avec biscuits', es: 'Fuente de chocolate con galletas' },
+  // ── Lanches page ──
+  'Lanches': { en: 'Snacks', fr: 'Goûters', es: 'Meriendas' },
+  'Serviço de Lanches': { en: 'Snack Service', fr: 'Service de goûters', es: 'Servicio de meriendas' },
+  'Menus de lanche para festas e grupos, servidos no Parque de Monsanto (Lisboa).': { en: 'Snack menus for parties and groups, served at the Monsanto park (Lisbon).', fr: 'Menus de goûter pour fêtes et groupes, servis au parc de Monsanto (Lisbonne).', es: 'Menús de merienda para fiestas y grupos, servidos en el parque de Monsanto (Lisboa).' },
+  'Extras': { en: 'Extras', fr: 'Extras', es: 'Extras' },
+  'por criança': { en: 'per child', fr: 'par enfant', es: 'por niño' },
+  'Servidos até às 18h30, mediante encomenda com um mínimo de 48 horas úteis de antecedência. Serviço do Monsanto Villas Restaurante (Lisboa Camping & Bungalows), no Parque de Monsanto.': { en: 'Served until 6:30 PM, ordered at least 48 business hours in advance. Provided by Monsanto Villas Restaurante (Lisboa Camping & Bungalows), at the Monsanto park.', fr: 'Servis jusqu’à 18h30, sur commande au moins 48 heures ouvrables à l’avance. Assuré par le Monsanto Villas Restaurante (Lisboa Camping & Bungalows), au parc de Monsanto.', es: 'Servidos hasta las 18:30, con pedido mínimo de 48 horas hábiles de antelación. A cargo de Monsanto Villas Restaurante (Lisboa Camping & Bungalows), en el parque de Monsanto.' },
   'Verão': { en: 'Summer', fr: 'Été', es: 'Verano' },
   'Inverno': { en: 'Winter', fr: 'Hiver', es: 'Invierno' },
   '09:00 – 19:00': { en: '9 AM – 7 PM', fr: '9h00 – 19h00', es: '9:00 – 19:00' },
@@ -207,18 +282,6 @@ const T = {
   'Inverno:': { en: 'Winter:', fr: 'Hiver :', es: 'Invierno:' },
 
   // ── FAQ ──
-  'Qual a idade mínima para jogar?': { en: 'What is the minimum age to play?', fr: 'Quel est l’âge minimum pour jouer ?', es: '¿Cuál es la edad mínima para jugar?' },
-  'Temos actividades adaptadas a crianças (paintball de baixo impacto e lasertag) e a adultos. Fala connosco para o programa mais adequado ao teu grupo.':
-    { en: 'We have activities for kids (low-impact paintball and lasertag) and adults. Talk to us for the best programme for your group.', fr: 'Nous avons des activités pour enfants (paintball faible impact et lasertag) et adultes. Contactez-nous pour le programme adapté à votre groupe.', es: 'Tenemos actividades para niños (paintball de bajo impacto y láser tag) y adultos. Habla con nosotros para el programa ideal para tu grupo.' },
-  'Preciso de marcar com antecedência?': { en: 'Do I need to book in advance?', fr: 'Faut-il réserver à l’avance ?', es: '¿Necesito reservar con antelación?' },
-  'Sim, recomendamos reserva prévia para garantir disponibilidade e monitorização dedicada ao teu grupo.':
-    { en: 'Yes, we recommend booking ahead to secure availability and dedicated supervision for your group.', fr: 'Oui, nous recommandons de réserver pour garantir la disponibilité et un encadrement dédié.', es: 'Sí, recomendamos reservar con antelación para garantizar disponibilidad y supervisión dedicada.' },
-  'O que está incluído?': { en: 'What is included?', fr: 'Qu’est-ce qui est inclus ?', es: '¿Qué está incluido?' },
-  'Equipamento, monitorização em todos os jogos e acesso ao campo. Os detalhes variam por actividade e pacote.':
-    { en: 'Equipment, supervision in every game and field access. Details vary by activity and pack.', fr: 'Équipement, encadrement à chaque jeu et accès au terrain. Les détails varient selon l’activité et le pack.', es: 'Equipo, supervisión en cada juego y acceso al campo. Los detalles varían según la actividad y el pack.' },
-  'Onde ficam os parques?': { en: 'Where are the parks?', fr: 'Où se trouvent les parcs ?', es: '¿Dónde están los parques?' },
-  'Temos dois parques: Monsanto (Lisboa) e Porto. Vê a página Campos para mais informação.':
-    { en: 'We have two parks: Monsanto (Lisbon) and Porto. See the Parks page for more.', fr: 'Nous avons deux parcs : Monsanto (Lisbonne) et Porto. Voir la page Parcs.', es: 'Tenemos dos parques: Monsanto (Lisboa) y Oporto. Consulta la página Campos.' },
 
   // ── Location pages (Porto / Monsanto) ──
   'Localização': { en: 'Location', fr: 'Emplacement', es: 'Ubicación' },
@@ -226,7 +289,6 @@ const T = {
   'Ver no Google Maps': { en: 'View on Google Maps', fr: 'Voir sur Google Maps', es: 'Ver en Google Maps' },
   'Ver galeria': { en: 'View gallery', fr: 'Voir la galerie', es: 'Ver galería' },
   'Galeria': { en: 'Gallery', fr: 'Galerie', es: 'Galería' },
-  'Ver parque': { en: 'View park', fr: 'Voir le parc', es: 'Ver parque' },
   'Cenários': { en: 'Scenarios', fr: 'Décors', es: 'Escenarios' },
   'Ataque': { en: 'Attack', fr: 'Attaque', es: 'Ataque' },
   'Defesa': { en: 'Defence', fr: 'Défense', es: 'Defensa' },
@@ -240,8 +302,6 @@ const T = {
     { en: 'CARRIS — Buses 714 and 750: 406 metres away (1 min walk).', fr: 'CARRIS — Bus 714 et 750 : à 406 mètres (1 min à pied).', es: 'CARRIS — Autobuses 714 y 750: a 406 metros (1 min a pie).' },
   'Situado em Canedo a 20 minutos do Porto, o nosso campo tem uma envolvência absolutamente natural, possibilitando uma «fuga» ao quotidiano. Com uma zona coberta para 200 pessoas, este espaço funde-se com o meio envolvente, fomentando o convívio, o descanso e a diversão.':
     { en: 'Located in Canedo, 20 minutes from Porto, our field is surrounded by pure nature — a real escape from the everyday. With a covered area for 200 people, the space blends into its surroundings, encouraging socialising, relaxation and fun.', fr: 'Situé à Canedo, à 20 minutes de Porto, notre terrain est entouré d’une nature totale — une véritable évasion du quotidien. Avec une zone couverte pour 200 personnes, l’espace se fond dans son environnement, favorisant convivialité, détente et amusement.', es: 'Situado en Canedo, a 20 minutos de Oporto, nuestro campo está rodeado de naturaleza — una auténtica escapada de la rutina. Con una zona cubierta para 200 personas, el espacio se funde con el entorno, fomentando la convivencia, el descanso y la diversión.' },
-  'Entre Torres, Minas e Autocarro Swat, o Parque Emboscada Porto oferece diversos cenários de paintball e ainda slide, escalada e Bubble Football. Se procura diversão e aventura, estamos à sua espera para lhe proporcionar uma experiência fantástica!':
-    { en: 'Between Towers, Mines and the Swat Bus, Emboscada Porto offers a range of paintball scenarios plus zipline, climbing and Bubble Football. If you’re after fun and adventure, we’re waiting to give you a fantastic experience!', fr: 'Entre Tours, Mines et le Bus Swat, Emboscada Porto propose divers décors de paintball ainsi que tyrolienne, escalade et Bubble Football. Si vous cherchez fun et aventure, nous vous attendons pour une expérience fantastique !', es: 'Entre Torres, Minas y el Autobús Swat, Emboscada Oporto ofrece diversos escenarios de paintball además de tirolina, escalada y Bubble Football. Si buscas diversión y aventura, ¡te esperamos para ofrecerte una experiencia fantástica!' },
   'Situado no Parque de Campismo de Monsanto a 10 minutos do centro da cidade de Lisboa, o Parque Emboscada transmite adrenalina e emoção a quem o visita.':
     { en: 'Located in the Monsanto campsite, 10 minutes from Lisbon city centre, Parque Emboscada delivers adrenaline and excitement to every visitor.', fr: 'Situé dans le camping de Monsanto, à 10 minutes du centre de Lisbonne, le Parque Emboscada offre adrénaline et émotion à ses visiteurs.', es: 'Situado en el camping de Monsanto, a 10 minutos del centro de Lisboa, el Parque Emboscada transmite adrenalina y emoción a quien lo visita.' },
   'Entre no ritmo citadino e teste a sua pontaria num confronto entre índios e cowboys no Western, ou explore os caminhos abandonados no nosso campo Factory. Atenção: quando visitar a Toxic City tenha cuidado com a exposição aos gases tóxicos que pairam no ar. Todos os cenários são criados para todos e ao gosto de todos.':
@@ -266,7 +326,6 @@ const T = {
   'Data pretendida': { en: 'Preferred date', fr: 'Date souhaitée', es: 'Fecha deseada' },
   'Parque': { en: 'Park', fr: 'Parc', es: 'Parque' },
   'Actividade': { en: 'Activity', fr: 'Activité', es: 'Actividad' },
-  'Nº de pessoas': { en: 'Number of people', fr: 'Nombre de personnes', es: 'Nº de personas' },
   'Mensagem': { en: 'Message', fr: 'Message', es: 'Mensaje' },
   'Selecionar…': { en: 'Select…', fr: 'Choisir…', es: 'Seleccionar…' },
   'Pack': { en: 'Pack', fr: 'Pack', es: 'Pack' },
@@ -277,9 +336,6 @@ const T = {
   'Pedido enviado! Entramos em contacto para confirmar a tua reserva.':
     { en: 'Request sent! We’ll be in touch to confirm your booking.', fr: 'Demande envoyée ! Nous vous contacterons pour confirmer.', es: '¡Solicitud enviada! Te contactaremos para confirmar.' },
   'Fazer outro pedido': { en: 'Make another request', fr: 'Faire une autre demande', es: 'Hacer otra solicitud' },
-  'Indica o nome e um contacto (email ou telefone).': { en: 'Enter your name and a contact (email or phone).', fr: 'Indiquez votre nom et un contact (e-mail ou téléphone).', es: 'Indica tu nombre y un contacto (correo o teléfono).' },
-  'Peça o seu orçamento à medida — respondemos o mais breve possível.':
-    { en: 'Request your tailored quote — we’ll reply as soon as possible.', fr: 'Demandez votre devis sur mesure — réponse dès que possible.', es: 'Solicita tu presupuesto a medida — respondemos lo antes posible.' },
 
   // ── Privacy policy ──
   'O Parque Emboscada, entidade pertencente à Emboscada – Organização de Eventos, Lda., preocupa-se em proteger a sua privacidade e irá processar e armazenar os seus dados pessoais, enquanto responsável pelo tratamento dos mesmos.':
