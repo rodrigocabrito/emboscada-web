@@ -1,10 +1,10 @@
-import { lazy, Suspense } from 'react';
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { lazy, Suspense, useEffect } from 'react';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation, useParams } from 'react-router-dom';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { ToastProvider } from './context/ToastContext';
-import Navbar from './components/Navbar';
 import ProtectedRoute from './components/ProtectedRoute';
+import AppLayout from './components/AppLayout';
 import ErrorBoundary from './components/ErrorBoundary';
 
 const queryClient = new QueryClient({
@@ -19,6 +19,19 @@ const queryClient = new QueryClient({
 // Route-level code splitting: each page loads on demand instead of shipping
 // one monolithic bundle (admin pages especially are rarely needed by monitors).
 const Login = lazy(() => import('./pages/Login'));
+// Public marketing site
+const PublicLayout = lazy(() => import('./features/public/PublicLayout'));
+const Home = lazy(() => import('./features/public/pages/Home'));
+const ActivityPacksPage = lazy(() => import('./features/public/pages/ActivityPacksPage'));
+const EquipmentPage = lazy(() => import('./features/public/pages/EquipmentPage'));
+const LanchesPage = lazy(() => import('./features/public/pages/LanchesPage'));
+const Empresas = lazy(() => import('./features/public/pages/Empresas'));
+const Campos = lazy(() => import('./features/public/pages/Campos'));
+const LocationPage = lazy(() => import('./features/public/pages/LocationPage'));
+const Contactos = lazy(() => import('./features/public/pages/Contactos'));
+const Reservas = lazy(() => import('./features/public/pages/Reservas'));
+const Faqs = lazy(() => import('./features/public/pages/Faqs'));
+const Privacy = lazy(() => import('./features/public/pages/Privacy'));
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const Sessions = lazy(() => import('./features/sessions/Sessions'));
 const SessionDetail = lazy(() => import('./features/sessions/SessionDetail'));
@@ -39,10 +52,47 @@ const Profile = lazy(() => import('./pages/Profile'));
 const NotFound = lazy(() => import('./pages/NotFound'));
 
 import './styles/global.css';
+import './styles/public.css';
 
-const RootRedirect = () => {
-  const { user } = useAuth();
-  return user ? <Navigate to="/home" replace /> : <Navigate to="/login" replace />;
+// Public marketing routes, defined once and rendered twice: at the root (PT,
+// unprefixed) and again under /:lang for English/French/Spanish (#9).
+const publicRoutes = [
+  { index: true, element: <Home /> },
+  { path: 'adults', element: <ActivityPacksPage pageKey="adultos" /> },
+  { path: 'adults/equipment', element: <EquipmentPage pageKey="adultos" /> },
+  { path: 'kids', element: <ActivityPacksPage pageKey="crianca" /> },
+  { path: 'kids/equipment', element: <EquipmentPage pageKey="crianca" /> },
+  { path: 'companies', element: <Empresas /> },
+  { path: 'fields', element: <Campos /> },
+  { path: 'fields/porto', element: <LocationPage slug="porto" /> },
+  { path: 'fields/monsanto', element: <LocationPage slug="monsanto" /> },
+  { path: 'contacts', element: <Contactos /> },
+  { path: 'reservations', element: <Reservas /> },
+  { path: 'faqs', element: <Faqs /> },
+  { path: 'privacy', element: <Privacy /> },
+  { path: 'snacks', element: <LanchesPage /> },
+];
+const renderPublicRoutes = () =>
+  publicRoutes.map((r, i) =>
+    r.index
+      ? <Route key={i} index element={r.element} />
+      : <Route key={i} path={r.path} element={r.element} />,
+  );
+
+// Guards the /:lang subtree: only en/fr/es are valid prefixes; anything else is
+// a real 404 (so /random doesn't silently render the home page as "language").
+const PUBLIC_LOCALES = ['pt', 'en', 'fr', 'es'];
+const LangGuard = () => {
+  const { lang } = useParams();
+  return PUBLIC_LOCALES.includes(lang) ? <Outlet /> : <NotFound />;
+};
+
+// The hidden staff login. Reachable only by typing /portal — no public link
+// points here. If already signed in, skip straight to the dashboard.
+const PortalGate = () => {
+  const { user, profile } = useAuth();
+  if (user && profile?.role) return <Navigate to="/home" replace />;
+  return <Login />;
 };
 
 function App() {
@@ -61,16 +111,34 @@ function App() {
   );
 }
 
-const AppContent = () => {
-  const { user } = useAuth();
+// Reset scroll to the top on every route change (but not on in-page #anchor
+// jumps, which only change the hash — pathname stays the same).
+const ScrollToTop = () => {
+  const { pathname } = useLocation();
+  useEffect(() => { window.scrollTo(0, 0); }, [pathname]);
+  return null;
+};
 
+const AppContent = () => {
   return (
-    <>
-      {user && <Navbar />}
-      <Suspense fallback={<div className="page" style={{ textAlign: 'center', paddingTop: '3rem', color: 'var(--text-muted)' }}>A carregar…</div>}>
+    <Suspense fallback={<div className="page" style={{ textAlign: 'center', paddingTop: '3rem', color: 'var(--text-muted)' }}>A carregar…</div>}>
+      <ScrollToTop />
       <Routes>
-        <Route path="/" element={<RootRedirect />} />
-        <Route path="/login" element={<Login />} />
+        {/* ── Public marketing site (open to everyone, no staff nav) ── */}
+        {/* Bare root → default language */}
+        <Route path="/" element={<Navigate to="/pt" replace />} />
+        <Route element={<PublicLayout />}>
+          {/* Every language is prefixed: /pt, /en, /fr, /es */}
+          <Route path=":lang" element={<LangGuard />}>
+            {renderPublicRoutes()}
+          </Route>
+        </Route>
+
+        {/* ── Hidden staff portal login ── */}
+        <Route path="/portal" element={<PortalGate />} />
+
+        {/* ── Staff app (authenticated) — Navbar lives in AppLayout ── */}
+        <Route element={<AppLayout />}>
         <Route
           path="/sessions"
           element={
@@ -215,10 +283,11 @@ const AppContent = () => {
             </ProtectedRoute>
           }
         />
+        </Route>
+
         <Route path="*" element={<NotFound />} />
       </Routes>
-      </Suspense>
-    </>
+    </Suspense>
   );
 };
 

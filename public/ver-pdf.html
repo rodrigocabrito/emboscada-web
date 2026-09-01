@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="pt">
+  <head>
+    <meta charset="UTF-8" />
+    <link rel="icon" type="image/jpeg" href="/emboscada_logo.jpg" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="robots" content="noindex" />
+    <title>Emboscada Parque Aventura</title>
+    <style>
+      html, body { margin: 0; height: 100%; background: #1f2d26; }
+      iframe { border: 0; width: 100%; height: 100%; display: block; }
+    </style>
+  </head>
+  <body>
+    <iframe id="pdf" title="PDF"></iframe>
+    <script>
+      var params = new URLSearchParams(location.search);
+      // Embed only our own static PDFs (same-origin, under /site/, no traversal).
+      var raw = params.get('src') || '';
+      if (/^\/site\/[A-Za-z0-9/_-]+\.pdf$/.test(raw)) {
+        document.getElementById('pdf').src = raw;
+      }
+      // Optional tab title (e.g. the invite name); assigning is text-only, no HTML.
+      var title = params.get('title');
+      if (title) document.title = title + ' · Emboscada Parque Aventura';
+    </script>
+  </body>
+</html>

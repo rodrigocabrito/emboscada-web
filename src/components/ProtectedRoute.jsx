@@ -7,11 +7,11 @@ const ProtectedRoute = ({ children, adminOnly = false }) => {
 
   if (!user) {
     // Remember where they were going, so we can redirect after login
-    return <Navigate to="/login" state={{ from: location.pathname }} replace />;
+    return <Navigate to="/portal" state={{ from: location.pathname }} replace />;
   }
 
   if (!profile || !profile.role) {
-    return <Navigate to="/login" replace />;
+    return <Navigate to="/portal" replace />;
   }
 
   if (adminOnly && !isAdmin) {
